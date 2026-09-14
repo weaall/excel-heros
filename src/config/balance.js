@@ -41,6 +41,9 @@ export const BALANCE = Object.freeze({
   MELEE_ADVANCE_CELLS: 3,   // how far (cells) a melee hero may leave formation
   ELITE: { hp: 2.5, atk: 1.5, gold: 3 },
   CARDS_FIRST_CLEAR_PER_PHASE: 2, // 강화 카드 on first clear = phase * this
+  // 도감 보너스: every owned hero (and every star on them) buffs the whole party, so duplicates/leftover cards still matter
+  COLLECTION: { atkPerHero: 0.01, atkPerStar: 0.005, goldPerHero: 0.01 },
+  AUTO_UPGRADE_INTERVAL: 1.0,     // seconds between automatic "자동 합계" passes when the toggle is on
 
   GEMS_FIRST_CLEAR: 10, GEMS_REPEAT_CLEAR: 1,
   GEMS_BOSS_FIRST: 50,  GEMS_BOSS_REPEAT: 10,

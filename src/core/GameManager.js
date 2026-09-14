@@ -8,6 +8,8 @@ import { pullOnce, promoteCost } from './GachaManager.js';
 import { createInitialState } from './state.js';
 import { EntityManager } from './EntityManager.js';
 import * as Quests from './QuestManager.js';
+import * as Achievements from './AchievementManager.js';
+import { HEROES } from '../data/heroes.js';
 import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
 
@@ -19,7 +21,7 @@ export class GameManager extends Emitter {
     this.rng = rng;
     this.logs = [];
     this.rowCounter = 1000 + Math.floor(Math.random() * 500);
-    this.saveTimer = 0; this.dailyTimer = 0;
+    this.saveTimer = 0; this.dailyTimer = 0; this.autoTimer = 0;
     Quests.ensureDaily(this.state, now);
     this.entities = new EntityManager(this);
     this.entities.rebuildParty();
@@ -28,7 +30,14 @@ export class GameManager extends Emitter {
 
   // ------------------------------------------------------------- derived --
   stageLabel() { return stageLabel(this.state.stage); }
-  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll) + TRAITS.greedy.value * this.partyTraitCount('greedy'); }
+  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold; }
+  /** 도감 보너스: owned heroes and their stars buff party ATK and gold income. */
+  collection() {
+    const owned = HEROES.filter((h) => this.state.heroes[h.id]?.owned);
+    const stars = owned.reduce((a, h) => a + Math.max(1, this.state.heroes[h.id].star), 0);
+    const C = BALANCE.COLLECTION;
+    return { owned: owned.length, total: HEROES.length, stars, atk: owned.length * C.atkPerHero + stars * C.atkPerStar, gold: owned.length * C.goldPerHero };
+  }
   partyTraitCount(trait) { return this.state.party.filter((id) => this.heroDef(id).trait === trait).length; }
   speedMult() { return 1 + teamUpgradeBonus('coffee', this.state.team.coffee); }
   hpBonus() { return teamUpgradeBonus('chairs', this.state.team.chairs); }
@@ -50,7 +59,7 @@ export class GameManager extends Emitter {
     const eCost = enhanceCost(entry.enhance);
     const view = {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
-      atk: heroATK(base.atk, entry.level, star, entry.enhance),
+      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk)),
       hp: heroHP(base.hp, entry.level, star, this.hpBonus(), entry.enhance),
       interval: base.interval, range: base.range,
       cost: upgradeCost(entry.level),
@@ -227,6 +236,18 @@ export class GameManager extends Emitter {
     this.state.settings.autoAdvance = !!v; this.emit('settings');
     if (v && !this.isChallenging()) this.startChallenge();
   }
+  /** Auto-upgrade: keep running "자동 합계" (cheapest party upgrade) every second while on. */
+  setAutoUpgrade(v) {
+    this.state.settings.autoUpgrade = !!v; this.emit('settings');
+    if (v) this.upgradeCheapestLoop();
+  }
+
+  claimAchievement(id) {
+    const r = Achievements.claimAchievement(this.state, id);
+    if (r) { this.log(`업적 달성: ${id} ${r.tier}단계 +${r.gems} 보석`, 'info'); this.emit('gems'); this.emit('quests'); }
+    return r;
+  }
+  achievementsClaimable() { return Achievements.claimableCount(this.state); }
 
   /** True while the party is fighting to clear the current stage (vs. farming it). */
   isChallenging() { return !!this.state.challenging; }
@@ -347,6 +368,7 @@ export class GameManager extends Emitter {
   tick(dt, now = Date.now()) {
     this.state.stats.playSeconds += dt;
     this.entities.update(dt);
+    if (this.state.settings.autoUpgrade) { this.autoTimer += dt; if (this.autoTimer >= BALANCE.AUTO_UPGRADE_INTERVAL) { this.autoTimer = 0; this.upgradeCheapestLoop(50); } }
     this.saveTimer += dt; this.dailyTimer += dt;
     if (this.dailyTimer >= 60) { this.dailyTimer = 0; if (Quests.ensureDaily(this.state, now)) { this.log('새로운 업무일이 시작되었습니다', 'info'); this.emit('quests'); } }
     if (this.saveTimer >= BALANCE.SAVE_INTERVAL_MS / 1000) { this.saveTimer = 0; this.persist(); }

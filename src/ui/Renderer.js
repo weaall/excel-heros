@@ -5,6 +5,7 @@ import { heroSprite, monsterSprite, flashSprite } from '../data/sprites.js';
 import { TILES, drawTile, packReady } from '../data/packSprites.js';
 import { GRADES } from '../data/heroes.js';
 import { stageLabel, BALANCE } from '../config/balance.js';
+import { bossForStage } from '../data/monsters.js';
 import { fmt } from '../utils/format.js';
 
 const TILE = 32;                       // 16px tiles drawn at 2x
@@ -21,12 +22,13 @@ export class Renderer {
     this.banner = null;
     game.on('challengeStart', ({ stage, boss }) => {
       this.banner = boss
-        ? { kind: 'boss', text: '긴급 티켓 발생!', sub: `${stageLabel(stage)} · ${BALANCE.BOSS_TIME_LIMIT}초 안에 처리`, t: 0, life: 2.4 }
+        ? { kind: 'boss', text: `${bossForStage(stage).name} 등장!`, sub: `${bossForStage(stage).desc} · ${BALANCE.BOSS_TIME_LIMIT}초 안에 처리`, t: 0, life: 2.4 }
         : { kind: 'challenge', text: `${stageLabel(stage)} 도전`, sub: `오류 ${BALANCE.KILLS_PER_STAGE}건 처리 시 클리어`, t: 0, life: 1.6 };
     });
     game.on('cleared', ({ stage, boss, first }) => {
       this.banner = { kind: 'clear', text: boss ? '보스 처리 완료!' : `${stageLabel(stage)} 마감!`, sub: first ? '첫 클리어 보상 지급' : '반복 클리어', t: 0, life: 1.5 };
     });
+    game.on('ult', ({ hero }) => { this.banner = { kind: 'skill', text: hero.skillName ?? 'ULT', sub: hero.def.name, hero, t: 0, life: 1.3 }; });
     game.on('challenge', () => { if (!game.isChallenging() && this.banner?.kind !== 'clear') this.banner = { kind: 'farm', text: `${game.stageLabel()} 자동 사냥`, sub: '', t: 0, life: 1.2 }; });
   }
 
@@ -131,6 +133,15 @@ export class Renderer {
       ctx.font = 'bold 15px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#f9e79f'; ctx.fillText(b.sub, CANVAS_W / 2 - 60 + slide, 230);
       const boss = this.game.entities.boss;
       if (boss) { const img = monsterSprite(boss.def, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, CANVAS_W - 300 + slide * 0.5, 100, img.width * 2, img.height * 2); }
+    } else if (b.kind === 'skill') {
+      // ultimate cut-in: purple sash + the caster's sprite blown up on the left
+      ctx.fillStyle = 'rgba(40,0,60,0.35)'; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.fillStyle = '#6c3483'; ctx.beginPath(); ctx.moveTo(-60 + slide, 130); ctx.lineTo(CANVAS_W + 60 + slide, 170); ctx.lineTo(CANVAS_W + 60 + slide, 250); ctx.lineTo(-60 + slide, 210); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 36px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(b.text, CANVAS_W / 2 + 70 + slide, 190);
+      ctx.font = 'bold 14px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#e8daef'; ctx.fillText(b.sub, CANVAS_W / 2 + 70 + slide, 228);
+      const img = heroSprite(b.hero.def, 'attack', 1); ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 60 + slide * 0.5, 80, img.width * 3, img.height * 3);
     } else {
       const col = b.kind === 'clear' ? '#217346' : b.kind === 'challenge' ? '#1f5fa8' : '#5d6d7e';
       ctx.fillStyle = col; ctx.globalAlpha = fade * 0.9; ctx.fillRect(slide, 150, CANVAS_W, 64);
@@ -148,7 +159,7 @@ export class Renderer {
     if (h.anim === 'attack') frame = h.animT < 0.16 ? 0 : h.animT < 0.32 ? 1 : 2;
     else if (h.anim === 'walk') { frame = Math.floor(h.animT * 9) % 4; if (frame % 2 === 0) bob = -2; }
     else frame = Math.floor(h.animT * 5) % 4;
-    const img = heroSprite(h.def, h.anim, frame);
+    const img = heroSprite(h.def, h.alive && h.flash > 0 ? 'hit' : h.anim, frame);
     // melee dash: out during the wind-up, back during recovery (purely visual)
     let dash = 0;
     if (h.anim === 'attack' && (h.role === 'melee' || h.role === 'tank') && h.dashTo) {
@@ -167,7 +178,7 @@ export class Renderer {
     }
     if (h.star >= 5 || h.def.grade === 'S') { ctx.save(); ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 14 + Math.sin(this.t * 4) * 5; ctx.strokeStyle = 'rgba(241,196,15,0.9)'; ctx.lineWidth = 2; ctx.strokeRect(sx + 12, sy + 2, 40, 62); ctx.restore(); }
     ctx.drawImage(img, sx, sy);
-    if (h.flash > 0) { ctx.globalAlpha = Math.min(1, h.flash / 0.12) * 0.85; ctx.drawImage(flashSprite(img), sx, sy); ctx.globalAlpha = 1; }
+    if (h.flash > 0) { ctx.globalAlpha = Math.min(1, h.flash / 0.12) * 0.5; ctx.drawImage(flashSprite(img), sx, sy); ctx.globalAlpha = 1; }
     this.#hpBar(h.x, h.y + 6, h.hp / h.maxHp, '#27ae60', 40);
     ctx.fillStyle = '#ecf0f1'; ctx.font = 'bold 10px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(`Lv${h.level}`, h.x, h.y + 12);

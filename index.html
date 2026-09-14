@@ -30,6 +30,7 @@
       <button id="qa-upgrade-all" class="rb-btn" title="골드가 다 떨어질 때까지 가장 싼 파티 업그레이드를 자동 구매"><span class="rb-icon">Σ</span>자동 합계</button>
       <button id="qa-challenge" class="rb-btn" title="다음 스테이지 도전 전투 시작 / 도전 중이면 중단"><span class="rb-icon">⚑</span><span id="qa-challenge-label">다음 단계 도전</span></button>
       <label class="rb-check" title="클리어할 때마다 자동으로 다음 단계에 도전 (실패하면 꺼짐)"><input type="checkbox" id="qa-auto"> 자동 진행</label>
+      <label class="rb-check" title="1초마다 자동 합계를 실행해 골드를 가장 싼 업그레이드에 계속 사용"><input type="checkbox" id="qa-auto-up"> 자동 합계 유지</label>
       <span class="rb-sep"></span>
       <button class="rb-btn" data-sheet="roster"><span class="rb-icon">▦</span>카드 명단</button>
       <button class="rb-btn" data-sheet="gacha"><span class="rb-icon">⇩</span>가져오기</button>
@@ -82,6 +83,7 @@
         <div class="sheet-head">
           <span>파티 <b id="party-count">1 / 5</b></span>
           <span>강화 카드 <b id="cards-cell">0</b>장</span>
+          <span title="보유 영웅 1종마다 파티 ATK +1% · 골드 +1%, 보유 영웅의 별 1개마다 ATK +0.5%">도감 보너스 <b id="collection-text"></b></span>
           <span class="muted">카드를 눌러 상세 보기 · 배치 / ★승급 / 강화 / 조각 변환 / 직급 승진</span>
         </div>
         <div class="card-grid" id="card-grid"></div>
@@ -139,6 +141,11 @@
           <span id="allclear-text" class="muted small"></span>
           <button id="btn-allclear" class="xl-btn">전체 완료 보너스</button>
         </div>
+        <h3 class="section-title">업적 <span class="muted">(누적 · 초기화되지 않음)</span></h3>
+        <table class="xl-table" id="ach-table">
+          <thead><tr><th>업적</th><th>진행</th><th>다음 보상</th><th>작업</th></tr></thead>
+          <tbody></tbody>
+        </table>
         <h3 class="section-title">광고 보상 <span class="muted">(임시 화면 · SDK 연동 전)</span></h3>
         <div class="ad-box">
           <span id="ad-left" class="small"></span>
@@ -155,6 +162,7 @@
             <div class="settings">
               <label><input type="checkbox" id="set-auto"> 자동 진행: 클리어할 때마다 다음 단계에 자동 도전 (도전 실패 시 자동으로 꺼지고 직전 스테이지에서 사냥)</label>
               <label><input type="checkbox" id="set-stealth"> 보스 키: 전투 화면을 텍스트 표로 (Esc)</label>
+              <label><input type="checkbox" id="set-auto-up"> 자동 합계 유지: 1초마다 골드를 가장 싼 파티 업그레이드에 자동 사용</label>
             </div>
             <h3 class="section-title">통계</h3>
             <table class="xl-table compact"><tbody id="stats-list"></tbody></table>

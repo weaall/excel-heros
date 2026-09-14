@@ -63,6 +63,7 @@ export const MONSTER_MAP = {
   lock: 'hooded', bug: 'goblin', cloud: 'ice_zombie', cursor: 'pumpkin',
   monkey: { tiny: 21 }, bull: { tiny: 122 }, mushroom: { tiny: 14 }, eyeball: { tiny: 5 }, hand: { tiny: 6 }, golem: { tiny: 47 }, flame: { tiny: 45 },
   orb: { tiny: 89 }, rabbit: { tiny: 133 }, chicken: { tiny: 149 }, cat: { tiny: 116 }, rat: { tiny: 92 }, snake: { tiny: 41 }, robot: { tiny: 80 },
+  boss: 'big_demon', boss_zombie: 'big_zombie', boss_ogre: 'ogre',
 };
 export const BOSS_CREATURE = 'big_demon';
 
@@ -71,7 +72,7 @@ function canvas(w, h) { const c = document.createElement('canvas'); c.width = w;
 
 /**
  * 64x64 (× scale) hero frame.
- * anim: idle (4 frames) | walk (4, run) | attack (3: raise → swing → idle)
+ * anim: idle (4 frames) | walk (4, run) | attack (3: raise → swing → idle) | hit (1)
  */
 export function packHeroFrame(def, anim = 'idle', frame = 0, scale = 1) {
   if (!sheet) return null;
@@ -79,6 +80,7 @@ export function packHeroFrame(def, anim = 'idle', frame = 0, scale = 1) {
   const row = HERO_ROW[m.base];
   let fi, swing = 0; // swing: weapon rotation in radians
   if (anim === 'walk') { fi = 4 + (frame % 4); swing = 0.35; }
+  else if (anim === 'hit') { fi = 8; swing = 0.9; }
   else if (anim === 'attack') { const k = frame % 3; fi = [0, 6, 0][k]; swing = [-1.1, 1.5, 0.35][k]; }
   else { fi = frame % 4; swing = 0.35; }
   const key = `h:${def.id}:${anim}:${fi}:${swing}:${scale}`;
@@ -110,8 +112,7 @@ export function packHeroIcon(def) {
 export function packMonsterFrame(mon, frame = 0, hueShift = 0) {
   if (!sheet) return null;
   const typeId = String(mon.id).split(':')[0];
-  const isBoss = typeId === 'boss';
-  const spec = isBoss ? BOSS_CREATURE : MONSTER_MAP[typeId];
+  const spec = MONSTER_MAP[typeId];
   if (!spec) return null;
   const fi = frame % 4;
   const key = `m:${typeId}:${fi}:${hueShift}:${mon.elite ? 'e' : ''}`;

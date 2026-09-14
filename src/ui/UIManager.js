@@ -1,7 +1,9 @@
 // DOM layer: ribbon, formula bar, sheets, task pane, card grid, quests, boss-key view, dialogs.
 import { BALANCE, teamUpgradeCost, isBossStage, stageLabel } from '../config/balance.js';
 import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, MAIN_ID, MAIN_TIER_TITLES } from '../data/heroes.js';
-import { stagePool, eliteChance, BOSS } from '../data/monsters.js';
+import { stagePool, eliteChance, bossForStage } from '../data/monsters.js';
+import { ACHIEVEMENTS } from '../data/achievements.js';
+import * as Achievements from '../core/AchievementManager.js';
 import { DAILY_QUESTS, ALL_CLEAR_BONUS } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
 import { GRID } from '../core/EntityManager.js';
@@ -55,6 +57,8 @@ export class UIManager {
     $('#qa-upgrade-all').addEventListener('click', () => { const n = this.game.upgradeCheapestLoop(); this.toast(n ? `자동 합계: 업그레이드 ${n}회 적용` : '골드가 부족합니다'); });
     $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
     $('#qa-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
+    $('#qa-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
+    $('#set-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
     $('#set-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#set-stealth').addEventListener('change', (e) => this.game.toggleExcel(e.target.checked));
 
@@ -131,7 +135,7 @@ export class UIManager {
     $('#status-gems').textContent = `보석: ${fmt(s.gems)}`;
     $('#status-dps').textContent = `DPS: ${fmt(this.game.entities.dps())}`;
     $('#gold-cell').textContent = fmt(s.gold); $('#gems-top').textContent = fmt(s.gems);
-    const claimable = DAILY_QUESTS.some((q) => Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)) || !s.daily.loginClaimed;
+    const claimable = DAILY_QUESTS.some((q) => Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)) || !s.daily.loginClaimed || Achievements.claimableCount(s) > 0;
     $('#quest-dot').hidden = !claimable;
   }
 
@@ -161,15 +165,16 @@ export class UIManager {
     mode.textContent = challenging ? (boss ? '보스 도전 중' : '도전 중') : '자동 사냥';
     mode.className = `stage-mode ${challenging ? 'challenge' : 'farm'}`;
     const pool = stagePool(s.stage);
-    $('#stage-monster').textContent = boss ? `보스: ${BOSS.name}` : pool.map((m) => m.name).join(' · ');
+    const bossDef = bossForStage(s.stage);
+    $('#stage-monster').textContent = boss ? `보스: ${bossDef.name}` : pool.map((m) => m.name).join(' · ');
     const req = g.killsRequired();
     $('#kill-bar').style.width = challenging ? `${Math.min(100, (s.kills / req) * 100)}%` : '100%';
     $('#kill-text').textContent = boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : challenging ? `${s.kills} / ${req}행 처리` : `사냥 중 · 처치 ${s.kills}`;
     const ec = eliteChance(s.stage);
-    $('#stage-hint').textContent = boss ? '30초 안에 처리하지 못하면 직전 스테이지에서 자동 사냥' : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
+    $('#stage-hint').textContent = boss ? `${bossDef.desc} · ${BALANCE.BOSS_TIME_LIMIT}초 제한` : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
     const next = g.nextStage();
     $('#qa-challenge-label').textContent = challenging ? '도전 중단' : `${stageLabel(next)} 도전${isBossStage(next) ? ' (보스)' : ''}`;
-    this.#refreshBestiary(boss ? [BOSS] : pool);
+    this.#refreshBestiary(boss ? [bossDef] : pool);
     this.#refreshFormulaBar();
   }
   #refreshBestiary(list) {
@@ -247,6 +252,8 @@ export class UIManager {
         el('td', {}, v.isMain ? v.def.title : (e.owned ? stars(e.star) : '미보유')), el('td', { class: 'num' }, e.owned ? e.level : '-'), el('td', { class: 'num' }, e.owned ? e.shards : '-')));
     }
     $('#party-count').textContent = `${this.game.state.party.length} / ${BALANCE.PARTY_SIZE}`;
+    const col = this.game.collection();
+    $('#collection-text').textContent = `${col.owned} / ${col.total}종 · ATK +${Math.round(col.atk * 100)}% · 골드 +${Math.round(col.gold * 100)}%`;
   }
 
   // ------------------------------------------------------ hero detail --
@@ -346,9 +353,25 @@ export class UIManager {
     const all = Quests.allQuestsClaimed(s);
     $('#btn-allclear').disabled = !all || s.daily.allClearClaimed;
     $('#allclear-text').textContent = s.daily.allClearClaimed ? '오늘의 전체 완료 보너스를 받았습니다.' : `모든 업무 완료 시 보석 ${ALL_CLEAR_BONUS.gems} + 강화 카드 ${ALL_CLEAR_BONUS.cards}`;
+    this.#refreshAchievements();
     const left = g.adsLeft();
     $('#ad-left').textContent = `오늘 남은 광고 ${left} / ${BALANCE.AD.perDay}회`;
     $('#btn-ad-instant').disabled = left <= 0;
+  }
+
+  #refreshAchievements() {
+    const s = this.game.state; const g = this.game;
+    const tbody = $('#ach-table tbody'); tbody.innerHTML = '';
+    for (const a of ACHIEVEMENTS) {
+      const value = Achievements.achievementValue(s, a), tier = Achievements.claimedTiers(s, a.id), target = Achievements.nextTarget(s, a.id);
+      const maxed = target === null, can = Achievements.canClaim(s, a.id);
+      const show = (v) => (a.unit === 'time' ? fmtTime(v) : fmt(v));
+      tbody.append(el('tr', { class: maxed ? 'claimed' : can ? 'done' : '' },
+        el('td', { class: 'name' }, `${a.name} ${'★'.repeat(tier)}`, el('div', { class: 'sub' }, a.desc)),
+        el('td', { class: 'num' }, maxed ? show(value) : `${show(Math.min(value, target))} / ${show(target)}`),
+        el('td', { class: 'small' }, maxed ? '완료' : `보석 ${a.gems[tier]}`),
+        el('td', { class: 'act' }, btn(maxed ? '완료' : '수령', () => { const r = g.claimAchievement(a.id); if (r) this.toast(`업적 ${a.name} ${r.tier}단계: 보석 +${r.gems}`); }, can ? 'primary' : '', !can))));
+    }
   }
 
   /** Placeholder ad: full-screen countdown, then `onDone`. Replace with a rewarded-ad SDK later. */
@@ -363,6 +386,7 @@ export class UIManager {
   #refreshSettings() {
     const st = this.game.state.settings;
     $('#qa-auto').checked = st.autoAdvance; $('#set-auto').checked = st.autoAdvance; $('#set-stealth').checked = st.excel;
+    $('#qa-auto-up').checked = !!st.autoUpgrade; $('#set-auto-up').checked = !!st.autoUpgrade;
   }
 
   #buildFormulaSheet() {
