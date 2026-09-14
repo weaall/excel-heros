@@ -3,6 +3,7 @@
 // from a surface-normal approximation, so heads, torsos and limbs read as rounded forms instead of
 // flat blocks. Soft per-colour outlines, eye whites / iris / pupil / highlight, hair strands, cloth folds.
 import { GRADES } from './heroes.js';
+import { sheetFrame } from './spriteSheets.js';
 
 export const SCALE = 1;
 export const SRC = 64;
@@ -335,6 +336,7 @@ const monsterPalette = (mon) => ramp({ ...MONSTER_DEFAULT, ...mon.palette });
 const HERO_POSES = { idle: ['idle', 'idle2'], walk: ['walkA', 'idle', 'walkB', 'idle'], attack: ['raise', 'strike', 'idle'] };
 /** @param anim 'idle' (2 frames) | 'walk' (4) | 'attack' (3) */
 export function heroSprite(def, anim = 'idle', frame = 0, scale = 1) {
+  const sheet = sheetFrame(def.id, anim, frame, scale); if (sheet) return sheet;
   const poses = HERO_POSES[anim] ?? HERO_POSES.idle;
   const pose = poses[frame % poses.length];
   const key = `h:${def.id}:${pose}:${scale}`;
@@ -344,6 +346,7 @@ export function heroSprite(def, anim = 'idle', frame = 0, scale = 1) {
 export const heroFrameCount = (anim) => (HERO_POSES[anim] ?? HERO_POSES.idle).length;
 
 export function monsterSprite(mon, frame = 0) {
+  const sheet = sheetFrame('m:' + String(mon.id).split(':')[0], 'idle', frame, 1); if (sheet) return sheet;
   const key = `m:${mon.id}:${mon.elite ? 'e' : ''}:${frame}`;
   if (cache.has(key)) return cache.get(key);
   const g = mon.shape === 'ticket' ? bossFrame(mon, frame) : monsterFrame(mon, frame);

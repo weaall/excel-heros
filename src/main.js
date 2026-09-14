@@ -5,6 +5,11 @@ import { SaveManager } from './core/SaveManager.js';
 import { createInitialState } from './core/state.js';
 import { Renderer } from './ui/Renderer.js';
 import { UIManager } from './ui/UIManager.js';
+import { loadSpriteSheets } from './data/spriteSheets.js';
+
+// Hand-made sprite sheets (assets/sprites/manifest.json) override the procedural art when present.
+const sheetCount = await loadSpriteSheets();
+if (sheetCount) console.info(`[sprites] ${sheetCount} sheet(s) loaded`);
 
 const save = new SaveManager();
 const loaded = save.load();

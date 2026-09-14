@@ -99,7 +99,7 @@ export class GameManager extends Emitter {
     if (!v.entry.owned || this.state.gold < v.cost) return false;
     this.state.gold -= v.cost; v.entry.level += 1;
     Quests.addProgress(this.state, 'upgrades', 1);
-    this.entities.refreshHeroStats();
+    this.entities.refreshHeroStats(); this.entities.levelUpFx(id);
     this.emit('gold'); this.emit('roster'); this.emit('quests');
     return true;
   }
@@ -149,7 +149,7 @@ export class GameManager extends Emitter {
     const v = this.heroView(id);
     if (!v.canPromote) return false;
     v.entry.shards -= v.promoteCost; v.entry.star += 1;
-    this.entities.refreshHeroStats();
+    this.entities.refreshHeroStats(); this.entities.levelUpFx(id);
     this.log(`${v.def.name} ${'★'.repeat(v.entry.star)} 승급`, 'info');
     this.emit('roster');
     return true;
@@ -244,6 +244,7 @@ export class GameManager extends Emitter {
     s.challenging = true; s.kills = 0; s.maxStage = Math.max(s.maxStage, s.stage);
     this.entities.startStage();
     this.log(`${this.stageLabel()} 도전 시작${isBossStage(s.stage) ? ' — 보스 등장!' : ''}`, 'stage');
+    this.emit('challengeStart', { stage: s.stage, boss: isBossStage(s.stage) });
     this.emit('stage'); this.emit('kills'); this.emit('challenge');
     return true;
   }
@@ -298,6 +299,7 @@ export class GameManager extends Emitter {
     const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
     Quests.addProgress(s, 'kills', 1);
+    this.entities.coinBurst(m.x, m.y, gold);
     if (m.isBoss) {
       s.stats.bossKills++; Quests.addProgress(s, 'boss', 1);
       this.log(`보스 처리 완료: ${m.def.name} +${gold}g`, 'boss');
@@ -321,6 +323,7 @@ export class GameManager extends Emitter {
     Quests.addProgress(s, 'clears', 1);
     this.log(`${this.stageLabel()} 마감 +${gems + lucky} 보석${cards ? ` +${cards} 강화 카드` : ''}`, 'stage');
     s.kills = 0; s.challenging = false;
+    this.emit('cleared', { stage: s.stage, boss, first });
     this.emit('stage'); this.emit('gems'); this.emit('cards'); this.emit('kills'); this.emit('quests');
     if (s.settings.autoAdvance) this.startChallenge();
     else { this.entities.startStage(); this.log(`${this.stageLabel()}에서 자동 사냥 중 (다음 단계 도전 대기)`, 'info'); this.emit('challenge'); }
