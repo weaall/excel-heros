@@ -33,7 +33,7 @@ npm test         # node:test — 공식, 천장, 퀘스트, 세이브, 헤드리
 
 ## 실제 도트 시트로 교체하기
 
-의 규격(64×64 프레임, idle 2 · walk 4 · attack 3, 오른쪽 바라봄)으로 PNG를 만들어 에 등록하면 캐릭터별로 코드 생성 도트를 대체합니다.
+`assets/sprites/README.md`의 규격(64×64 프레임, idle 2 · walk 4 · attack 3, 오른쪽 바라봄)으로 PNG를 만들어 `assets/sprites/manifest.json`에 등록하면 캐릭터별로 코드 생성 도트를 대체합니다.
 
 ## 구조
 
