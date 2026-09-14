@@ -3,7 +3,7 @@ import {
   BALANCE, upgradeCost, baseGold, bossGold, isBossStage, stageLabel, heroATK, heroHP,
   teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, offlineGold,
 } from '../config/balance.js';
-import { HERO_BY_ID, GRADES, SKILLS, heroBaseStats, MAIN_ID, MAIN_JOBS } from '../data/heroes.js';
+import { HERO_BY_ID, GRADES, SKILLS, TRAITS, heroBaseStats, MAIN_ID, MAIN_JOBS } from '../data/heroes.js';
 import { pullOnce, promoteCost } from './GachaManager.js';
 import { createInitialState } from './state.js';
 import { EntityManager } from './EntityManager.js';
@@ -19,7 +19,7 @@ export class GameManager extends Emitter {
     this.rng = rng;
     this.logs = [];
     this.rowCounter = 1000 + Math.floor(Math.random() * 500);
-    this.saveTimer = 0; this.dailyTimer = 0;
+    this.saveTimer = 0; this.dailyTimer = 0; this.wipeStreak = 0;
     Quests.ensureDaily(this.state, now);
     this.entities = new EntityManager(this);
     this.entities.rebuildParty();
@@ -28,7 +28,8 @@ export class GameManager extends Emitter {
 
   // ------------------------------------------------------------- derived --
   stageLabel() { return stageLabel(this.state.stage); }
-  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll); }
+  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll) + TRAITS.greedy.value * this.partyTraitCount('greedy'); }
+  partyTraitCount(trait) { return this.state.party.filter((id) => this.heroDef(id).trait === trait).length; }
   speedMult() { return 1 + teamUpgradeBonus('coffee', this.state.team.coffee); }
   hpBonus() { return teamUpgradeBonus('chairs', this.state.team.chairs); }
   isMain(id) { return id === MAIN_ID; }
@@ -57,6 +58,7 @@ export class GameManager extends Emitter {
       skillUnlocked, skillPower,
       skillName: SKILLS[def.skill.type].name,
       skillDesc: SKILLS[def.skill.type].desc.replace('{p}', +(def.skill.power * skillPower).toFixed(2)),
+      traitName: TRAITS[def.trait].name, traitDesc: TRAITS[def.trait].desc,
       skillUnlockHint: isMain ? `${['인턴', '사원'][BALANCE.MAIN_SKILL_TIER]} 승급 시 해금` : `★${BALANCE.SKILL_UNLOCK_STAR} 해금`,
       promoteCost: nextCost,
       canPromote: !isMain && entry.owned && nextCost !== null && entry.shards >= nextCost,
@@ -216,9 +218,9 @@ export class GameManager extends Emitter {
     return true;
   }
 
-  toggleStealth(force) {
-    this.state.settings.stealth = force ?? !this.state.settings.stealth;
-    this.emit('stealth', this.state.settings.stealth);
+  toggleExcel(force) {
+    this.state.settings.excel = force ?? !this.state.settings.excel;
+    this.emit('excel', this.state.settings.excel);
   }
   setAutoBoss(v) { this.state.settings.autoBoss = !!v; this.emit('settings'); }
 
@@ -251,7 +253,7 @@ export class GameManager extends Emitter {
   // ---------------------------------------------------------- stage flow --
   onMonsterKilled(m) {
     const s = this.state;
-    const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult());
+    const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
     Quests.addProgress(s, 'kills', 1);
     if (m.isBoss) {
@@ -271,15 +273,17 @@ export class GameManager extends Emitter {
     const gems = boss
       ? (first ? BALANCE.GEMS_BOSS_FIRST : BALANCE.GEMS_BOSS_REPEAT)
       : (first ? BALANCE.GEMS_FIRST_CLEAR : BALANCE.GEMS_REPEAT_CLEAR);
-    s.gems += gems; s.maxCleared = Math.max(s.maxCleared, s.stage);
+    const lucky = this.partyTraitCount('lucky') * TRAITS.lucky.value;
+    const cards = first ? (Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1) * BALANCE.CARDS_FIRST_CLEAR_PER_PHASE : 0;
+    s.gems += gems + lucky; s.cards += cards; s.maxCleared = Math.max(s.maxCleared, s.stage); this.wipeStreak = 0;
     Quests.addProgress(s, 'clears', 1);
-    this.log(`${this.stageLabel()} 마감 +${gems} 보석`, 'stage');
+    this.log(`${this.stageLabel()} 마감 +${gems + lucky} 보석${cards ? ` +${cards} 강화 카드` : ''}`, 'stage');
     const next = s.stage + 1;
     s.kills = 0;
     if (isBossStage(next) && !s.settings.autoBoss) this.log(`자동 보스 꺼짐: ${this.stageLabel()} 반복 사냥`, 'info');
     else { s.stage = next; s.maxStage = Math.max(s.maxStage, next); }
     this.entities.startStage();
-    this.emit('stage'); this.emit('gems'); this.emit('kills'); this.emit('quests');
+    this.emit('stage'); this.emit('gems'); this.emit('cards'); this.emit('kills'); this.emit('quests');
   }
 
   onBossTimeout() {
@@ -290,10 +294,19 @@ export class GameManager extends Emitter {
     this.emit('stage'); this.emit('kills');
   }
 
+  /** Party wipe: restart the same stage; after several wipes in a row, retreat one stage. */
   onPartyWiped() {
-    const s = this.state;
-    if (s.stage > 1) { s.stage -= 1; s.kills = 0; this.log(`팀 전원 번아웃. ${this.stageLabel()}로 후퇴`, 'warn'); }
-    else this.log('팀 전원 번아웃. Phase 1-1에서 재정비 (진행도 유지)', 'warn');
+    const s = this.state; this.wipeStreak++;
+    if (this.wipeStreak >= BALANCE.WIPE_RETREAT_AFTER && s.stage > 1) {
+      s.stage -= 1; s.kills = 0; this.wipeStreak = 0;
+      this.log(`연속 ${BALANCE.WIPE_RETREAT_AFTER}회 전멸. ${this.stageLabel()}로 후퇴`, 'warn');
+    } else if (s.stage === 1) {
+      this.log('팀 전원 번아웃. Phase 1-1에서 재정비 (튜토리얼 스테이지: 진행도 유지)', 'warn');
+    } else {
+      s.kills = 0;
+      this.log(`팀 전원 번아웃. ${this.stageLabel()} 처음부터 재시작 (${this.wipeStreak}/${BALANCE.WIPE_RETREAT_AFTER})`, 'warn');
+    }
+    this.emit('wipe');
     this.entities.startStage();
     this.emit('stage'); this.emit('kills');
   }

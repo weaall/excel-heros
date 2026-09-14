@@ -34,11 +34,14 @@ export const BALANCE = Object.freeze({
 
   MAX_MONSTERS: 5,
   RESPAWN_DELAY: 1.0,
-  MONSTER_SPEED: 42,        // px / s
-  HERO_SPEED: 70,
+  MONSTER_SPEED: 60,        // px / s (64px sprites)
+  HERO_SPEED: 100,
   HERO_REVIVE_SEC: 8,
   HERO_REGEN_PCT: 0.02,     // fraction of max HP regenerated per second while alive
-  MELEE_ADVANCE_CELLS: 2,   // how far a melee hero may leave formation
+  MELEE_ADVANCE_CELLS: 3,   // how far (cells) a melee hero may leave formation
+  ELITE: { hp: 2.5, atk: 1.5, gold: 3 },
+  WIPE_RETREAT_AFTER: 3,    // party wipes on the same stage before retreating one stage
+  CARDS_FIRST_CLEAR_PER_PHASE: 2, // 강화 카드 on first clear = phase * this
 
   GEMS_FIRST_CLEAR: 10, GEMS_REPEAT_CLEAR: 1,
   GEMS_BOSS_FIRST: 50,  GEMS_BOSS_REPEAT: 10,

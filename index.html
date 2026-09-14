@@ -13,7 +13,7 @@
     <span class="app-icon">X</span>
     <span class="title-text">통합 문서1 - Excel</span>
     <span class="spacer"></span>
-    <button id="btn-stealth" class="tb-btn" title="보스 키 — 캔버스 숨기기 (Esc)">🔒</button>
+    <button id="btn-stealth" class="tb-btn" title="보스 키 — 전투 화면만 숨기기 (Esc)">🔒 보스 키</button>
     <span class="win-btn">—</span><span class="win-btn">☐</span><span class="win-btn close">✕</span>
   </header>
 
@@ -28,11 +28,17 @@
   <div class="ribbon-body">
     <div class="ribbon-group">
       <button id="qa-upgrade-all" class="rb-btn" title="골드가 다 떨어질 때까지 가장 싼 파티 업그레이드를 자동 구매"><span class="rb-icon">Σ</span>자동 합계</button>
-      <button id="qa-boss" class="rb-btn" title="다음 보스에 다시 도전"><span class="rb-icon">⚑</span>보스</button>
+      <button id="qa-boss" class="rb-btn" title="다음 보스에 다시 도전"><span class="rb-icon">⚑</span>보스 도전</button>
       <label class="rb-check" title="보스 스테이지 자동 진입"><input type="checkbox" id="qa-autoboss"> 자동 보스</label>
+      <span class="rb-sep"></span>
+      <button class="rb-btn" data-sheet="roster"><span class="rb-icon">▦</span>카드 명단</button>
+      <button class="rb-btn" data-sheet="gacha"><span class="rb-icon">⇩</span>가져오기</button>
+      <button class="rb-btn" data-sheet="quests"><span class="rb-icon">✓</span>일일 업무</button>
     </div>
     <div class="ribbon-group right">
       <div class="rb-stat">골드 <b id="gold-cell">0</b></div>
+      <div class="rb-stat">보석 <b id="gems-top">0</b></div>
+      <div class="rb-stat">강화 카드 <b id="cards-top">0</b></div>
       <div class="rb-stat">파티 DPS <b id="party-dps">0</b></div>
     </div>
   </div>
@@ -43,119 +49,151 @@
     <div class="formula" id="formula">=SUM(Hero_ATK)</div>
   </div>
 
-  <main class="sheets">
-    <!-- Sheet1: 메인_전투 -------------------------------------------------->
-    <section class="sheet active" id="sheet-home">
-      <div class="canvas-wrap" id="canvas-wrap"><canvas id="battle" width="480" height="380"></canvas></div>
-      <div id="stealth-view" class="stealth-view" hidden>
-        <table class="xl-table stealth" id="stealth-table">
-          <thead><tr><th>셀</th><th>작업</th><th>담당</th><th>상태</th><th class="num">값</th></tr></thead>
+  <div class="workspace">
+    <main class="sheets">
+      <!-- Sheet1: 메인_전투 -------------------------------------------------->
+      <section class="sheet active" id="sheet-home">
+        <div class="grid-frame">
+          <div class="col-headers" id="col-headers"></div>
+          <div class="row-headers" id="row-headers"></div>
+          <div class="cell-area">
+            <div class="canvas-wrap" id="canvas-wrap"><canvas id="battle" width="832" height="416"></canvas></div>
+            <div id="stealth-view" class="stealth-view" hidden>
+              <table class="xl-table stealth" id="stealth-table">
+                <thead><tr><th>셀</th><th>작업</th><th>담당</th><th>상태</th><th class="num">값</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="stage-bar">
+          <span class="stage-label" id="stage-label">Phase 1-1</span>
+          <span class="stage-monster" id="stage-monster"></span>
+          <div class="progress"><div class="progress-fill" id="kill-bar"></div><span class="progress-text" id="kill-text"></span></div>
+          <span class="muted small" id="stage-hint"></span>
+        </div>
+        <h3 class="section-title">활동 로그</h3>
+        <table class="xl-table compact log" id="log-table"><tbody></tbody></table>
+      </section>
+
+      <!-- Sheet2: 인사_명단 (cards) -------------------------------------------->
+      <section class="sheet" id="sheet-roster">
+        <div class="sheet-head">
+          <span>파티 <b id="party-count">1 / 5</b></span>
+          <span>강화 카드 <b id="cards-cell">0</b>장</span>
+          <span class="muted">카드를 눌러 상세 보기 · 배치 / ★승급 / 강화 / 조각 변환 / 직급 승진</span>
+        </div>
+        <div class="card-grid" id="card-grid"></div>
+        <table class="xl-table compact" id="roster-table">
+          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">조각</th></tr></thead>
           <tbody></tbody>
         </table>
-      </div>
-      <div class="stage-bar">
-        <span class="stage-label" id="stage-label">Phase 1-1</span>
-        <span class="stage-monster" id="stage-monster"></span>
-        <div class="progress"><div class="progress-fill" id="kill-bar"></div><span class="progress-text" id="kill-text"></span></div>
-      </div>
-      <table class="xl-table" id="hero-table">
-        <thead><tr><th>A · 이름</th><th class="num">B · Lv</th><th class="num">C · ATK</th><th class="num">D · 비용</th><th>E · 작업</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <h3 class="section-title">회사 업그레이드</h3>
-      <table class="xl-table" id="team-table">
-        <thead><tr><th>항목</th><th class="num">Lv</th><th class="num">비용</th><th>작업</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <h3 class="section-title">활동 로그</h3>
-      <table class="xl-table compact log" id="log-table"><tbody></tbody></table>
-    </section>
+      </section>
 
-    <!-- Sheet2: 인사_명단 (cards) -------------------------------------------->
-    <section class="sheet" id="sheet-roster">
-      <div class="sheet-head">
-        <span>파티 <b id="party-count">1 / 5</b></span>
-        <span>강화 카드 <b id="cards-cell">0</b>장</span>
-        <span class="muted">카드를 눌러 상세 보기</span>
-      </div>
-      <div class="card-grid" id="card-grid"></div>
-      <table class="xl-table compact" id="roster-table">
-        <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>별/직급</th><th class="num">Lv</th><th class="num">조각</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
+      <!-- Sheet3: 데이터_가져오기 (gacha) -------------------------------------->
+      <section class="sheet" id="sheet-gacha">
+        <div class="sheet-head">
+          <span>보석 <b id="gems-cell">0</b></span>
+          <span class="muted">누적 가져오기: <b id="total-pulls">0</b>회</span>
+        </div>
+        <div class="gacha-layout">
+          <div>
+            <div class="gacha-actions">
+              <button id="pull1" class="xl-btn big">1행 가져오기<small>보석 100</small></button>
+              <button id="pull10" class="xl-btn big primary">10행 가져오기<small>보석 900</small></button>
+            </div>
+            <table class="xl-table compact">
+              <thead><tr><th>등급</th><th class="num">확률</th><th>보장</th></tr></thead>
+              <tbody>
+                <tr><td class="g-D">D · 일반</td><td class="num">45%</td><td>—</td></tr>
+                <tr><td class="g-C">C · 희귀</td><td class="num">30%</td><td>—</td></tr>
+                <tr><td class="g-B">B · 고급</td><td class="num">17%</td><td>—</td></tr>
+                <tr><td class="g-A">A · 영웅</td><td class="num">7%</td><td><b id="pity-a">50</b>회 안에 A 이상 확정</td></tr>
+                <tr><td class="g-S">S · 전설</td><td class="num">1%</td><td><b id="pity-s">100</b>회 안에 S 확정</td></tr>
+              </tbody>
+            </table>
+            <p class="muted small">새 카드 → 즉시 ★1 해금. 중복 → 조각 5~10개 (★승급 재료 또는 강화 카드로 변환).</p>
+          </div>
+          <div>
+            <h3 class="section-title">가져오기 이력</h3>
+            <table class="xl-table compact" id="gacha-log">
+              <thead><tr><th>#</th><th>등급</th><th>이름</th><th>결과</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
-    <!-- Sheet3: 데이터_가져오기 (gacha) -------------------------------------->
-    <section class="sheet" id="sheet-gacha">
-      <div class="sheet-head">
-        <span>보석 <b id="gems-cell">0</b></span>
-        <span class="muted">누적 가져오기: <b id="total-pulls">0</b>회</span>
-      </div>
-      <div class="gacha-actions">
-        <button id="pull1" class="xl-btn big">1행 가져오기<small>보석 100</small></button>
-        <button id="pull10" class="xl-btn big primary">10행 가져오기<small>보석 900</small></button>
-      </div>
-      <table class="xl-table compact">
-        <thead><tr><th>등급</th><th class="num">확률</th><th>보장</th></tr></thead>
-        <tbody>
-          <tr><td class="g-D">D · 일반</td><td class="num">45%</td><td>—</td></tr>
-          <tr><td class="g-C">C · 희귀</td><td class="num">30%</td><td>—</td></tr>
-          <tr><td class="g-B">B · 고급</td><td class="num">17%</td><td>—</td></tr>
-          <tr><td class="g-A">A · 영웅</td><td class="num">7%</td><td><b id="pity-a">50</b>회 안에 A 이상 확정</td></tr>
-          <tr><td class="g-S">S · 전설</td><td class="num">1%</td><td><b id="pity-s">100</b>회 안에 S 확정</td></tr>
-        </tbody>
-      </table>
-      <p class="muted small">새 카드 → 즉시 ★1 해금. 중복 → 조각 5~10개 (★승급 재료 또는 강화 카드로 변환).</p>
-      <h3 class="section-title">가져오기 이력</h3>
-      <table class="xl-table compact" id="gacha-log">
-        <thead><tr><th>#</th><th>등급</th><th>이름</th><th>결과</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
+      <!-- Sheet4: 일일_업무 (quests) ------------------------------------------>
+      <section class="sheet" id="sheet-quests">
+        <div class="sheet-head">
+          <span>업무일 <b id="daily-date"></b></span>
+          <button id="btn-login" class="xl-btn primary">출근 도장 찍기</button>
+        </div>
+        <table class="xl-table" id="quest-table">
+          <thead><tr><th>업무</th><th>진행</th><th>보상</th><th>작업</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="quest-footer">
+          <span id="allclear-text" class="muted small"></span>
+          <button id="btn-allclear" class="xl-btn">전체 완료 보너스</button>
+        </div>
+        <h3 class="section-title">광고 보상 <span class="muted">(임시 화면 · SDK 연동 전)</span></h3>
+        <div class="ad-box">
+          <span id="ad-left" class="small"></span>
+          <button id="btn-ad-instant" class="xl-btn">광고 보고 1시간 방치 보상 받기</button>
+        </div>
+        <p class="muted small">방치 보상: 켜두면 100%, 꺼두면 60% (최대 10시간). 복귀 시 광고를 보면 2배.</p>
+      </section>
 
-    <!-- Sheet4: 일일_업무 (quests) ------------------------------------------>
-    <section class="sheet" id="sheet-quests">
-      <div class="sheet-head">
-        <span>업무일 <b id="daily-date"></b></span>
-        <button id="btn-login" class="xl-btn primary">출근 도장 찍기</button>
-      </div>
-      <table class="xl-table" id="quest-table">
-        <thead><tr><th>업무</th><th>진행</th><th>보상</th><th>작업</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div class="quest-footer">
-        <span id="allclear-text" class="muted small"></span>
-        <button id="btn-allclear" class="xl-btn">전체 완료 보너스</button>
-      </div>
-      <h3 class="section-title">광고 보상 <span class="muted">(임시 화면 · SDK 연동 전)</span></h3>
-      <div class="ad-box">
-        <span id="ad-left" class="small"></span>
-        <button id="btn-ad-instant" class="xl-btn">광고 보고 1시간 방치 보상 받기</button>
-      </div>
-      <p class="muted small">방치 보상: 켜두면 100%, 꺼두면 60% (최대 10시간). 복귀 시 광고를 보면 2배.</p>
-    </section>
+      <!-- Sheet5: 수식 / 설정 -------------------------------------------------->
+      <section class="sheet" id="sheet-settings">
+        <div class="two-col">
+          <div>
+            <h3 class="section-title">설정</h3>
+            <div class="settings">
+              <label><input type="checkbox" id="set-autoboss"> 보스 스테이지 자동 진입 (끄면 보스 직전 스테이지에서 반복 사냥)</label>
+              <label><input type="checkbox" id="set-stealth"> 보스 키: 전투 화면을 텍스트 표로 (Esc)</label>
+            </div>
+            <h3 class="section-title">통계</h3>
+            <table class="xl-table compact"><tbody id="stats-list"></tbody></table>
+            <h3 class="section-title">저장 데이터</h3>
+            <p class="muted small">10초마다 이 브라우저(localStorage)에 자동 저장됩니다. 다른 기기로 옮기려면 내보내기를 사용하세요.</p>
+            <textarea id="save-text" rows="3" spellcheck="false" placeholder="내보내기를 누르면 저장 문자열이 여기 표시됩니다. 붙여넣고 가져오기를 누르면 불러옵니다."></textarea>
+            <div class="settings-actions">
+              <button id="btn-export" class="xl-btn">내보내기</button>
+              <button id="btn-import" class="xl-btn">가져오기</button>
+              <button id="btn-reset" class="xl-btn danger">통합 문서 삭제</button>
+            </div>
+          </div>
+          <div>
+            <h3 class="section-title">게임 공식</h3>
+            <table class="xl-table compact"><tbody id="formula-list"></tbody></table>
+            <h3 class="section-title">특성 목록</h3>
+            <table class="xl-table compact"><tbody id="trait-list"></tbody></table>
+          </div>
+        </div>
+      </section>
+    </main>
 
-    <!-- Sheet5: 수식 / 설정 -------------------------------------------------->
-    <section class="sheet" id="sheet-settings">
-      <h3 class="section-title">설정</h3>
-      <div class="settings">
-        <label><input type="checkbox" id="set-autoboss"> 보스 스테이지 자동 진입 (끄면 보스 직전 스테이지에서 반복 사냥)</label>
-        <label><input type="checkbox" id="set-stealth"> 보스 키 / 스텔스 모드 (Esc)</label>
+    <!-- Right task pane (Excel "작업 창"): party management -------------------->
+    <aside class="task-pane">
+      <div class="pane-title">파티 관리 <span class="pane-x">✕</span></div>
+      <div class="pane-body">
+        <table class="xl-table" id="hero-table">
+          <thead><tr><th>이름</th><th class="num">Lv</th><th class="num">ATK</th><th class="num">비용</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3 class="section-title">회사 업그레이드</h3>
+        <table class="xl-table" id="team-table">
+          <thead><tr><th>항목</th><th class="num">Lv</th><th class="num">비용</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3 class="section-title">이번 스테이지 출현</h3>
+        <div class="bestiary" id="bestiary"></div>
       </div>
-      <h3 class="section-title">통계</h3>
-      <table class="xl-table compact"><tbody id="stats-list"></tbody></table>
-      <h3 class="section-title">게임 공식</h3>
-      <table class="xl-table compact"><tbody id="formula-list"></tbody></table>
-      <h3 class="section-title">저장 데이터</h3>
-      <p class="muted small">10초마다 이 브라우저(localStorage)에 자동 저장됩니다. 다른 기기로 옮기려면 내보내기를 사용하세요.</p>
-      <textarea id="save-text" rows="3" spellcheck="false" placeholder="내보내기를 누르면 저장 문자열이 여기 표시됩니다. 붙여넣고 가져오기를 누르면 불러옵니다."></textarea>
-      <div class="settings-actions">
-        <button id="btn-export" class="xl-btn">내보내기</button>
-        <button id="btn-import" class="xl-btn">가져오기</button>
-        <button id="btn-reset" class="xl-btn danger">통합 문서 삭제</button>
-      </div>
-    </section>
-  </main>
+    </aside>
+  </div>
 
   <footer class="sheet-tabs">
     <span class="sheet-nav">◂ ▸</span>

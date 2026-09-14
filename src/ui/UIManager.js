@@ -1,9 +1,10 @@
-// DOM layer: ribbon, formula bar, sheets, tables, card grid, quests, stealth view, dialogs.
+// DOM layer: ribbon, formula bar, sheets, task pane, card grid, quests, boss-key view, dialogs.
 import { BALANCE, teamUpgradeCost, isBossStage, stageLabel } from '../config/balance.js';
-import { HEROES, GRADES, GRADE_ORDER, ROLES, MAIN_ID, MAIN_TIER_TITLES } from '../data/heroes.js';
-import { monsterForStage } from '../data/monsters.js';
+import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, MAIN_ID, MAIN_TIER_TITLES } from '../data/heroes.js';
+import { stagePool, eliteChance, BOSS } from '../data/monsters.js';
 import { DAILY_QUESTS, ALL_CLEAR_BONUS } from '../data/quests.js';
-import { heroIconDataURL, cardCanvas, portraitCanvas } from '../data/sprites.js';
+import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
+import { GRID } from '../core/EntityManager.js';
 import * as Quests from '../core/QuestManager.js';
 import { fmt, fmtTime, pct, stars } from '../utils/format.js';
 
@@ -27,28 +28,35 @@ export class UIManager {
     this.acc = 0; this.formulaIdx = 0; this.formulaTimer = 0; this.stealthTimer = 0;
     this.heroRows = new Map(); this.teamRows = new Map();
     this.gachaLog = []; this.detailId = null;
+    this.#buildGridHeaders();
     this.#bind();
     this.#subscribe();
     this.rebuildAll();
-    this.applyStealth(game.state.settings.stealth, true);
+    this.applyStealth(game.state.settings.excel, true);
   }
 
   // ----------------------------------------------------------------- bind --
+  #buildGridHeaders() {
+    const cols = $('#col-headers'), rows = $('#row-headers');
+    for (let c = 0; c < GRID.cols; c++) cols.append(el('span', {}, String.fromCharCode(65 + c)));
+    for (let r = 0; r < GRID.rows; r++) rows.append(el('span', {}, String(r + 1)));
+  }
+
   #bind() {
     document.title = '통합 문서1 - Excel';
     document.querySelectorAll('[data-sheet]').forEach((b) => b.addEventListener('click', () => this.switchSheet(b.dataset.sheet)));
-    $('#btn-stealth').addEventListener('click', () => this.game.toggleStealth());
+    $('#btn-stealth').addEventListener('click', () => this.game.toggleExcel());
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       e.preventDefault();
-      if (!$('#modal').hidden) this.closeModal(); else this.game.toggleStealth();
+      if (!$('#modal').hidden) this.closeModal(); else this.game.toggleExcel();
     });
 
     $('#qa-upgrade-all').addEventListener('click', () => { const n = this.game.upgradeCheapestLoop(); this.toast(n ? `자동 합계: 업그레이드 ${n}회 적용` : '골드가 부족합니다'); });
     $('#qa-boss').addEventListener('click', () => { if (!this.game.challengeBoss()) this.toast('여기서 도전할 보스가 없습니다'); });
     $('#qa-autoboss').addEventListener('change', (e) => this.game.setAutoBoss(e.target.checked));
     $('#set-autoboss').addEventListener('change', (e) => this.game.setAutoBoss(e.target.checked));
-    $('#set-stealth').addEventListener('change', (e) => this.game.toggleStealth(e.target.checked));
+    $('#set-stealth').addEventListener('change', (e) => this.game.toggleExcel(e.target.checked));
 
     $('#pull1').addEventListener('click', () => this.#pull(1));
     $('#pull10').addEventListener('click', () => this.#pull(10));
@@ -74,24 +82,25 @@ export class UIManager {
     const g = this.game;
     g.on('roster', () => { this.#refreshHeroTable(); this.#refreshTeamTable(); this.#buildCards(); this.#refreshDetail(); });
     g.on('party', () => { this.#buildHeroTable(); this.#buildCards(); this.#refreshDetail(); });
-    g.on('cards', () => { $('#cards-cell').textContent = fmt(g.state.cards); this.#refreshDetail(); });
+    g.on('cards', () => { $('#cards-cell').textContent = fmt(g.state.cards); $('#cards-top').textContent = fmt(g.state.cards); this.#refreshDetail(); });
     g.on('main', (job) => this.openModal('승진 발표', `<p><b>김인턴</b>이(가) <b>${job.title}</b>(${job.grade}급)으로 승진했습니다!</p><p class="muted">${job.desc ?? '스탯과 스킬이 강화되었습니다.'}</p>`));
     g.on('stage', () => this.#refreshStage());
     g.on('kills', () => this.#refreshStage());
+    g.on('wipe', () => this.toast('팀 전원 번아웃 — 스테이지를 처음부터 다시 시작합니다'));
     g.on('gems', () => this.#refreshGacha());
     g.on('quests', () => this.#refreshQuests());
-    g.on('stealth', (on) => this.applyStealth(on));
+    g.on('excel', (on) => this.applyStealth(on));
     g.on('settings', () => this.#refreshSettings());
     g.on('toast', (t) => this.toast(t));
     g.on('gacha', (results) => this.#showGachaResults(results));
     g.on('reset', () => { this.rebuildAll(); this.toast('통합 문서를 다시 불러왔습니다'); });
     g.on('log', (row) => this.#appendLog(row));
-    g.on('saved', () => { const s = $('#status-ready'); s.textContent = '저장됨'; setTimeout(() => { s.textContent = this.game.state.settings.stealth ? '계산 중 (4개 프로세서): 37%' : '준비'; }, 800); });
+    g.on('saved', () => { const s = $('#status-ready'); s.textContent = '저장됨'; setTimeout(() => { s.textContent = this.game.state.settings.excel ? '계산 중 (4개 프로세서): 37%' : '준비'; }, 800); });
   }
 
   rebuildAll() {
     this.#buildHeroTable(); this.#buildTeamTable(); this.#buildCards(); this.#refreshStage(); this.#refreshGacha(); this.#refreshQuests(); this.#refreshSettings(); this.#buildFormulaSheet(); this.#buildLog();
-    $('#cards-cell').textContent = fmt(this.game.state.cards);
+    $('#cards-cell').textContent = fmt(this.game.state.cards); $('#cards-top').textContent = fmt(this.game.state.cards);
   }
 
   // ---------------------------------------------------------------- loop --
@@ -103,14 +112,14 @@ export class UIManager {
       this.#refreshStatus();
       this.#refreshHeroTable(true);
       this.#refreshTeamTable(true);
-      if (this.game.state.settings.stealth && this.stealthTimer >= 0.5) { this.stealthTimer = 0; this.#refreshStealth(); }
+      if (this.game.state.settings.excel && this.stealthTimer >= 0.5) { this.stealthTimer = 0; this.#refreshStealth(); }
       this.#refreshFormulaSheetValues();
     }
   }
 
   switchSheet(name) {
     document.querySelectorAll('.sheet').forEach((s) => s.classList.toggle('active', s.id === `sheet-${name}`));
-    document.querySelectorAll('[data-sheet]').forEach((b) => b.classList.toggle('active', b.dataset.sheet === name));
+    document.querySelectorAll('.ribbon-tab, .sheet-tab').forEach((b) => b.classList.toggle('active', b.dataset.sheet === name));
     if (name === 'quests') this.#refreshQuests();
   }
 
@@ -120,14 +129,14 @@ export class UIManager {
     $('#status-gold').textContent = `골드: ${fmt(s.gold)}`;
     $('#status-gems').textContent = `보석: ${fmt(s.gems)}`;
     $('#status-dps').textContent = `DPS: ${fmt(this.game.entities.dps())}`;
-    $('#gold-cell').textContent = fmt(s.gold);
+    $('#gold-cell').textContent = fmt(s.gold); $('#gems-top').textContent = fmt(s.gems);
     const claimable = DAILY_QUESTS.some((q) => Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)) || !s.daily.loginClaimed;
-    $('#quest-dot').hidden = !claimable || s.settings.stealth;
+    $('#quest-dot').hidden = !claimable;
   }
 
   #refreshFormulaBar() {
     const s = this.game.state; const g = this.game;
-    if (s.settings.stealth) {
+    if (s.settings.excel) {
       $('#namebox').textContent = 'D14';
       $('#formula').textContent = STEALTH_FORMULAS[this.formulaIdx % STEALTH_FORMULAS.length];
       return;
@@ -136,7 +145,7 @@ export class UIManager {
     const list = [
       `=SUM(Hero_ATK) = ${fmt(g.partyATK())}`,
       `=PROGRESS("${g.stageLabel()}", ${s.kills}/${kills}) = ${pct(s.kills / kills)}`,
-      `=DPS(Sheet1!A1:G15) = ${fmt(g.entities.dps())}/s`,
+      `=DPS(Sheet1!A1:M8) = ${fmt(g.entities.dps())}/s`,
       `=IDLE_RATE(MAX_STAGE=${s.maxStage}) = ${g.goldPerSecAt(s.maxStage).toFixed(2)} gold/s`,
     ];
     $('#namebox').textContent = g.stageLabel();
@@ -147,12 +156,20 @@ export class UIManager {
     const s = this.game.state; const g = this.game;
     const boss = isBossStage(s.stage);
     $('#stage-label').textContent = g.stageLabel();
-    $('#stage-monster').textContent = boss ? '보스: 긴급 티켓' : monsterForStage(s.stage).name;
+    const pool = stagePool(s.stage);
+    $('#stage-monster').textContent = boss ? `보스: ${BOSS.name}` : pool.map((m) => m.name).join(' · ');
     const req = g.killsRequired();
     $('#kill-bar').style.width = `${Math.min(100, (s.kills / req) * 100)}%`;
     $('#kill-text').textContent = boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : `${s.kills} / ${req}행 처리`;
+    const ec = eliteChance(s.stage);
+    $('#stage-hint').textContent = boss ? '30초 안에 처리하지 못하면 이전 스테이지로 후퇴' : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
     $('#qa-boss').disabled = !(isBossStage(s.stage + 1) && s.stage + 1 <= s.maxStage);
+    this.#refreshBestiary(boss ? [BOSS] : pool);
     this.#refreshFormulaBar();
+  }
+  #refreshBestiary(list) {
+    const box = $('#bestiary'); box.innerHTML = '';
+    for (const m of list) box.append(el('div', { class: 'beast' }, monsterSprite(m, 0), el('span', {}, m.name)));
   }
 
   // ------------------------------------------------------- hero table --
@@ -161,9 +178,9 @@ export class UIManager {
     for (const id of this.game.state.party) {
       const v = this.game.heroView(id);
       const row = el('tr', { 'data-id': id },
-        el('td', { class: 'name clickable', onclick: () => this.openDetail(id) },
+        el('td', { class: 'name clickable', onclick: () => this.openDetail(id), title: `${v.traitName}: ${v.traitDesc}` },
           el('img', { src: heroIconDataURL(v.def), class: 'icon', alt: '' }), el('span', {}, v.def.name),
-          el('span', { class: 'grade', style: `color:${v.grade.color}` }, v.isMain ? ` ${v.def.title}` : ` ${stars(v.star)}`)),
+          el('div', { class: 'sub', style: `color:${v.grade.color}` }, v.isMain ? `${v.def.grade} · ${v.def.title}` : `${v.def.grade} · ${stars(v.star)}`)),
         el('td', { class: 'num lvl' }), el('td', { class: 'num atk' }), el('td', { class: 'num cost' }),
         el('td', { class: 'act' }, btn('강화', () => { if (!this.game.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'up')),
       );
@@ -216,13 +233,12 @@ export class UIManager {
         title: v.isMain ? `${v.def.title} · Lv ${e.level}` : (e.owned ? `${stars(e.star)} · Lv ${e.level}` : ''),
         sub: e.enhance ? `+${e.enhance}` : '',
       });
-      const wrap = el('div', { class: `card ${v.inParty ? 'in-party' : ''} ${e.owned ? '' : 'locked'}`, onclick: () => this.openDetail(id) }, c);
+      const wrap = el('div', { class: `card ${v.inParty ? 'in-party' : ''} ${e.owned ? '' : 'locked'}`, title: `${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id) }, c);
       if (v.inParty) wrap.append(el('span', { class: 'card-badge' }, '배치'));
       if (v.isMain) wrap.append(el('span', { class: 'card-badge main' }, '메인'));
       grid.append(wrap);
-      // stealth fallback table
       tbody.append(el('tr', { class: e.owned ? '' : 'locked' },
-        el('td', {}, v.def.name), el('td', { style: `color:${v.grade.color}` }, v.def.grade), el('td', {}, ROLES[v.def.role].name),
+        el('td', {}, v.def.name), el('td', { style: `color:${v.grade.color}` }, v.def.grade), el('td', {}, ROLES[v.def.role].name), el('td', {}, v.traitName),
         el('td', {}, v.isMain ? v.def.title : (e.owned ? stars(e.star) : '미보유')), el('td', { class: 'num' }, e.owned ? e.level : '-'), el('td', { class: 'num' }, e.owned ? e.shards : '-')));
     }
     $('#party-count').textContent = `${this.game.state.party.length} / ${BALANCE.PARTY_SIZE}`;
@@ -235,15 +251,15 @@ export class UIManager {
     const id = this.detailId; const g = this.game; const v = g.heroView(id); const e = v.entry; const s = g.state;
     $('#modal-title').textContent = v.isMain ? `${v.def.name} · ${v.def.title} (메인 영웅)` : `${v.def.name} · ${v.grade.name}급 ${v.grade.label}`;
     const body = $('#modal-body'); body.innerHTML = '';
-    const head = el('div', { class: 'detail-head' }, portraitCanvas(v.def, 5),
+    body.append(el('div', { class: 'detail-head' }, portraitCanvas(v.def, 4),
       el('div', { class: 'detail-stats' },
         el('div', { class: 'detail-line', html: `<b style="color:${v.grade.color}">${v.def.grade}</b> · ${ROLES[v.def.role].name}${v.isMain ? ` · ${MAIN_TIER_TITLES[v.def.tier]}` : ` · ${stars(v.star)}`}` }),
         el('div', { class: 'detail-line' }, e.owned ? `Lv ${e.level}  ·  강화 +${e.enhance}` : '미보유 (데이터 가져오기에서 획득)'),
         el('div', { class: 'detail-line' }, `ATK ${fmt(v.atk)}  ·  HP ${fmt(v.hp)}  ·  공격 ${v.interval}s`),
-        el('div', { class: 'detail-line skill' }, `${v.skillName}: ${v.skillDesc}`, v.skillUnlocked ? '' : el('span', { class: 'muted' }, ` (${v.skillUnlockHint})`)),
+        el('div', { class: 'detail-line trait' }, `특성 · ${v.traitName}: ${v.traitDesc}`),
+        el('div', { class: 'detail-line skill' }, `스킬 · ${v.skillName}: ${v.skillDesc}`, v.skillUnlocked ? '' : el('span', { class: 'muted' }, ` (${v.skillUnlockHint})`)),
         e.owned && !v.isMain ? el('div', { class: 'detail-line muted' }, `조각 ${e.shards}${v.promoteCost !== null ? ` / 다음 ★ ${v.promoteCost}` : ' (최대 ★)'}`) : null,
-      ));
-    body.append(head);
+      )));
     const actions = el('div', { class: 'detail-actions' });
     if (e.owned) {
       actions.append(btn(v.inParty ? '파티 해제' : '파티 배치', () => g.toggleParty(id), v.inParty ? '' : 'primary', v.isMain && v.inParty && s.party.length === 1));
@@ -269,6 +285,7 @@ export class UIManager {
     for (const job of info.options) {
       opts.append(el('div', { class: 'promo-opt' }, cardCanvas(job, { title: `${job.title} · ${job.grade}급` }),
         el('div', { class: 'small muted' }, job.desc ?? `${ROLES[job.role].name} · ${job.grade}급`),
+        el('div', { class: 'small', style: 'color:#1f5fa8' }, `특성: ${TRAITS[job.trait].name}`),
         btn(`${job.title}으로 승진`, () => { if (!this.game.promoteMain(job.id)) this.toast('승진 조건이 충족되지 않았습니다'); }, 'primary', !info.ok)));
     }
     box.append(opts);
@@ -285,7 +302,7 @@ export class UIManager {
   }
   #refreshGacha() {
     const s = this.game.state;
-    $('#gems-cell').textContent = fmt(s.gems);
+    $('#gems-cell').textContent = fmt(s.gems); $('#gems-top').textContent = fmt(s.gems);
     $('#pull1').disabled = s.gems < BALANCE.GACHA_SINGLE_COST; $('#pull10').disabled = s.gems < BALANCE.GACHA_TEN_COST;
     $('#pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA;
     $('#pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
@@ -340,7 +357,7 @@ export class UIManager {
   // ---------------------------------------------------------- settings --
   #refreshSettings() {
     const st = this.game.state.settings;
-    $('#qa-autoboss').checked = st.autoBoss; $('#set-autoboss').checked = st.autoBoss; $('#set-stealth').checked = st.stealth;
+    $('#qa-autoboss').checked = st.autoBoss; $('#set-autoboss').checked = st.autoBoss; $('#set-stealth').checked = st.excel;
   }
 
   #buildFormulaSheet() {
@@ -348,15 +365,18 @@ export class UIManager {
       ['업그레이드 비용', '=FLOOR(10 * 1.12 ^ (Level - 1))'],
       ['몬스터 HP', '=FLOOR(50 * 1.18 ^ (Stage - 1))'],
       ['몬스터 ATK', '=FLOOR(1 * 1.13 ^ (Stage - 1))'],
-      ['처치 골드', '=FLOOR(5 * 1.15 ^ (Stage - 1)) * (1 + 성과급)'],
+      ['엘리트', `HP ×${BALANCE.ELITE.hp} · ATK ×${BALANCE.ELITE.atk} · 골드 ×${BALANCE.ELITE.gold} (5스테이지부터 확률 증가, 최대 30%)`],
+      ['처치 골드', '=FLOOR(5 * 1.15 ^ (Stage - 1)) * (1 + 성과급 + 영업 마인드)'],
       ['영웅 ATK', '=FLOOR(Base * 1.10 ^ (Level - 1) * StarMult * (1 + 0.04 * 강화))'],
       ['영웅 HP', '=FLOOR(Base * 1.08 ^ (Level - 1) * StarMult * (1 + 0.04 * 강화) * (1 + 의자))'],
-      ['보스', '=MonsterHP * 8   /   30초 제한'],
+      ['보스', '=MonsterHP * 8   /   30초 제한, 실패 시 후퇴'],
+      ['전멸', `같은 스테이지 재시작, 연속 ${BALANCE.WIPE_RETREAT_AFTER}회 전멸 시 1스테이지 후퇴`],
       ['오프라인 골드', '=IdleGoldPerSec(MaxStage) * MIN(Seconds, 36000) * 0.6'],
       ['천장', '50회 내 A 이상, 100회 내 S 확정'],
       ['조각 → 카드', 'D 1 · C 2 · B 4 · A 8 · S 16 장/조각'],
       ['직급 승진', `카드 ${BALANCE.MAIN_PROMOTE_CARDS.join('/')} · 클리어 스테이지 ${BALANCE.MAIN_PROMOTE_STAGE.join('/')}`],
     ].map(([k, f]) => `<tr><td>${k}</td><td class="mono">${f}</td></tr>`).join('');
+    $('#trait-list').innerHTML = Object.values(TRAITS).map((t) => `<tr><td>${t.name}</td><td>${t.desc}</td></tr>`).join('');
   }
   #refreshFormulaSheetValues() {
     const s = this.game.state.stats; const st = this.game.state;
@@ -367,15 +387,17 @@ export class UIManager {
     ].map(([k, v]) => `<tr><td>${k}</td><td class="num">${v}</td></tr>`).join('');
   }
 
-  // ------------------------------------------------------------ stealth --
+  // ------------------------------------------------------------ boss key --
+  /** Boss key: only the play area changes (canvas → text rows); the layout stays identical. */
   applyStealth(on, silent = false) {
     document.body.classList.toggle('stealth', on);
     $('#canvas-wrap').hidden = on; $('#stealth-view').hidden = !on;
     $('#status-ready').textContent = on ? '계산 중 (4개 프로세서): 37%' : '준비';
     $('#set-stealth').checked = on;
+    $('#btn-stealth').textContent = on ? '🔓 보스 키 해제' : '🔒 보스 키';
     this.#refreshFormulaBar();
     if (on) { this.#refreshStealth(); this.closeModal(); }
-    if (!silent) this.toast(on ? '보스 키 ON (Esc로 복귀)' : '보스 키 OFF');
+    if (!silent) this.toast(on ? '보스 키 ON — 전투 화면을 숨겼습니다 (Esc로 복귀)' : '보스 키 OFF');
   }
   #refreshStealth() {
     const em = this.game.entities; const tbody = $('#stealth-table tbody'); tbody.innerHTML = '';
@@ -386,7 +408,7 @@ export class UIManager {
     for (const m of em.monsters.filter((m) => m.alive)) {
       tbody.append(el('tr', {}, el('td', {}, `B${n++}`), el('td', {}, `${m.def.name} 검증`), el('td', {}, '품질'), el('td', {}, `${Math.round((m.hp / m.maxHp) * 100)}%`), el('td', { class: 'num' }, fmt(m.hp))));
     }
-    for (const row of this.game.logs.slice(-8).reverse()) {
+    for (const row of this.game.logs.slice(-10).reverse()) {
       tbody.append(el('tr', { class: 'log' }, el('td', {}, `#${row.row}`), el('td', {}, `Processing Row #${row.row}... ${row.text}`), el('td', {}, '시스템'), el('td', {}, 'OK'), el('td', { class: 'num' }, '')));
     }
   }
@@ -424,11 +446,11 @@ export class UIManager {
   }
   showWelcome() {
     this.openModal('새 통합 문서', `
-      <p><b>엑셀 히어로즈</b>에 오신 것을 환영합니다. 파티가 <b>A1:G15</b> 셀 안에서 자동으로 사냥합니다.</p>
+      <p><b>엑셀 히어로즈</b>에 오신 것을 환영합니다. 파티가 사무실(A1:M8)에서 자동으로 오류 몬스터를 처리합니다.</p>
       <ul>
-        <li><b>홈</b> — 전투와 강화. <b>데이터</b> — 카드 명단·승급·직급 승진. <b>삽입</b> — 직원 데이터 가져오기(뽑기). <b>검토</b> — 일일 업무.</li>
+        <li><b>홈</b> — 전투. 오른쪽 <b>파티 관리</b> 창에서 강화. <b>데이터</b> — 카드 명단·승급·직급 승진. <b>삽입</b> — 직원 데이터 가져오기(뽑기). <b>검토</b> — 일일 업무.</li>
         <li>시작 보석 <b>${BALANCE.STARTING_GEMS}</b>개: 바로 10행 가져오기를 해보세요.</li>
-        <li><b>Esc</b> 또는 🔒 버튼으로 캔버스를 숨기고 표와 로그만 남길 수 있습니다.</li>
+        <li><b>Esc</b> 또는 🔒 보스 키: 전투 화면만 텍스트 표로 바뀌고 나머지 레이아웃은 그대로입니다.</li>
       </ul>`);
   }
   toast(text) {

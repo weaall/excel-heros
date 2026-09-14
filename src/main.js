@@ -41,7 +41,7 @@ let lastDraw = performance.now();
 function frame(now) {
   const dt = Math.min(0.5, (now - lastDraw) / 1000); lastDraw = now;
   ui.update(dt);
-  if (!game.state.settings.stealth) renderer.draw(dt);
+  if (!game.state.settings.excel) renderer.draw(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
