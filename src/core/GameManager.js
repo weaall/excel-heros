@@ -52,6 +52,22 @@ export class GameManager extends Emitter {
     return { ...info, total: s.prestige.shares };
   }
   setSound(v) { this.state.settings.sound = !!v; this.emit('settings'); }
+  setGridlines(v) { this.state.settings.gridlines = !!v; this.emit('settings'); }
+
+  /** 파티 자동 편성: the strongest owned heroes by ATK, guaranteeing one tank and one healer when available. */
+  autoParty() {
+    const owned = Object.keys(this.state.heroes).filter((id) => this.state.heroes[id].owned && !this.isMain(id))
+      .map((id) => this.heroView(id)).sort((a, b) => b.atk - a.atk);
+    const slots = BALANCE.PARTY_SIZE - 1;
+    const pick = [];
+    for (const role of ['tank', 'healer']) { const best = owned.find((v) => v.def.role === role); if (best) pick.push(best); }
+    for (const v of owned) { if (pick.length >= slots) break; if (!pick.includes(v)) pick.push(v); }
+    this.state.party = [MAIN_ID, ...pick.slice(0, slots).map((v) => v.id)];
+    this.entities.rebuildParty();
+    this.log(`파티 자동 편성: ${this.state.party.map((id) => this.heroDef(id).name).join(', ')}`, 'info');
+    this.emit('party'); this.emit('roster');
+    return this.state.party;
+  }
   /** 도감 보너스: owned heroes and their stars buff party ATK and gold income. */
   collection() {
     const owned = HEROES.filter((h) => this.state.heroes[h.id]?.owned);

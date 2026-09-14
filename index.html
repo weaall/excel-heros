@@ -11,6 +11,10 @@
 <div id="app" class="app">
   <header class="titlebar">
     <span class="app-icon">X</span>
+    <span class="autosave" title="10초마다 이 브라우저에 자동 저장됩니다">자동 저장 <b class="pill">켬</b></span>
+    <button id="qat-save" class="tb-btn qat" title="지금 저장 (Ctrl+S)">💾</button>
+    <button id="qat-undo" class="tb-btn qat" title="실행 취소 (Ctrl+Z)">↶</button>
+    <button id="qat-redo" class="tb-btn qat" title="다시 실행 (Ctrl+Y)">↷</button>
     <span class="title-text">통합 문서1 - Excel</span>
     <span class="spacer"></span>
     <button id="btn-sound" class="tb-btn" title="효과음 켜기/끄기 (보스 키가 켜져 있으면 항상 무음)">🔇 효과음</button>
@@ -19,23 +23,96 @@
   </header>
 
   <nav class="ribbon-tabs">
-    <button class="ribbon-tab file" data-sheet="settings">파일</button>
-    <button class="ribbon-tab active" data-sheet="home">홈</button>
-    <button class="ribbon-tab" data-sheet="gacha">삽입</button>
-    <button class="ribbon-tab" data-sheet="settings">수식</button>
-    <button class="ribbon-tab" data-sheet="roster">데이터</button>
-    <button class="ribbon-tab" data-sheet="quests">검토<span id="quest-dot" class="dot" hidden></span></button>
+    <button class="ribbon-tab file" data-ribbon="file">파일</button>
+    <button class="ribbon-tab active" data-ribbon="home">홈</button>
+    <button class="ribbon-tab" data-ribbon="insert">삽입</button>
+    <button class="ribbon-tab" data-ribbon="data">데이터</button>
+    <button class="ribbon-tab" data-ribbon="review">검토<span id="quest-dot" class="dot" hidden></span></button>
+    <button class="ribbon-tab" data-ribbon="view">보기</button>
   </nav>
   <div class="ribbon-body">
-    <div class="ribbon-group">
-      <button id="qa-upgrade-all" class="rb-btn" title="골드가 다 떨어질 때까지 가장 싼 파티 업그레이드를 자동 구매"><span class="rb-icon">Σ</span>자동 합계</button>
-      <button id="qa-challenge" class="rb-btn" title="다음 스테이지 도전 전투 시작 / 도전 중이면 중단"><span class="rb-icon">⚑</span><span id="qa-challenge-label">다음 단계 도전</span></button>
-      <label class="rb-check" title="클리어할 때마다 자동으로 다음 단계에 도전 (실패하면 꺼짐)"><input type="checkbox" id="qa-auto"> 자동 진행</label>
-      <label class="rb-check" title="1초마다 자동 합계를 실행해 골드를 가장 싼 업그레이드에 계속 사용"><input type="checkbox" id="qa-auto-up"> 자동 합계 유지</label>
+    <!-- 홈 -->
+    <div class="ribbon-panel active" data-panel="home">
+      <div class="rb-group">
+        <div class="rb-row">
+          <button id="qa-upgrade-all" class="rb-btn" title="골드가 다 떨어질 때까지 가장 싼 파티 업그레이드를 자동 구매"><span class="rb-icon">Σ</span>자동 합계</button>
+          <button id="qa-challenge" class="rb-btn" title="다음 스테이지 도전 전투 시작 / 도전 중이면 중단"><span class="rb-icon">⚑</span><span id="qa-challenge-label">다음 단계 도전</span></button>
+          <div class="rb-stack">
+            <label class="rb-check" title="클리어할 때마다 자동으로 다음 단계에 도전 (실패하면 꺼짐)"><input type="checkbox" id="qa-auto"> 자동 진행</label>
+            <label class="rb-check" title="1초마다 자동 합계를 실행해 골드를 가장 싼 업그레이드에 계속 사용"><input type="checkbox" id="qa-auto-up"> 자동 합계 유지</label>
+          </div>
+        </div>
+        <div class="rb-group-label">전투</div>
+      </div>
       <span class="rb-sep"></span>
-      <button class="rb-btn" data-sheet="roster"><span class="rb-icon">▦</span>카드 명단</button>
-      <button class="rb-btn" data-sheet="gacha"><span class="rb-icon">⇩</span>가져오기</button>
-      <button class="rb-btn" data-sheet="quests"><span class="rb-icon">✓</span>일일 업무</button>
+      <div class="rb-group">
+        <div class="rb-row">
+          <button class="rb-btn" data-sheet="roster"><span class="rb-icon">▦</span>카드 명단</button>
+          <button class="rb-btn" data-sheet="gacha"><span class="rb-icon">⇩</span>가져오기</button>
+          <button class="rb-btn" data-sheet="quests"><span class="rb-icon">✓</span>일일 업무</button>
+        </div>
+        <div class="rb-group-label">시트</div>
+      </div>
+    </div>
+    <!-- 삽입 -->
+    <div class="ribbon-panel" data-panel="insert">
+      <div class="rb-group">
+        <div class="rb-row">
+          <button id="qa-pull1" class="rb-btn" title="보석 100"><span class="rb-icon">⇩</span>1행 가져오기<small>보석 100</small></button>
+          <button id="qa-pull10" class="rb-btn" title="보석 900"><span class="rb-icon">⇩⇩</span>10행 가져오기<small>보석 900</small></button>
+          <button class="rb-btn" data-sheet="gacha"><span class="rb-icon">▤</span>가져오기 시트</button>
+        </div>
+        <div class="rb-group-label">외부 데이터 가져오기</div>
+      </div>
+      <span class="rb-sep"></span>
+      <div class="rb-group">
+        <div class="rb-row rb-text"><span>A 이상 확정까지 <b id="qa-pity-a">50</b>회</span><span>S 확정까지 <b id="qa-pity-s">100</b>회</span></div>
+        <div class="rb-group-label">천장</div>
+      </div>
+    </div>
+    <!-- 데이터 -->
+    <div class="ribbon-panel" data-panel="data">
+      <div class="rb-group">
+        <div class="rb-row">
+          <button id="qa-auto-party" class="rb-btn" title="보유 영웅 중 ATK가 높은 5명으로 파티 구성 (탱커·힐러 1명씩 보장)"><span class="rb-icon">⇅</span>파티 자동 편성</button>
+          <button class="rb-btn" data-sheet="roster"><span class="rb-icon">▦</span>카드 명단</button>
+        </div>
+        <div class="rb-group-label">정렬 및 필터</div>
+      </div>
+      <span class="rb-sep"></span>
+      <div class="rb-group">
+        <div class="rb-row rb-text"><span id="qa-collection">도감 0 / 20종</span></div>
+        <div class="rb-group-label">도감 보너스</div>
+      </div>
+    </div>
+    <!-- 검토 -->
+    <div class="ribbon-panel" data-panel="review">
+      <div class="rb-group">
+        <div class="rb-row">
+          <button id="qa-login" class="rb-btn"><span class="rb-icon">✎</span>출근 도장</button>
+          <button class="rb-btn" data-sheet="quests"><span class="rb-icon">✓</span>일일 업무</button>
+          <button id="qa-ad" class="rb-btn" title="광고를 보고 1시간 방치 보상"><span class="rb-icon">▶</span>광고 보상</button>
+        </div>
+        <div class="rb-group-label">업무 검토</div>
+      </div>
+    </div>
+    <!-- 보기 -->
+    <div class="ribbon-panel" data-panel="view">
+      <div class="rb-group">
+        <div class="rb-row">
+          <div class="rb-stack">
+            <label class="rb-check" title="전투 화면 위에 셀 눈금선 표시"><input type="checkbox" id="qa-gridlines"> 눈금선</label>
+            <label class="rb-check" title="합성 효과음 (보스 키 중 무음)"><input type="checkbox" id="qa-sound"> 효과음</label>
+          </div>
+          <button id="qa-stealth" class="rb-btn" title="보스 키 (Esc): 전투 화면만 텍스트 표로"><span class="rb-icon">🔒</span>보스 키</button>
+        </div>
+        <div class="rb-group-label">표시</div>
+      </div>
+      <span class="rb-sep"></span>
+      <div class="rb-group">
+        <div class="rb-row rb-text"><span>확대/축소 100%</span></div>
+        <div class="rb-group-label">확대/축소</div>
+      </div>
     </div>
     <div class="ribbon-group right">
       <div class="rb-stat">골드 <b id="gold-cell">0</b></div>
@@ -156,42 +233,6 @@
         <p class="muted small">방치 보상: 켜두면 100%, 꺼두면 60% (최대 10시간). 복귀 시 광고를 보면 2배.</p>
       </section>
 
-      <!-- Sheet5: 수식 / 설정 -------------------------------------------------->
-      <section class="sheet" id="sheet-settings">
-        <div class="two-col">
-          <div>
-            <h3 class="section-title">설정</h3>
-            <div class="settings">
-              <label><input type="checkbox" id="set-auto"> 자동 진행: 클리어할 때마다 다음 단계에 자동 도전 (도전 실패 시 자동으로 꺼지고 직전 스테이지에서 사냥)</label>
-              <label><input type="checkbox" id="set-stealth"> 보스 키: 전투 화면을 텍스트 표로 (Esc)</label>
-              <label><input type="checkbox" id="set-auto-up"> 자동 합계 유지: 1초마다 골드를 가장 싼 파티 업그레이드에 자동 사용</label>
-              <label><input type="checkbox" id="set-sound"> 효과음 (합성음 · 보스 키가 켜져 있으면 무음)</label>
-            </div>
-            <h3 class="section-title">회사 이전 <span class="muted">(프레스티지)</span></h3>
-            <div class="settings">
-              <p class="muted small" id="prestige-info"></p>
-              <p class="muted small">스테이지·골드·영웅 레벨·회사 업그레이드가 초기화되고, 보유 영웅·별·강화·강화 카드·보석·직급·업적은 유지됩니다. 지분 1주당 파티 ATK·골드 영구 +3%.</p>
-              <div class="settings-actions"><button id="btn-prestige" class="xl-btn primary" disabled>회사 이전 (지분 획득)</button></div>
-            </div>
-            <h3 class="section-title">통계</h3>
-            <table class="xl-table compact"><tbody id="stats-list"></tbody></table>
-            <h3 class="section-title">저장 데이터</h3>
-            <p class="muted small">10초마다 이 브라우저(localStorage)에 자동 저장됩니다. 다른 기기로 옮기려면 내보내기를 사용하세요.</p>
-            <textarea id="save-text" rows="3" spellcheck="false" placeholder="내보내기를 누르면 저장 문자열이 여기 표시됩니다. 붙여넣고 가져오기를 누르면 불러옵니다."></textarea>
-            <div class="settings-actions">
-              <button id="btn-export" class="xl-btn">내보내기</button>
-              <button id="btn-import" class="xl-btn">가져오기</button>
-              <button id="btn-reset" class="xl-btn danger">통합 문서 삭제</button>
-            </div>
-          </div>
-          <div>
-            <h3 class="section-title">게임 공식</h3>
-            <table class="xl-table compact"><tbody id="formula-list"></tbody></table>
-            <h3 class="section-title">특성 목록</h3>
-            <table class="xl-table compact"><tbody id="trait-list"></tbody></table>
-          </div>
-        </div>
-      </section>
     </main>
 
     <!-- Right task pane (Excel "작업 창"): party management -------------------->
@@ -211,6 +252,70 @@
         <div class="bestiary" id="bestiary"></div>
       </div>
     </aside>
+
+    <!-- 파일 backstage view (Excel-style): 정보 · 옵션 · 저장 -------------------->
+    <div id="backstage" class="backstage" hidden>
+      <nav class="bs-nav">
+        <button class="bs-back" id="bs-close" title="닫기 (Esc)">⟵</button>
+        <button class="bs-item active" data-bs="info">정보</button>
+        <button class="bs-item" data-bs="options">옵션</button>
+        <button class="bs-item" data-bs="save">저장 / 내보내기</button>
+        <button class="bs-item" data-bs="formula">게임 공식</button>
+        <span class="spacer"></span>
+        <button class="bs-item danger" id="btn-reset">통합 문서 삭제</button>
+      </nav>
+      <div class="bs-content">
+        <section class="bs-section active" data-bs="info">
+          <h2>정보</h2>
+          <div class="two-col">
+            <div>
+              <h3 class="section-title">통계</h3>
+              <table class="xl-table compact"><tbody id="stats-list"></tbody></table>
+            </div>
+            <div>
+              <h3 class="section-title">회사 이전 <span class="muted">(프레스티지)</span></h3>
+              <div class="settings">
+                <p class="muted small" id="prestige-info"></p>
+                <p class="muted small">스테이지·골드·영웅 레벨·회사 업그레이드가 초기화되고, 보유 영웅·별·강화·강화 카드·보석·직급·업적은 유지됩니다. 지분 1주당 파티 ATK·골드 영구 +3%.</p>
+                <div class="settings-actions"><button id="btn-prestige" class="xl-btn primary" disabled>회사 이전 (지분 획득)</button></div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="bs-section" data-bs="options">
+          <h2>옵션</h2>
+          <div class="two-col">
+            <div>
+            <h3 class="section-title">일반</h3>
+            <div class="settings">
+              <label><input type="checkbox" id="set-auto"> 자동 진행: 클리어할 때마다 다음 단계에 자동 도전 (도전 실패 시 자동으로 꺼지고 직전 스테이지에서 사냥)</label>
+              <label><input type="checkbox" id="set-stealth"> 보스 키: 전투 화면을 텍스트 표로 (Esc)</label>
+              <label><input type="checkbox" id="set-auto-up"> 자동 합계 유지: 1초마다 골드를 가장 싼 파티 업그레이드에 자동 사용</label>
+              <label><input type="checkbox" id="set-sound"> 효과음 (합성음 · 보스 키가 켜져 있으면 무음)</label>
+              <label><input type="checkbox" id="set-gridlines"> 눈금선: 전투 화면 위에 셀 눈금선 표시</label>
+            </div>
+            </div>
+            <div>
+              <h3 class="section-title">특성 목록</h3>
+              <table class="xl-table compact"><tbody id="trait-list"></tbody></table>
+            </div>
+          </div>
+        </section>
+        <section class="bs-section" data-bs="save">
+          <h2>저장 / 내보내기</h2>
+          <p class="muted small">10초마다 이 브라우저(localStorage)에 자동 저장됩니다. 다른 기기로 옮기려면 내보내기를 사용하세요.</p>
+          <textarea id="save-text" rows="4" spellcheck="false" placeholder="내보내기를 누르면 저장 문자열이 여기 표시됩니다. 붙여넣고 가져오기를 누르면 불러옵니다."></textarea>
+          <div class="settings-actions">
+            <button id="btn-export" class="xl-btn primary">내보내기</button>
+            <button id="btn-import" class="xl-btn">가져오기</button>
+          </div>
+        </section>
+        <section class="bs-section" data-bs="formula">
+          <h2>게임 공식</h2>
+          <table class="xl-table compact"><tbody id="formula-list"></tbody></table>
+        </section>
+      </div>
+    </div>
   </div>
 
   <footer class="sheet-tabs">
@@ -219,14 +324,16 @@
     <button class="sheet-tab" data-sheet="roster">인사_명단</button>
     <button class="sheet-tab" data-sheet="gacha">데이터_가져오기</button>
     <button class="sheet-tab" data-sheet="quests">일일_업무</button>
-    <button class="sheet-tab" data-sheet="settings">수식</button>
-    <span class="sheet-add">⊕</span>
+    <span class="sheet-add" title="새 시트">⊕</span>
   </footer>
   <div class="statusbar">
     <span id="status-ready">준비</span>
+    <span class="status-dim" id="status-cell">A1</span>
     <span class="spacer"></span>
     <span id="status-gold"></span><span id="status-gems"></span><span id="status-dps"></span>
-    <span class="zoom">100%</span>
+    <span class="status-dim">계산 모드: 자동</span>
+    <span class="status-views">▦ ▤ ▥</span>
+    <span class="zoom">− ────●──── + 100%</span>
   </div>
 </div>
 

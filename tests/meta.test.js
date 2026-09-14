@@ -69,3 +69,17 @@ test('prestige resets progression, keeps the roster, and buffs ATK + gold perman
   assert.equal(m.prestige.shares, r.gain);
   assert.equal(m.settings.sound, false);
 });
+
+test('파티 자동 편성 picks the strongest heroes and guarantees a tank and a healer', () => {
+  const s = createInitialState();
+  const own = (id, level) => { s.heroes[id] = { owned: true, star: 1, shards: 0, level, enhance: 0 }; };
+  own('guard', 1); own('barista', 1); own('parttime', 40); own('courier', 40); own('contract', 40); own('staff_park', 40); own('vlookup', 40);
+  const g = new GameManager({ state: s, save: memSave() });
+  const party = g.autoParty();
+  assert.equal(party.length, BALANCE.PARTY_SIZE);
+  assert.equal(party[0], MAIN_ID);
+  assert.ok(party.includes('guard'), 'tank guaranteed'); assert.ok(party.includes('barista'), 'healer guaranteed');
+  assert.equal(g.entities.heroes.length, BALANCE.PARTY_SIZE);
+  assert.equal(g.entities.heroes[0].role, 'tank');
+  assert.equal(createInitialState().settings.gridlines, true);
+});

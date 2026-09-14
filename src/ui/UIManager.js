@@ -21,6 +21,9 @@ const el = (tag, attrs = {}, ...children) => {
 };
 const btn = (label, onclick, cls = '', disabled = false) => { const b = el('button', { class: `xl-btn ${cls}`, onclick }, label); b.disabled = disabled; return b; };
 
+const RIBBON_SHEET = { home: 'home', insert: 'gacha', data: 'roster', review: 'quests' };
+const SHEET_RIBBON = { home: 'home', gacha: 'insert', roster: 'data', quests: 'review' };
+const COLS = 'ABCDEFGHIJKLM';
 const STEALTH_FORMULAS = ['=SUMIFS(Sheet2!D:D,Sheet2!A:A,"Q3",Sheet2!B:B,">0")', '=IFERROR(VLOOKUP(A14,Sheet3!$A:$F,4,FALSE),"")', '=INDEX(Data!$C:$C,MATCH(B2,Data!$A:$A,0))'];
 const rewardText = (r) => [r.gems && `보석 ${r.gems}`, r.gold && `골드 ${fmt(r.gold)}`, r.cards && `카드 ${r.cards}`].filter(Boolean).join(' · ');
 
@@ -47,12 +50,36 @@ export class UIManager {
   #bind() {
     document.title = '통합 문서1 - Excel';
     document.querySelectorAll('[data-sheet]').forEach((b) => b.addEventListener('click', () => this.switchSheet(b.dataset.sheet)));
+    document.querySelectorAll('[data-ribbon]').forEach((b) => b.addEventListener('click', () => this.showRibbon(b.dataset.ribbon)));
+    document.querySelectorAll('.bs-item[data-bs]').forEach((b) => b.addEventListener('click', () => this.openBackstage(b.dataset.bs)));
+    $('#bs-close').addEventListener('click', () => this.closeBackstage());
     $('#btn-stealth').addEventListener('click', () => this.game.toggleExcel());
+    $('#qa-stealth').addEventListener('click', () => this.game.toggleExcel());
     document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); this.game.persist(); this.toast('저장됨'); return; }
       if (e.key !== 'Escape') return;
       e.preventDefault();
-      if (!$('#modal').hidden) this.closeModal(); else this.game.toggleExcel();
+      if (!$('#modal').hidden) this.closeModal();
+      else if (!$('#backstage').hidden) this.closeBackstage();
+      else this.game.toggleExcel();
     });
+    // quick access toolbar
+    $('#qat-save').addEventListener('click', () => { this.game.persist(); this.toast('저장됨 — 통합 문서1'); });
+    $('#qat-undo').addEventListener('click', () => this.toast('실행 취소할 작업이 없습니다'));
+    $('#qat-redo').addEventListener('click', () => this.toast('다시 실행할 작업이 없습니다'));
+    // ribbon panels
+    $('#qa-pull1').addEventListener('click', () => { this.switchSheet('gacha'); this.#pull(1); });
+    $('#qa-pull10').addEventListener('click', () => { this.switchSheet('gacha'); this.#pull(10); });
+    $('#qa-auto-party').addEventListener('click', () => { const p = this.game.autoParty(); this.toast(`파티 자동 편성: ${p.length}명`); });
+    $('#qa-login').addEventListener('click', () => { const r = this.game.claimLogin(); this.toast(r ? `출근 보상: ${rewardText(r)}` : '오늘은 이미 출근 도장을 찍었습니다'); });
+    $('#qa-ad').addEventListener('click', () => this.playAd(() => { const r = this.game.adReward('instant'); if (r) this.toast(`광고 보상 +${fmt(r.gold)} 골드`); }));
+    $('#qa-gridlines').addEventListener('change', (e) => this.game.setGridlines(e.target.checked));
+    $('#set-gridlines').addEventListener('change', (e) => this.game.setGridlines(e.target.checked));
+    $('#qa-sound').addEventListener('change', (e) => { this.sound?.unlock(); this.game.setSound(e.target.checked); });
+    // worksheet cell selection on the battle canvas
+    const canvas = $('#battle');
+    canvas.addEventListener('click', (e) => this.#selectCellAt(e));
+    canvas.addEventListener('dblclick', (e) => { const h = this.#entityAt(e); if (h?.kind === 'hero') this.openDetail(h.heroId); });
 
     $('#qa-upgrade-all').addEventListener('click', () => { const n = this.game.upgradeCheapestLoop(); this.toast(n ? `자동 합계: 업그레이드 ${n}회 적용` : '골드가 부족합니다'); });
     $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
@@ -131,9 +158,65 @@ export class UIManager {
   }
 
   switchSheet(name) {
+    this.closeBackstage();
     document.querySelectorAll('.sheet').forEach((s) => s.classList.toggle('active', s.id === `sheet-${name}`));
-    document.querySelectorAll('.ribbon-tab, .sheet-tab').forEach((b) => b.classList.toggle('active', b.dataset.sheet === name));
+    document.querySelectorAll('.sheet-tab').forEach((b) => b.classList.toggle('active', b.dataset.sheet === name));
+    if (SHEET_RIBBON[name]) this.#activateRibbon(SHEET_RIBBON[name]);
     if (name === 'quests') this.#refreshQuests();
+  }
+  /** Ribbon tabs switch the ribbon contents (like Excel) and jump to the matching sheet; 파일 opens the backstage. */
+  showRibbon(name) {
+    if (name === 'file') { this.openBackstage('info'); return; }
+    this.#activateRibbon(name);
+    if (RIBBON_SHEET[name]) this.switchSheet(RIBBON_SHEET[name]);
+  }
+  #activateRibbon(name) {
+    document.querySelectorAll('.ribbon-tab').forEach((b) => b.classList.toggle('active', b.dataset.ribbon === name));
+    document.querySelectorAll('.ribbon-panel').forEach((p) => p.classList.toggle('active', p.dataset.panel === name));
+  }
+  openBackstage(section = 'info') {
+    $('#backstage').hidden = false;
+    document.querySelectorAll('.ribbon-tab').forEach((b) => b.classList.toggle('active', b.dataset.ribbon === 'file'));
+    document.querySelectorAll('.bs-item[data-bs]').forEach((b) => b.classList.toggle('active', b.dataset.bs === section));
+    document.querySelectorAll('.bs-section').forEach((s) => s.classList.toggle('active', s.dataset.bs === section));
+    this.#refreshSettings(); this.#refreshFormulaSheetValues();
+  }
+  closeBackstage() {
+    if ($('#backstage').hidden) return;
+    $('#backstage').hidden = true;
+    const active = document.querySelector('.sheet.active')?.id.replace('sheet-', '') ?? 'home';
+    this.#activateRibbon(SHEET_RIBBON[active] ?? 'home');
+  }
+
+  // ----------------------------------------------------- cell selection --
+  #cellFromEvent(e) {
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - r.left) * (e.currentTarget.width / r.width), y = (e.clientY - r.top) * (e.currentTarget.height / r.height);
+    return { col: Math.max(0, Math.min(GRID.cols - 1, Math.floor(x / GRID.cellW))), row: Math.max(0, Math.min(GRID.rows - 1, Math.floor(y / GRID.cellH))), x, y };
+  }
+  #entityAt(e) {
+    const { x, y } = this.#cellFromEvent(e); const em = this.game.entities;
+    const hit = (ent, w, h) => Math.abs(ent.x - x) <= w / 2 && y <= ent.y + 8 && y >= ent.y - h;
+    return em.heroes.find((h) => hit(h, 48, 64)) ?? em.monsters.find((m) => m.alive && hit(m, m.w ?? 64, m.h ?? 64)) ?? null;
+  }
+  #selectCellAt(e) {
+    const c = this.#cellFromEvent(e);
+    this.selected = { col: c.col, row: c.row }; this.renderer.selected = this.selected;
+    document.querySelectorAll('#col-headers span').forEach((s, i) => s.classList.toggle('sel', i === c.col));
+    document.querySelectorAll('#row-headers span').forEach((s, i) => s.classList.toggle('sel', i === c.row));
+    this.selectedEntity = this.#entityAt(e);
+    this.#refreshFormulaBar();
+  }
+  #cellRef() { return this.selected ? `${COLS[this.selected.col]}${this.selected.row + 1}` : null; }
+  /** Formula for whatever stands in the selected cell (hero / monster), or null. */
+  #cellFormula() {
+    const ent = this.selectedEntity; if (!ent) return null;
+    if (ent.kind === 'hero') {
+      const alive = ent.alive; const v = this.game.heroView(ent.heroId);
+      return `=HERO("${ent.def.name}", LV=${v.entry.level}, ATK=${fmt(ent.atk)}, HP=${alive ? Math.round(ent.hp) : 0}/${ent.maxHp}${alive ? '' : ', STATUS="병가"'})`;
+    }
+    if (!ent.alive) return null;
+    return `=${ent.isBoss ? 'BOSS' : ent.def.chest ? 'CHEST' : 'MONSTER'}("${ent.def.name}", HP=${fmt(Math.round(ent.hp))}/${fmt(ent.maxHp)}, ATK=${fmt(ent.atk)}${ent.elite ? ', ELITE=TRUE' : ''})`;
   }
 
   // ------------------------------------------------------------ status --
@@ -161,8 +244,10 @@ export class UIManager {
       `=DPS(Sheet1!A1:M8) = ${fmt(g.entities.dps())}/s`,
       `=IDLE_RATE(MAX_STAGE=${s.maxStage}) = ${g.goldPerSecAt(s.maxStage).toFixed(2)} gold/s`,
     ];
-    $('#namebox').textContent = g.stageLabel();
-    $('#formula').textContent = list[this.formulaIdx % list.length];
+    const ref = this.#cellRef();
+    $('#namebox').textContent = ref ?? g.stageLabel();
+    $('#status-cell').textContent = ref ? `셀 ${ref}` : '';
+    $('#formula').textContent = this.#cellFormula() ?? list[this.formulaIdx % list.length];
   }
 
   #refreshStage() {
@@ -262,6 +347,7 @@ export class UIManager {
     $('#party-count').textContent = `${this.game.state.party.length} / ${BALANCE.PARTY_SIZE}`;
     const col = this.game.collection();
     $('#collection-text').textContent = `${col.owned} / ${col.total}종 · ATK +${Math.round(col.atk * 100)}% · 골드 +${Math.round(col.gold * 100)}%`;
+    $('#qa-collection').textContent = `도감 ${col.owned} / ${col.total}종 · ATK +${Math.round(col.atk * 100)}% · 골드 +${Math.round(col.gold * 100)}%`;
   }
 
   // ------------------------------------------------------ hero detail --
@@ -327,6 +413,8 @@ export class UIManager {
     $('#pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA;
     $('#pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
     $('#total-pulls').textContent = s.stats.totalPulls;
+    $('#qa-pull1').disabled = s.gems < BALANCE.GACHA_SINGLE_COST; $('#qa-pull10').disabled = s.gems < BALANCE.GACHA_TEN_COST;
+    $('#qa-pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA; $('#qa-pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
     const tbody = $('#gacha-log tbody'); tbody.innerHTML = '';
     this.gachaLog.forEach((r, i) => tbody.append(el('tr', { class: `g-${r.grade}` },
       el('td', {}, String(this.gachaLog.length - i)), el('td', { style: `color:${GRADES[r.grade].color}` }, r.grade), el('td', {}, r.def.name), el('td', {}, r.isNew ? '신규 입사' : `조각 +${r.shards}`))));
@@ -394,6 +482,7 @@ export class UIManager {
   #refreshSettings() {
     const st = this.game.state.settings;
     $('#qa-auto').checked = st.autoAdvance; $('#set-auto').checked = st.autoAdvance; $('#set-stealth').checked = st.excel;
+    $('#qa-gridlines').checked = st.gridlines !== false; $('#set-gridlines').checked = st.gridlines !== false; $('#qa-sound').checked = !!st.sound;
     $('#qa-auto-up').checked = !!st.autoUpgrade; $('#set-auto-up').checked = !!st.autoUpgrade;
     $('#set-sound').checked = !!st.sound; $('#btn-sound').textContent = st.sound ? '🔊 효과음' : '🔇 효과음';
     this.#refreshPrestige();
@@ -441,6 +530,7 @@ export class UIManager {
     $('#status-ready').textContent = on ? '계산 중 (4개 프로세서): 37%' : '준비';
     $('#set-stealth').checked = on;
     $('#btn-stealth').textContent = on ? '🔓 보스 키 해제' : '🔒 보스 키';
+    if (on) this.closeBackstage();
     this.#refreshFormulaBar();
     if (on) { this.#refreshStealth(); this.closeModal(); }
     if (!silent) this.toast(on ? '보스 키 ON — 전투 화면을 숨겼습니다 (Esc로 복귀)' : '보스 키 OFF');

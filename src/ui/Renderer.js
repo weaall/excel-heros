@@ -1,6 +1,6 @@
 // Canvas renderer: scrolling dungeon (0x72 tiles), side-view line combat, effects, projectiles,
 // particles, hit flashes, screen shake, stage banners and the boss cut-in.
-import { CANVAS_W, CANVAS_H, GROUND_Y } from '../core/EntityManager.js';
+import { CANVAS_W, CANVAS_H, GROUND_Y, GRID } from '../core/EntityManager.js';
 import { heroSprite, monsterSprite, flashSprite } from '../data/sprites.js';
 import { TILES, PROPS, drawTile, drawProp, packReady } from '../data/packSprites.js';
 import { GRADES } from '../data/heroes.js';
@@ -20,6 +20,7 @@ export class Renderer {
     this.ctx.imageSmoothingEnabled = false;
     this.t = 0;
     this.banner = null;
+    this.selected = null;   // { col, row } selected worksheet cell (Excel-style selection box)
     game.on('challengeStart', ({ stage, boss }) => {
       this.banner = boss
         ? { kind: 'boss', text: `${bossForStage(stage).name} 등장!`, sub: `${bossForStage(stage).desc} · ${BALANCE.BOSS_TIME_LIMIT}초 안에 처리`, t: 0, life: 2.4 }
@@ -38,6 +39,7 @@ export class Renderer {
     ctx.save();
     if (em.shake > 0) ctx.translate((Math.random() - 0.5) * em.shake, (Math.random() - 0.5) * em.shake);
     this.#drawDungeon(em.scroll);
+    if (this.game.state.settings.gridlines) this.#drawGridlines();
     this.#drawBossBar(em);
     const entities = [...em.monsters, ...em.heroes].sort((a, b) => a.y - b.y);
     for (const e of entities) (e.kind === 'hero' ? this.#drawHero(e) : this.#drawMonster(e));
@@ -47,7 +49,28 @@ export class Renderer {
     this.#drawFloaters(em);
     this.#drawBuff(em);
     ctx.restore();
+    this.#drawSelection();
     this.#drawBanner(dt);
+  }
+
+  /** Faint worksheet gridlines over the dungeon: the cells are 64×52 like the A–M / 1–8 headers. */
+  #drawGridlines() {
+    const { ctx } = this; const { cellW, cellH } = GRID;
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.09)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = cellW; x < CANVAS_W; x += cellW) { ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, CANVAS_H); }
+    for (let y = cellH; y < CANVAS_H; y += cellH) { ctx.moveTo(0, y + 0.5); ctx.lineTo(CANVAS_W, y + 0.5); }
+    ctx.stroke(); ctx.restore();
+  }
+  /** Excel selection rectangle with the fill handle. */
+  #drawSelection() {
+    const s = this.selected; if (!s) return;
+    const { ctx } = this; const x = s.col * GRID.cellW, y = s.row * GRID.cellH;
+    ctx.save();
+    ctx.strokeStyle = '#217346'; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, GRID.cellW - 2, GRID.cellH - 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1; ctx.strokeRect(x + 2.5, y + 2.5, GRID.cellW - 5, GRID.cellH - 5);
+    ctx.fillStyle = '#217346'; ctx.fillRect(x + GRID.cellW - 5, y + GRID.cellH - 5, 6, 6);
+    ctx.fillStyle = '#fff'; ctx.fillRect(x + GRID.cellW - 4, y + GRID.cellH - 4, 4, 4); ctx.fillStyle = '#217346'; ctx.fillRect(x + GRID.cellW - 3, y + GRID.cellH - 3, 2, 2);
+    ctx.restore();
   }
 
   // ------------------------------------------------------------- dungeon --
