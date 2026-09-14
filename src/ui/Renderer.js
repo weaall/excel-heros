@@ -1,6 +1,6 @@
-// Canvas renderer: pixel office floor, 64px sprites, HP bars, floating text, boss bar.
+// Canvas renderer: pixel office floor, 64px sprites, hit flashes, particles, HP bars, floating text, boss bar.
 import { GRID, CANVAS_W, CANVAS_H } from '../core/EntityManager.js';
-import { heroSprite, monsterSprite } from '../data/sprites.js';
+import { heroSprite, monsterSprite, flashSprite } from '../data/sprites.js';
 import { GRADES } from '../data/heroes.js';
 import { fmt } from '../utils/format.js';
 import { BALANCE } from '../config/balance.js';
@@ -24,6 +24,7 @@ export class Renderer {
     this.#drawBossBar(em);
     const entities = [...em.monsters, ...em.heroes].sort((a, b) => a.y - b.y);
     for (const e of entities) (e.kind === 'hero' ? this.#drawHero(e) : this.#drawMonster(e));
+    this.#drawParticles(em);
     this.#drawProjectiles(em);
     this.#drawFloaters(em);
     this.#drawBuff(em);
@@ -33,20 +34,20 @@ export class Renderer {
   #buildBackground() {
     const c = document.createElement('canvas'); c.width = CANVAS_W; c.height = CANVAS_H;
     const ctx = c.getContext('2d');
-    // wall
+    // wall + baseboard
     const wall = ctx.createLinearGradient(0, 0, 0, WALL_H);
     wall.addColorStop(0, '#dfe6ea'); wall.addColorStop(1, '#c9d3d9');
     ctx.fillStyle = wall; ctx.fillRect(0, 0, CANVAS_W, WALL_H);
-    ctx.fillStyle = '#b8c2c8'; ctx.fillRect(0, WALL_H - 8, CANVAS_W, 8);           // baseboard
+    ctx.fillStyle = '#b8c2c8'; ctx.fillRect(0, WALL_H - 8, CANVAS_W, 8);
     ctx.fillStyle = '#9aa5ab'; ctx.fillRect(0, WALL_H - 2, CANVAS_W, 2);
     // windows
-    for (const x of [64, 352, 640]) {
+    for (const x of [64, 352]) {
       ctx.fillStyle = '#7f8c8d'; ctx.fillRect(x - 4, 12, 136, 64);
       const sky = ctx.createLinearGradient(0, 16, 0, 72);
       sky.addColorStop(0, '#8ec5ff'); sky.addColorStop(1, '#d9ecff');
       ctx.fillStyle = sky; ctx.fillRect(x, 16, 128, 56);
       ctx.fillStyle = '#7f8c8d'; ctx.fillRect(x + 62, 16, 4, 56); ctx.fillRect(x, 42, 128, 4);
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x + 8, 22, 22, 6); ctx.fillRect(x + 80, 30, 30, 6); // clouds
+      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x + 8, 22, 22, 6); ctx.fillRect(x + 80, 30, 30, 6);
     }
     // whiteboard with a tiny chart
     ctx.fillStyle = '#ffffff'; ctx.fillRect(208, 16, 112, 60); ctx.strokeStyle = '#8395a7'; ctx.lineWidth = 3; ctx.strokeRect(208, 16, 112, 60);
@@ -55,6 +56,13 @@ export class Renderer {
     // clock
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(560, 44, 18, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#555'; ctx.lineWidth = 3; ctx.stroke();
     ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(560, 44); ctx.lineTo(560, 32); ctx.moveTo(560, 44); ctx.lineTo(569, 48); ctx.stroke();
+    // binder shelf (spreadsheet archive) + wall calendar
+    ctx.fillStyle = '#8d6e63'; ctx.fillRect(612, 22, 180, 6); ctx.fillRect(612, 62, 180, 6);
+    const binders = ['#217346', '#2b7cd3', '#c0392b', '#f39c12', '#8e44ad', '#16a085', '#2c3e50', '#d4a017'];
+    binders.forEach((col, i) => { ctx.fillStyle = col; ctx.fillRect(616 + i * 22, 30, 18, 32); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(620 + i * 22, 36, 10, 4); ctx.fillRect(620 + i * 22, 50, 10, 6); });
+    ctx.fillStyle = '#fff'; ctx.fillRect(160, 20, 34, 40); ctx.fillStyle = '#c0392b'; ctx.fillRect(160, 20, 34, 9);
+    ctx.fillStyle = '#bbb'; for (let r = 0; r < 4; r++) for (let q = 0; q < 5; q++) ctx.fillRect(163 + q * 6, 32 + r * 6, 4, 4);
+    ctx.fillStyle = '#217346'; ctx.fillRect(175, 44, 4, 4);
     // floor tiles (checker)
     for (let y = WALL_H; y < CANVAS_H; y += 32) for (let x = 0; x < CANVAS_W; x += 32) {
       ctx.fillStyle = ((x / 32 + y / 32) % 2 === 0) ? '#efe9dc' : '#e4ddcf'; ctx.fillRect(x, y, 32, 32);
@@ -69,7 +77,16 @@ export class Renderer {
       ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.ellipse(x, WALL_H - 30, 16, 14, 0, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.ellipse(x - 6, WALL_H - 38, 8, 8, 0, 0, Math.PI * 2); ctx.fill();
     }
-    // arrow strip on the floor pointing left ("incoming")
+    // desks with monitors along the bottom edge (foreground furniture, units walk in front of the wall)
+    for (const x of [40, 330, 620]) {
+      ctx.fillStyle = '#d7b98d'; ctx.fillRect(x, 388, 170, 28); ctx.fillStyle = '#b8955f'; ctx.fillRect(x, 388, 170, 4); ctx.fillStyle = '#a07d4a'; ctx.fillRect(x + 6, 408, 8, 8); ctx.fillRect(x + 156, 408, 8, 8);
+      ctx.fillStyle = '#2d3436'; ctx.fillRect(x + 60, 358, 46, 30); ctx.fillRect(x + 79, 386, 8, 4); ctx.fillStyle = '#dfe6e9'; ctx.fillRect(x + 63, 361, 40, 24);
+      ctx.fillStyle = '#217346'; ctx.fillRect(x + 63, 361, 40, 4); ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (let i = 1; i < 4; i++) { ctx.moveTo(x + 63, 361 + 4 + i * 5 + 0.5); ctx.lineTo(x + 103, 361 + 4 + i * 5 + 0.5); ctx.moveTo(x + 63 + i * 10 + 0.5, 365); ctx.lineTo(x + 63 + i * 10 + 0.5, 385); }
+      ctx.stroke();
+      ctx.fillStyle = '#636e72'; ctx.fillRect(x + 112, 392, 30, 10); ctx.fillStyle = '#b2bec3'; ctx.fillRect(x + 114, 394, 26, 6);
+      ctx.fillStyle = '#fff'; ctx.fillRect(x + 20, 394, 22, 14); ctx.fillStyle = '#bbb'; ctx.fillRect(x + 23, 397, 16, 2); ctx.fillRect(x + 23, 401, 12, 2);
+    }
     ctx.fillStyle = 'rgba(33,115,70,0.08)'; ctx.fillRect(CANVAS_W - 96, WALL_H, 96, CANVAS_H - WALL_H);
     return c;
   }
@@ -98,15 +115,18 @@ export class Renderer {
   // ------------------------------------------------------------ entities --
   #drawHero(h) {
     const { ctx } = this;
-    let frame;
-    if (h.anim === 'attack') frame = h.animT < 0.15 ? 0 : 1;
-    else if (h.anim === 'walk') frame = Math.floor(h.animT * 6) % 2;
-    else frame = Math.floor(h.animT * 2) % 2;
+    let frame, bob = 0;
+    if (h.anim === 'attack') frame = h.animT < 0.12 ? 0 : h.animT < 0.3 ? 1 : 2;
+    else if (h.anim === 'walk') { frame = Math.floor(h.animT * 9) % 4; if (frame % 2 === 0) bob = -2; }
+    else frame = Math.floor(h.animT * 1.6) % 2;
     const img = heroSprite(h.def, h.anim, frame);
-    const sx = Math.round(h.x - 32 + (h.shake ? (Math.random() - 0.5) * 4 * h.shake : 0)), sy = Math.round(h.y - 32);
-    this.#shadow(h.x, h.y + 30, 22);
+    const knock = h.flash ? -6 * (h.flash / 0.12) : 0;
+    const sx = Math.round(h.x - 32 + knock + (h.shake ? (Math.random() - 0.5) * 3 * h.shake : 0)), sy = Math.round(h.y - 32 + bob);
+    this.#shadow(h.x, h.y + 30, 20);
     if (!h.alive) {
-      ctx.globalAlpha = 0.3; ctx.drawImage(img, sx, sy); ctx.globalAlpha = 1;
+      // fall over (rotate onto the back) and fade
+      const k = Math.min(1, (BALANCE.HERO_REVIVE_SEC - h.reviveT) * 4);
+      ctx.save(); ctx.globalAlpha = 0.35 + 0.35 * (1 - k); ctx.translate(h.x - 8, h.y + 28); ctx.rotate(-Math.PI / 2 * k); ctx.drawImage(img, -24, -60); ctx.restore();
       ctx.fillStyle = '#7f8c8d'; ctx.font = 'bold 12px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(`${Math.ceil(h.reviveT)}s`, h.x, h.y + 44);
       return;
@@ -114,6 +134,7 @@ export class Renderer {
     if (h.star >= 5 || h.def.grade === 'S') { ctx.save(); ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 14 + Math.sin(this.t * 4) * 5; ctx.strokeStyle = 'rgba(241,196,15,0.9)'; ctx.lineWidth = 2; ctx.strokeRect(sx - 3, sy - 3, 70, 70); ctx.restore(); }
     else if (h.star >= 3) { ctx.strokeStyle = GRADES[h.def.grade].color; ctx.lineWidth = 1; ctx.strokeRect(sx - 2.5, sy - 2.5, 69, 69); }
     ctx.drawImage(img, sx, sy);
+    if (h.flash > 0) { ctx.globalAlpha = Math.min(1, h.flash / 0.12) * 0.85; ctx.drawImage(flashSprite(img), sx, sy); ctx.globalAlpha = 1; }
     this.#hpBar(h.x, h.y + 34, h.hp / h.maxHp, '#27ae60', 44);
     ctx.fillStyle = '#333'; ctx.font = 'bold 10px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(`Lv${h.level}`, h.x, h.y + 39);
@@ -123,16 +144,35 @@ export class Renderer {
     const { ctx } = this;
     const frame = Math.floor(m.animT * 3) % 2;
     const img = monsterSprite(m.def, frame);
-    const lunge = m.lunge > 0 ? -10 : 0;
-    const sx = Math.round(m.x - img.width / 2 + lunge + (m.shake ? (Math.random() - 0.5) * 4 * m.shake : 0));
-    const sy = Math.round(m.y - img.height / 2);
-    this.#shadow(m.x, m.y + img.height / 2 - 4, img.width / 3);
-    if (!m.alive) { ctx.globalAlpha = Math.max(0, 1 - m.deadT * 4); ctx.drawImage(img, sx, sy); ctx.globalAlpha = 1; return; }
+    const knock = m.flash ? 6 * (m.flash / 0.12) : 0;
+    const lunge = m.lunge > 0 ? -12 * (m.lunge / 0.2) : 0;
+    const cx = m.x + lunge + knock + (m.shake ? (Math.random() - 0.5) * 3 * m.shake : 0);
+    const bottom = m.y + img.height / 2;
+    this.#shadow(m.x, bottom - 4, img.width / 3);
+    if (!m.alive) {
+      const k = Math.min(1, m.deadT * 4);
+      ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(m.x, bottom); ctx.scale(1 + k * 0.5, 1 - k); ctx.drawImage(img, -img.width / 2, -img.height); ctx.restore();
+      return;
+    }
+    // squash & stretch on the lunge
+    const sqx = m.lunge > 0 ? 1.12 : 1, sqy = m.lunge > 0 ? 0.9 : 1;
+    ctx.save();
     if (m.stun > 0) ctx.globalAlpha = 0.7;
-    ctx.drawImage(img, sx, sy);
-    ctx.globalAlpha = 1;
-    if (m.stun > 0) { ctx.fillStyle = '#8e44ad'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('zZ', m.x + 20, sy - 4); }
+    ctx.translate(Math.round(cx), Math.round(bottom)); ctx.scale(sqx, sqy);
+    ctx.drawImage(img, -img.width / 2, -img.height);
+    if (m.flash > 0) { ctx.globalAlpha = Math.min(1, m.flash / 0.12) * 0.85; ctx.drawImage(flashSprite(img), -img.width / 2, -img.height); }
+    ctx.restore();
+    if (m.stun > 0) { ctx.fillStyle = '#8e44ad'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('zZ', m.x + 20, m.y - img.height / 2 - 4); }
     if (!m.isBoss) this.#hpBar(m.x, m.y + 34, m.hp / m.maxHp, m.elite ? '#f1c40f' : '#e74c3c', m.elite ? 52 : 44);
+  }
+
+  #drawParticles(em) {
+    const { ctx } = this;
+    for (const p of em.particles) {
+      ctx.globalAlpha = Math.max(0, 1 - p.t / p.life);
+      ctx.fillStyle = p.color; ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
   }
 
   #shadow(x, y, rx) { const { ctx } = this; ctx.fillStyle = 'rgba(0,0,0,0.13)'; ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.3, 0, 0, Math.PI * 2); ctx.fill(); }

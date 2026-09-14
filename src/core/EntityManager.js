@@ -34,6 +34,7 @@ export class EntityManager {
     this.atkBuff = { mult: 1, until: 0 };
     this.time = 0;
     this.dmgLog = [];
+    this.particles = [];
     this.rallyMult = 1;
   }
 
@@ -69,7 +70,7 @@ export class EntityManager {
       id: nextId++, kind: 'hero', heroId: def.heroId, def, role: def.role, trait: def.trait,
       x: 0, y: 0, homeX: 0, homeY: 0, hp: 1, maxHp: 1, atk: 1, interval: 1, cd: Math.random() * 0.5,
       range: 0, speed: BALANCE.HERO_SPEED, alive: true, reviveT: 0, targetId: null,
-      anim: 'idle', animT: 0, skillCd: 2 + Math.random() * 3, star: 1, level: 1, shake: 0,
+      anim: 'idle', animT: 0, skillCd: 2 + Math.random() * 3, star: 1, level: 1, shake: 0, flash: 0,
     };
   }
 
@@ -114,7 +115,7 @@ export class EntityManager {
       atk: (isBoss ? bossATK(stage) : monsterATK(stage)) * (elite ? BALANCE.ELITE.atk : 1),
       interval: isBoss ? 2.0 : 1.5, cd: 0.8 + Math.random() * 0.6,
       range, speed: isBoss ? 34 : BALANCE.MONSTER_SPEED * (0.85 + Math.random() * 0.3) * (elite ? 0.9 : 1),
-      alive: true, targetId: null, anim: 'walk', animT: Math.random(), stun: 0, shake: 0, lunge: 0,
+      alive: true, targetId: null, anim: 'walk', animT: Math.random(), stun: 0, shake: 0, lunge: 0, flash: 0,
       offX: Math.cos(a) * r, offY: Math.sin(a) * r,
       w: isBoss ? 96 : 64, h: isBoss ? 64 : 64,
     };
@@ -147,7 +148,7 @@ export class EntityManager {
 
     // --- heroes ---------------------------------------------------------
     for (const h of this.heroes) {
-      h.shake = Math.max(0, h.shake - dt * 8);
+      h.shake = Math.max(0, h.shake - dt * 8); h.flash = Math.max(0, h.flash - dt);
       if (!h.alive) {
         h.reviveT -= dt;
         if (h.reviveT <= 0) { h.alive = true; h.hp = h.maxHp; h.x = h.homeX; h.y = h.homeY; this.game.log(`${h.def.name} 병가 복귀`, 'info'); }
@@ -197,7 +198,7 @@ export class EntityManager {
     // --- monsters -------------------------------------------------------
     for (const m of this.monsters) {
       if (!m.alive) continue;
-      m.animT += dt; m.shake = Math.max(0, m.shake - dt * 8);
+      m.animT += dt; m.shake = Math.max(0, m.shake - dt * 8); m.flash = Math.max(0, m.flash - dt);
       if (m.lunge > 0) m.lunge -= dt;
       if (m.stun > 0) { m.stun -= dt; continue; }
       let target = this.#byId(heroes, m.targetId);
@@ -222,6 +223,8 @@ export class EntityManager {
 
     for (const p of this.projectiles) p.t += dt;
     this.projectiles = this.projectiles.filter((p) => p.t < p.dur);
+    for (const p of this.particles) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 220 * dt; }
+    this.particles = this.particles.filter((p) => p.t < p.life);
     for (const f of this.floaters) f.t += dt;
     this.floaters = this.floaters.filter((f) => f.t < 1.0);
     if (this.floaters.length > 40) this.floaters.splice(0, this.floaters.length - 40);
@@ -283,7 +286,7 @@ export class EntityManager {
     if (!target.alive) return 0;
     amount = Math.max(1, Math.round(amount));
     const dealt = Math.min(amount, target.hp);
-    target.hp -= amount; target.shake = 1;
+    target.hp -= amount; target.shake = 1; target.flash = 0.12;
     const color = target.kind === 'monster' ? (isSkill ? '#f1c40f' : '#ffffff') : '#e74c3c';
     this.floaters.push({ x: target.x + (Math.random() * 24 - 12), y: target.y - 36, text: String(amount), color, t: 0, big: isSkill });
     if (target.kind === 'monster') this.dmgLog.push([this.time, dealt]);
@@ -291,6 +294,8 @@ export class EntityManager {
       target.hp = 0; target.alive = false;
       if (target.kind === 'monster') {
         target.deadT = 0;
+        const color = target.def.palette?.M ?? '#e74c3c';
+        for (let i = 0; i < 10; i++) { const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 90; this.particles.push({ x: target.x, y: target.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, t: 0, life: 0.5 + Math.random() * 0.3, color: Math.random() < 0.3 ? '#ffffff' : color, size: 3 + Math.random() * 3 }); }
         if (!target.isBoss) this.spawnQueue.push(BALANCE.RESPAWN_DELAY);
         this.game.onMonsterKilled(target);
       } else {
