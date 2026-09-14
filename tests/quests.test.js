@@ -64,7 +64,7 @@ test('game hooks feed quest progress (kills, upgrades, pulls)', () => {
   const s = createInitialState(); s.gold = 1000; s.gems = 1000; s.heroes.main.level = 30;
   const g = new GameManager({ state: s, save: memSave() });
   g.upgradeHero('main'); g.pull(1);
-  for (let t = 0; t < 60; t += 0.05) g.tick(0.05);
+  for (let t = 0; t < 150; t += 0.05) g.tick(0.05);
   assert.ok(Q.questProgress(g.state, 'kills') > 0);
   assert.equal(Q.questProgress(g.state, 'upgrades'), 1);
   assert.equal(Q.questProgress(g.state, 'pull'), 1);

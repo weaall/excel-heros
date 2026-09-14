@@ -1,13 +1,15 @@
-// Canvas renderer: pixel office, 64px sprites, effects (slashes, rings, sparkles, puffs), projectiles,
+// Canvas renderer: scrolling dungeon (0x72 tiles), side-view line combat, effects, projectiles,
 // particles, hit flashes, screen shake, stage banners and the boss cut-in.
-import { GRID, CANVAS_W, CANVAS_H } from '../core/EntityManager.js';
+import { CANVAS_W, CANVAS_H, GROUND_Y } from '../core/EntityManager.js';
 import { heroSprite, monsterSprite, flashSprite } from '../data/sprites.js';
+import { TILES, drawTile, packReady } from '../data/packSprites.js';
 import { GRADES } from '../data/heroes.js';
-import { stageLabel } from '../config/balance.js';
+import { stageLabel, BALANCE } from '../config/balance.js';
 import { fmt } from '../utils/format.js';
-import { BALANCE } from '../config/balance.js';
 
-const WALL_H = 96;
+const TILE = 32;                       // 16px tiles drawn at 2x
+const WALL_ROWS = 3;                   // wall band height in tiles
+const hash = (n) => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = (x * 2246822519) >>> 0; x ^= x >>> 13; return x / 4294967296; };
 
 export class Renderer {
   constructor(canvas, game) {
@@ -16,8 +18,7 @@ export class Renderer {
     this.ctx = canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
     this.t = 0;
-    this.bg = this.#buildBackground();
-    this.banner = null;   // { text, sub, t, life, kind }
+    this.banner = null;
     game.on('challengeStart', ({ stage, boss }) => {
       this.banner = boss
         ? { kind: 'boss', text: '긴급 티켓 발생!', sub: `${stageLabel(stage)} · ${BALANCE.BOSS_TIME_LIMIT}초 안에 처리`, t: 0, life: 2.4 }
@@ -34,7 +35,7 @@ export class Renderer {
     const { ctx } = this; const em = this.game.entities;
     ctx.save();
     if (em.shake > 0) ctx.translate((Math.random() - 0.5) * em.shake, (Math.random() - 0.5) * em.shake);
-    ctx.drawImage(this.bg, 0, 0);
+    this.#drawDungeon(em.scroll);
     this.#drawBossBar(em);
     const entities = [...em.monsters, ...em.heroes].sort((a, b) => a.y - b.y);
     for (const e of entities) (e.kind === 'hero' ? this.#drawHero(e) : this.#drawMonster(e));
@@ -47,57 +48,51 @@ export class Renderer {
     this.#drawBanner(dt);
   }
 
-  // ----------------------------------------------------------- background --
-  #buildBackground() {
-    const c = document.createElement('canvas'); c.width = CANVAS_W; c.height = CANVAS_H;
-    const ctx = c.getContext('2d');
-    const wall = ctx.createLinearGradient(0, 0, 0, WALL_H);
-    wall.addColorStop(0, '#dfe6ea'); wall.addColorStop(1, '#c9d3d9');
-    ctx.fillStyle = wall; ctx.fillRect(0, 0, CANVAS_W, WALL_H);
-    ctx.fillStyle = '#b8c2c8'; ctx.fillRect(0, WALL_H - 8, CANVAS_W, 8);
-    ctx.fillStyle = '#9aa5ab'; ctx.fillRect(0, WALL_H - 2, CANVAS_W, 2);
-    for (const x of [64, 352]) {
-      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(x - 4, 12, 136, 64);
-      const sky = ctx.createLinearGradient(0, 16, 0, 72);
-      sky.addColorStop(0, '#8ec5ff'); sky.addColorStop(1, '#d9ecff');
-      ctx.fillStyle = sky; ctx.fillRect(x, 16, 128, 56);
-      ctx.fillStyle = '#7f8c8d'; ctx.fillRect(x + 62, 16, 4, 56); ctx.fillRect(x, 42, 128, 4);
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(x + 8, 22, 22, 6); ctx.fillRect(x + 80, 30, 30, 6);
+  // ------------------------------------------------------------- dungeon --
+  #drawDungeon(scroll) {
+    const { ctx } = this;
+    const phase = Math.floor((this.game.state.stage - 1) / BALANCE.BOSS_EVERY);
+    if (!packReady()) { this.#drawFallbackDungeon(scroll); return; }
+    // wall band (parallax 0.6) with banners, holes, fountains and columns
+    const wallOff = Math.floor((scroll * 0.6) % TILE);
+    const wallCol0 = Math.floor((scroll * 0.6) / TILE);
+    const flame = Math.floor(this.t * 6) % 3;
+    for (let i = -1; i <= CANVAS_W / TILE + 1; i++) {
+      const col = wallCol0 + i, dx = i * TILE - wallOff;
+      drawTile(ctx, TILES.wall_top, dx, 0);
+      const m5 = ((col % 5) + 5) % 5, m7 = ((col % 7) + 7) % 7, m9 = ((col % 9) + 9) % 9;
+      if (m7 === 3) { // animated fountain
+        drawTile(ctx, TILES.fountain_top, dx, 0); drawTile(ctx, [64 + 16 * flame, 16], dx, TILE); drawTile(ctx, [64 + 16 * flame, 32], dx, TILE * 2); continue;
+      }
+      if (m9 === 5) { drawTile(ctx, TILES.wall_mid, dx, TILE); drawTile(ctx, TILES.column_top, dx, TILE); drawTile(ctx, TILES.column_mid, dx, TILE * 2); drawTile(ctx, TILES.column_base, dx, TILE * 3); continue; }
+      const banner = m5 === 1 ? ['banner_red', 'banner_blue', 'banner_green', 'banner_yellow'][((Math.floor(col / 5) + phase) % 4 + 4) % 4] : null;
+      drawTile(ctx, banner ? TILES[banner] : TILES.wall_mid, dx, TILE);
+      drawTile(ctx, TILES.wall_mid, dx, TILE * 2);
     }
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(208, 16, 112, 60); ctx.strokeStyle = '#8395a7'; ctx.lineWidth = 3; ctx.strokeRect(208, 16, 112, 60);
-    ctx.fillStyle = '#217346'; for (const [i, h] of [[0, 18], [1, 30], [2, 24], [3, 40]]) ctx.fillRect(222 + i * 22, 66 - h, 12, h);
-    ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(216, 60); ctx.lineTo(240, 48); ctx.lineTo(262, 52); ctx.lineTo(286, 34); ctx.lineTo(310, 30); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(560, 44, 18, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#555'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(560, 44); ctx.lineTo(560, 32); ctx.moveTo(560, 44); ctx.lineTo(569, 48); ctx.stroke();
-    ctx.fillStyle = '#8d6e63'; ctx.fillRect(612, 22, 180, 6); ctx.fillRect(612, 62, 180, 6);
-    const binders = ['#217346', '#2b7cd3', '#c0392b', '#f39c12', '#8e44ad', '#16a085', '#2c3e50', '#d4a017'];
-    binders.forEach((col, i) => { ctx.fillStyle = col; ctx.fillRect(616 + i * 22, 30, 18, 32); ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(620 + i * 22, 36, 10, 4); ctx.fillRect(620 + i * 22, 50, 10, 6); });
-    ctx.fillStyle = '#fff'; ctx.fillRect(160, 20, 34, 40); ctx.fillStyle = '#c0392b'; ctx.fillRect(160, 20, 34, 9);
-    ctx.fillStyle = '#bbb'; for (let r = 0; r < 4; r++) for (let q = 0; q < 5; q++) ctx.fillRect(163 + q * 6, 32 + r * 6, 4, 4);
-    ctx.fillStyle = '#217346'; ctx.fillRect(175, 44, 4, 4);
-    for (let y = WALL_H; y < CANVAS_H; y += 32) for (let x = 0; x < CANVAS_W; x += 32) {
-      ctx.fillStyle = ((x / 32 + y / 32) % 2 === 0) ? '#efe9dc' : '#e4ddcf'; ctx.fillRect(x, y, 32, 32);
+    // floor (full-speed scroll), tile picked per world column/row so it stays put while scrolling
+    const floorOff = Math.floor(scroll % TILE), col0 = Math.floor(scroll / TILE);
+    for (let row = WALL_ROWS; row < CANVAS_H / TILE; row++) {
+      for (let i = -1; i <= CANVAS_W / TILE + 1; i++) {
+        const col = col0 + i; const k = hash(col * 101 + row * 7 + phase * 3);
+        const tile = TILES.floor[k < 0.62 ? 0 : Math.floor(k * TILES.floor.length)];
+        drawTile(ctx, tile, i * TILE - floorOff, row * TILE);
+      }
     }
-    ctx.strokeStyle = 'rgba(0,0,0,0.05)'; ctx.lineWidth = 1; ctx.beginPath();
-    for (let x = 0; x <= CANVAS_W; x += 64) { ctx.moveTo(x + 0.5, WALL_H); ctx.lineTo(x + 0.5, CANVAS_H); }
-    for (let y = WALL_H; y <= CANVAS_H; y += 64) { ctx.moveTo(0, y + 0.5); ctx.lineTo(CANVAS_W, y + 0.5); }
+    // phase tint so deeper phases feel different, plus a soft vignette at the wall base
+    if (phase > 0) { ctx.fillStyle = `hsla(${(phase * 47) % 360}, 60%, 40%, 0.12)`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
+    const g = ctx.createLinearGradient(0, WALL_ROWS * TILE, 0, WALL_ROWS * TILE + 40);
+    g.addColorStop(0, 'rgba(0,0,0,0.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(0, WALL_ROWS * TILE, CANVAS_W, 40);
+  }
+
+  #drawFallbackDungeon(scroll) {
+    const { ctx } = this;
+    ctx.fillStyle = '#2c3440'; ctx.fillRect(0, 0, CANVAS_W, TILE * WALL_ROWS);
+    ctx.fillStyle = '#3d4654'; ctx.fillRect(0, TILE * WALL_ROWS, CANVAS_W, CANVAS_H);
+    const off = Math.floor(scroll % TILE);
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath();
+    for (let x = -off; x <= CANVAS_W; x += TILE) { ctx.moveTo(x + 0.5, TILE * WALL_ROWS); ctx.lineTo(x + 0.5, CANVAS_H); }
+    for (let y = TILE * WALL_ROWS; y <= CANVAS_H; y += TILE) { ctx.moveTo(0, y + 0.5); ctx.lineTo(CANVAS_W, y + 0.5); }
     ctx.stroke();
-    for (const x of [24, CANVAS_W - 40]) {
-      ctx.fillStyle = '#b5651d'; ctx.fillRect(x - 10, WALL_H - 18, 20, 18);
-      ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.ellipse(x, WALL_H - 30, 16, 14, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.ellipse(x - 6, WALL_H - 38, 8, 8, 0, 0, Math.PI * 2); ctx.fill();
-    }
-    for (const x of [40, 330, 620]) {
-      ctx.fillStyle = '#d7b98d'; ctx.fillRect(x, 388, 170, 28); ctx.fillStyle = '#b8955f'; ctx.fillRect(x, 388, 170, 4); ctx.fillStyle = '#a07d4a'; ctx.fillRect(x + 6, 408, 8, 8); ctx.fillRect(x + 156, 408, 8, 8);
-      ctx.fillStyle = '#2d3436'; ctx.fillRect(x + 60, 358, 46, 30); ctx.fillRect(x + 79, 386, 8, 4); ctx.fillStyle = '#dfe6e9'; ctx.fillRect(x + 63, 361, 40, 24);
-      ctx.fillStyle = '#217346'; ctx.fillRect(x + 63, 361, 40, 4); ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1; ctx.beginPath();
-      for (let i = 1; i < 4; i++) { ctx.moveTo(x + 63, 365 + i * 5 + 0.5); ctx.lineTo(x + 103, 365 + i * 5 + 0.5); ctx.moveTo(x + 63 + i * 10 + 0.5, 365); ctx.lineTo(x + 63 + i * 10 + 0.5, 385); }
-      ctx.stroke();
-      ctx.fillStyle = '#636e72'; ctx.fillRect(x + 112, 392, 30, 10); ctx.fillStyle = '#b2bec3'; ctx.fillRect(x + 114, 394, 26, 6);
-      ctx.fillStyle = '#fff'; ctx.fillRect(x + 20, 394, 22, 14); ctx.fillStyle = '#bbb'; ctx.fillRect(x + 23, 397, 16, 2); ctx.fillRect(x + 23, 401, 12, 2);
-    }
-    ctx.fillStyle = 'rgba(33,115,70,0.08)'; ctx.fillRect(CANVAS_W - 96, WALL_H, 96, CANVAS_H - WALL_H);
-    return c;
   }
 
   // ------------------------------------------------------------ overlays --
@@ -121,7 +116,6 @@ export class Renderer {
     ctx.fillText(`▲ 팀 싱크: ATK ×${em.atkBuff.mult.toFixed(2)} (${Math.max(0, em.atkBuff.until - em.time).toFixed(1)}s)`, 14, CANVAS_H - 16);
   }
 
-  /** Stage banner / boss cut-in drawn on top of everything (not shaken). */
   #drawBanner(dt) {
     const b = this.banner; if (!b) return;
     b.t += dt; if (b.t >= b.life) { this.banner = null; return; }
@@ -136,7 +130,7 @@ export class Renderer {
       ctx.fillText(b.text, CANVAS_W / 2 - 60 + slide, 178);
       ctx.font = 'bold 15px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#f9e79f'; ctx.fillText(b.sub, CANVAS_W / 2 - 60 + slide, 230);
       const boss = this.game.entities.boss;
-      if (boss) { const img = monsterSprite(boss.def, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, CANVAS_W - 300 + slide * 0.5, 100, 192, 128); }
+      if (boss) { const img = monsterSprite(boss.def, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, CANVAS_W - 300 + slide * 0.5, 100, img.width * 2, img.height * 2); }
     } else {
       const col = b.kind === 'clear' ? '#217346' : b.kind === 'challenge' ? '#1f5fa8' : '#5d6d7e';
       ctx.fillStyle = col; ctx.globalAlpha = fade * 0.9; ctx.fillRect(slide, 150, CANVAS_W, 64);
@@ -151,27 +145,32 @@ export class Renderer {
   #drawHero(h) {
     const { ctx } = this;
     let frame, bob = 0;
-    if (h.anim === 'attack') frame = h.animT < 0.12 ? 0 : h.animT < 0.3 ? 1 : 2;
+    if (h.anim === 'attack') frame = h.animT < 0.16 ? 0 : h.animT < 0.32 ? 1 : 2;
     else if (h.anim === 'walk') { frame = Math.floor(h.animT * 9) % 4; if (frame % 2 === 0) bob = -2; }
-    else frame = Math.floor(h.animT * 1.6) % 2;
+    else frame = Math.floor(h.animT * 5) % 4;
     const img = heroSprite(h.def, h.anim, frame);
+    // melee dash: out during the wind-up, back during recovery (purely visual)
+    let dash = 0;
+    if (h.anim === 'attack' && (h.role === 'melee' || h.role === 'tank') && h.dashTo) {
+      const k = h.animT / 0.45; const s = k < 0.3 ? Math.sin((k / 0.3) * Math.PI / 2) : k < 0.55 ? 1 : Math.max(0, 1 - (k - 0.55) / 0.35);
+      dash = (h.dashTo - h.homeX) * s;
+    }
     const knock = h.flash ? -6 * (h.flash / 0.12) : 0;
-    const sx = Math.round(h.x - 32 + knock + (h.shake ? (Math.random() - 0.5) * 3 * h.shake : 0)), sy = Math.round(h.y - 32 + bob);
-    this.#shadow(h.x, h.y + 30, 20);
+    const sx = Math.round(h.x + dash - 32 + knock + (h.shake ? (Math.random() - 0.5) * 3 * h.shake : 0)), sy = Math.round(h.y - 60 + bob);
+    this.#shadow(h.x + dash, h.y + 2, 18);
     if (!h.alive) {
       const k = Math.min(1, (BALANCE.HERO_REVIVE_SEC - h.reviveT) * 4);
-      ctx.save(); ctx.globalAlpha = 0.35 + 0.35 * (1 - k); ctx.translate(h.x - 8, h.y + 28); ctx.rotate(-Math.PI / 2 * k); ctx.drawImage(img, -24, -60); ctx.restore();
-      ctx.fillStyle = '#7f8c8d'; ctx.font = 'bold 12px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(`${Math.ceil(h.reviveT)}s`, h.x, h.y + 44);
+      ctx.save(); ctx.globalAlpha = 0.35 + 0.35 * (1 - k); ctx.translate(h.x - 8, h.y); ctx.rotate(-Math.PI / 2 * k); ctx.drawImage(img, -24, -60); ctx.restore();
+      ctx.fillStyle = '#bdc3c7'; ctx.font = 'bold 12px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(`${Math.ceil(h.reviveT)}s`, h.x, h.y + 16);
       return;
     }
-    if (h.star >= 5 || h.def.grade === 'S') { ctx.save(); ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 14 + Math.sin(this.t * 4) * 5; ctx.strokeStyle = 'rgba(241,196,15,0.9)'; ctx.lineWidth = 2; ctx.strokeRect(sx - 3, sy - 3, 70, 70); ctx.restore(); }
-    else if (h.star >= 3) { ctx.strokeStyle = GRADES[h.def.grade].color; ctx.lineWidth = 1; ctx.strokeRect(sx - 2.5, sy - 2.5, 69, 69); }
+    if (h.star >= 5 || h.def.grade === 'S') { ctx.save(); ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 14 + Math.sin(this.t * 4) * 5; ctx.strokeStyle = 'rgba(241,196,15,0.9)'; ctx.lineWidth = 2; ctx.strokeRect(sx + 12, sy + 2, 40, 62); ctx.restore(); }
     ctx.drawImage(img, sx, sy);
     if (h.flash > 0) { ctx.globalAlpha = Math.min(1, h.flash / 0.12) * 0.85; ctx.drawImage(flashSprite(img), sx, sy); ctx.globalAlpha = 1; }
-    this.#hpBar(h.x, h.y + 34, h.hp / h.maxHp, '#27ae60', 44);
-    ctx.fillStyle = '#333'; ctx.font = 'bold 10px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText(`Lv${h.level}`, h.x, h.y + 39);
+    this.#hpBar(h.x, h.y + 6, h.hp / h.maxHp, '#27ae60', 40);
+    ctx.fillStyle = '#ecf0f1'; ctx.font = 'bold 10px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(`Lv${h.level}`, h.x, h.y + 12);
   }
 
   #drawMonster(m) {
@@ -179,16 +178,15 @@ export class Renderer {
     const frame = Math.floor(m.animT * (m.anim === 'walk' ? 8 : 5)) % 4;
     const img = monsterSprite(m.def, frame);
     const knock = m.flash ? 6 * (m.flash / 0.12) : 0;
-    const lunge = m.lunge > 0 ? -12 * (m.lunge / 0.2) : 0;
+    const lunge = m.lunge > 0 ? -14 * (m.lunge / 0.2) : 0;
     const cx = m.x + lunge + knock + (m.shake ? (Math.random() - 0.5) * 3 * m.shake : 0);
-    const bottom = m.y + img.height / 2;
-    this.#shadow(m.x, bottom - 4, img.width / 3);
+    const bottom = m.y + 4;
+    this.#shadow(m.x, bottom, img.width / 3.2);
     if (!m.alive) {
       const k = Math.min(1, m.deadT * 3.5);
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(m.x, bottom); ctx.scale(1 + k * 0.5, 1 - k); ctx.drawImage(img, -img.width / 2, -img.height); ctx.restore();
       return;
     }
-    // spawn pop (overshoot), squash & stretch on the lunge
     const pop = m.spawnT < 0.3 ? Math.min(1.15, m.spawnT / 0.3 * 1.15) * (m.spawnT > 0.22 ? (1.15 - (m.spawnT - 0.22) / 0.08 * 0.15) / 1.15 : 1) : 1;
     const sqx = (m.lunge > 0 ? 1.12 : 1) * pop, sqy = (m.lunge > 0 ? 0.9 : 1) * pop;
     ctx.save();
@@ -197,8 +195,8 @@ export class Renderer {
     ctx.drawImage(img, -img.width / 2, -img.height);
     if (m.flash > 0) { ctx.globalAlpha = Math.min(1, m.flash / 0.12) * 0.85; ctx.drawImage(flashSprite(img), -img.width / 2, -img.height); }
     ctx.restore();
-    if (m.stun > 0) { ctx.fillStyle = '#8e44ad'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('zZ', m.x + 20, m.y - img.height / 2 - 4); }
-    if (!m.isBoss) this.#hpBar(m.x, m.y + 34, m.hp / m.maxHp, m.elite ? '#f1c40f' : '#e74c3c', m.elite ? 52 : 44);
+    if (m.stun > 0) { ctx.fillStyle = '#c39bd3'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('zZ', m.x + 20, bottom - img.height - 4); }
+    if (!m.isBoss) this.#hpBar(m.x, bottom + 6, m.hp / m.maxHp, m.elite ? '#f1c40f' : '#e74c3c', m.elite ? 48 : 40);
   }
 
   // ------------------------------------------------------------- effects --
@@ -220,7 +218,7 @@ export class Renderer {
         }
         case 'sparkle': {
           const n = f.n ?? 6; ctx.fillStyle = f.color;
-          for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + i, rr = 12 + k * 26, x = f.x + Math.cos(a) * rr, y = f.y - k * 40 + Math.sin(a) * rr * 0.5; ctx.globalAlpha = 1 - k; ctx.fillRect(x - 2, y - 1, 4, 2); ctx.fillRect(x - 1, y - 2, 2, 4); }
+          for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + i, rr = 12 + k * 26, x = f.x + Math.cos(a) * rr, y = f.y - 20 - k * 40 + Math.sin(a) * rr * 0.5; ctx.globalAlpha = 1 - k; ctx.fillRect(x - 2, y - 1, 4, 2); ctx.fillRect(x - 1, y - 2, 2, 4); }
           ctx.globalAlpha = 1; break;
         }
         case 'puff': {
@@ -240,19 +238,16 @@ export class Renderer {
 
   #drawParticles(em) {
     const { ctx } = this;
-    for (const p of em.particles) {
-      ctx.globalAlpha = Math.max(0, 1 - p.t / p.life);
-      ctx.fillStyle = p.color; ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
-    }
+    for (const p of em.particles) { ctx.globalAlpha = Math.max(0, 1 - p.t / p.life); ctx.fillStyle = p.color; ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size); }
     ctx.globalAlpha = 1;
   }
 
-  #shadow(x, y, rx) { const { ctx } = this; ctx.fillStyle = 'rgba(0,0,0,0.13)'; ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.3, 0, 0, Math.PI * 2); ctx.fill(); }
+  #shadow(x, y, rx) { const { ctx } = this; ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.3, 0, 0, Math.PI * 2); ctx.fill(); }
 
   #hpBar(x, y, ratio, color, w = 44) {
     const { ctx } = this; const h = 5;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(x - w / 2 - 1, y - 1, w + 2, h + 2);
-    ctx.fillStyle = '#e0e0e0'; ctx.fillRect(x - w / 2, y, w, h);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - w / 2 - 1, y - 1, w + 2, h + 2);
+    ctx.fillStyle = '#4a4a4a'; ctx.fillRect(x - w / 2, y, w, h);
     ctx.fillStyle = ratio > 0.5 ? color : ratio > 0.25 ? '#f39c12' : '#c0392b';
     ctx.fillRect(x - w / 2, y, Math.max(0, w * Math.min(1, ratio)), h);
   }
@@ -260,6 +255,7 @@ export class Renderer {
   #drawProjectiles(em) {
     const { ctx } = this;
     for (const p of em.projectiles) {
+      if (p.kind === 'none') continue;
       const k = Math.min(1, p.t / p.dur);
       const arc = p.hostile ? 26 : 16;
       const x = p.x + (p.tx - p.x) * k, y = p.y + (p.ty - p.y) * k - Math.sin(k * Math.PI) * arc;

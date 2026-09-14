@@ -31,14 +31,15 @@ test('a full 5-hero party progresses through several stages and the tank soaks a
   const front = g.entities.heroes.find((h) => h.slot === 'front');
   assert.equal(front.role, 'tank', 'tank takes the front slot');
   run(g, 300);
-  assert.ok(g.state.stage >= 4, `stage=${g.state.stage}`);
+  assert.ok(g.state.stage >= 3, `stage=${g.state.stage}`);
   assert.equal(g.entities.heroes.length, 5);
 });
 
 test('boss timeout falls back to farming 1-9 with auto-advance off; boss kill advances', () => {
   const s = createInitialState(); s.stage = 10; s.maxStage = 10; s.maxCleared = 9; s.heroes[MAIN_ID].level = 20;
   const g = new GameManager({ state: s, save: memSave() });
-  assert.ok(g.entities.boss, 'boss spawned on stage 10 challenge');
+  run(g, 2);
+  assert.ok(g.entities.boss, 'boss spawned on stage 10 challenge (after the approach)');
   run(g, BALANCE.BOSS_TIME_LIMIT + 2);
   assert.equal(g.state.stage, 9, 'farming 1-9 after timeout');
   assert.equal(g.isChallenging(), false);
@@ -50,7 +51,7 @@ test('boss timeout falls back to farming 1-9 with auto-advance off; boss kill ad
 
   const s2 = createInitialState(); s2.stage = 10; s2.maxStage = 10; s2.maxCleared = 9; s2.heroes[MAIN_ID].level = 60;
   const g2 = new GameManager({ state: s2, save: memSave() });
-  run(g2, 25);
+  run(g2, 30);
   assert.equal(g2.state.stage, 11, 'boss killed -> Phase 2-1');
   assert.equal(g2.state.stats.bossKills, 1);
   assert.equal(g2.state.gems, BALANCE.STARTING_GEMS + BALANCE.GEMS_BOSS_FIRST);

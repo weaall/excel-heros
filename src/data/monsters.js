@@ -17,6 +17,19 @@ export const MONSTER_TYPES = [
   { id: 'cursor',    shape: 'cursor',    name: '커서 도둑',     face: { eyes: 'one',    mouth: 'smile' } },
   { id: 'monkey',    shape: 'monkey',    name: '복붙 원숭이',   face: { eyes: 'round',  mouth: 'smile' } },
   { id: 'bull',      shape: 'bull',      name: '마감 황소',     face: { eyes: 'angry',  mouth: 'teeth' } },
+  // Tiny Creatures additions (single-frame creatures, bob animation)
+  { id: 'mushroom',  shape: 'blob',      name: '스팸 버섯',     face: { eyes: 'round',  mouth: 'smile' } },
+  { id: 'eyeball',   shape: 'blob',      name: '감시 눈알',     face: { eyes: 'one',    mouth: 'flat' }, ranged: 'drop' },
+  { id: 'hand',      shape: 'blob',      name: '단축키 손',     face: { eyes: 'dot',    mouth: 'flat' } },
+  { id: 'golem',     shape: 'cube',      name: '서버 다운 골렘', face: { eyes: 'angry',  mouth: 'flat' } },
+  { id: 'flame',     shape: 'spike',     name: '과열 불꽃',     face: { eyes: 'angry',  mouth: 'zigzag' } },
+  { id: 'orb',       shape: 'blob',      name: '로딩 구슬',     face: { eyes: 'one',    mouth: 'o' }, ranged: 'drop' },
+  { id: 'rabbit',    shape: 'blob',      name: '마감 토끼',     face: { eyes: 'round',  mouth: 'o' } },
+  { id: 'chicken',   shape: 'blob',      name: '야근 닭',       face: { eyes: 'dot',    mouth: 'flat' }, ranged: 'paper' },
+  { id: 'cat',       shape: 'blob',      name: '야근 고양이',   face: { eyes: 'sleepy', mouth: 'smile' } },
+  { id: 'rat',       shape: 'blob',      name: '버그 쥐',       face: { eyes: 'dot',    mouth: 'teeth' } },
+  { id: 'snake',     shape: 'blob',      name: '피드백 뱀',     face: { eyes: 'angry',  mouth: 'zigzag' } },
+  { id: 'robot',     shape: 'cube',      name: '매크로 로봇',   face: { eyes: 'dot',    mouth: 'flat' }, ranged: 'bar' },
 ];
 
 export const PALETTES = [

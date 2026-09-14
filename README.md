@@ -46,7 +46,7 @@ src/data/monsters.js           스테이지별 몬스터, 보스
 src/data/quests.js             일일 업무 정의, 출근/전체 완료 보너스
 src/data/sprites.js            문자열 템플릿 → 치비 픽셀 스프라이트, 카드/초상 일러스트 생성
 src/core/GameManager.js        재화, 스테이지 흐름, 플레이어 액션(강화/승진/변환/방출/퀘스트/광고), 이벤트
-src/core/EntityManager.js      5인 포메이션, 타겟팅, 이동, 전투, 스킬
+src/core/EntityManager.js      한 줄 대열 라인 전투, 웨이브/이동 스크롤, 대시·투사체 타이밍, 스킬
 src/core/GachaManager.js       확률 + 천장(50/100) 순수 로직
 src/core/QuestManager.js       일일 리셋, 진행/수령, 광고 횟수
 src/core/SaveManager.js        localStorage 10초 자동 저장, 오프라인 보상 계산
@@ -60,6 +60,6 @@ DevTools 콘솔에서 `EH.game.state` 로 상태를 보고, `EH.game.state.gold 
 
 ## 아트 크레딧 (CC0)
 
-- 영웅·몬스터·보스 스프라이트: **16x16 DungeonTileset II v1.7** by 0x72 — <https://0x72.itch.io/dungeontileset-ii> (CC0). 캐릭터별로 색조(hue)를 바꿔 28명을 10개 베이스로 만듭니다. 파일: `assets/sprites/0x72/sheet.png`
-- 추가 생물 스프라이트(예비): **Tiny Creatures** by Clint Bellanger — <https://opengameart.org/content/tiny-creatures> (CC0). 파일: `assets/sprites/tiny-creatures/tilemap_packed.png`
+- 영웅·몬스터·보스 스프라이트: **16x16 DungeonTileset II v1.7** by 0x72 — <https://0x72.itch.io/dungeontileset-ii> (CC0). 캐릭터별로 색조(hue)를 바꿔 28명을 10개 베이스로 만들고, 던전 벽·바닥·배너·분수 타일도 이 시트에서 가져옵니다. 파일: `assets/sprites/0x72/sheet.png`
+- 몬스터 12종: **Tiny Creatures** by Clint Bellanger — <https://opengameart.org/content/tiny-creatures> (CC0). 파일: `assets/sprites/tiny-creatures/tilemap_packed.png`
 - 팩이 없거나 매핑이 없는 캐릭터는 `src/data/heroArt.js` / `src/data/monsterArt.js`의 코드 생성 도트로 대체됩니다.
