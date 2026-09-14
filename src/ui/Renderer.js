@@ -3,6 +3,7 @@ import { GRID, CANVAS_W, CANVAS_H } from '../core/EntityManager.js';
 import { heroSprite, monsterSprite } from '../data/sprites.js';
 import { GRADES } from '../data/heroes.js';
 import { fmt } from '../utils/format.js';
+import { BALANCE } from '../config/balance.js';
 
 const COLS = 'ABCDEFG';
 const GRID_LINE = '#d4d4d4', HEADER_BG = '#f3f3f3', HEADER_FG = '#444', SELECT = '#217346';
@@ -86,10 +87,10 @@ export class Renderer {
     if (!em.boss) return;
     const b = em.boss; const { ctx } = this;
     const x = GRID.headerW, y = GRID.headerH, w = GRID.cols * GRID.cellW, h = GRID.cellH;
-    const hpRatio = Math.max(0, b.hp / b.maxHp), tRatio = Math.max(0, em.bossTimer / this.game.constructor.BOSS_TIME ?? 30);
+    const hpRatio = Math.max(0, b.hp / b.maxHp);
     ctx.fillStyle = '#fde9e7'; ctx.fillRect(x, y, w, h);
     ctx.fillStyle = '#f1948a'; ctx.fillRect(x, y, w * hpRatio, h);
-    ctx.fillStyle = '#c0392b'; ctx.fillRect(x, y + h - 3, w * Math.min(1, em.bossTimer / 30), 3);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(x, y + h - 3, w * Math.min(1, em.bossTimer / BALANCE.BOSS_TIME_LIMIT), 3);
     ctx.fillStyle = '#5a1a12'; ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(`${b.def.name}   ${fmt(b.hp)} / ${fmt(b.maxHp)}   ⏱ ${em.bossTimer.toFixed(1)}s`, x + w / 2, y + h / 2 - 1);
   }
@@ -170,6 +171,6 @@ export class Renderer {
     const { ctx } = this;
     ctx.fillStyle = 'rgba(142,68,173,0.12)'; ctx.fillRect(GRID.headerW, CANVAS_H - GRID.cellH, GRID.cols * GRID.cellW, GRID.cellH);
     ctx.fillStyle = '#6c3483'; ctx.font = 'bold 11px "Segoe UI", Arial'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(`▲ Team Sync: ATK ×${em.atkBuff.mult.toFixed(2)} (${Math.max(0, em.atkBuff.until - em.time).toFixed(1)}s)`, GRID.headerW + 6, CANVAS_H - GRID.cellH / 2);
+    ctx.fillText(`▲ 팀 싱크: ATK ×${em.atkBuff.mult.toFixed(2)} (${Math.max(0, em.atkBuff.until - em.time).toFixed(1)}s)`, GRID.headerW + 6, CANVAS_H - GRID.cellH / 2);
   }
 }

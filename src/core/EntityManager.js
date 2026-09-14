@@ -1,6 +1,6 @@
 // Combat simulation: 5-hero formation vs. up to 5 monsters (or 1 boss) on the A1:G15 grid.
 import { BALANCE, monsterHP, monsterATK, bossHP, bossATK, isBossStage } from '../config/balance.js';
-import { HERO_BY_ID, ROLES } from '../data/heroes.js';
+import { ROLES } from '../data/heroes.js';
 import { monsterForStage, BOSS } from '../data/monsters.js';
 
 export const GRID = Object.freeze({ cols: 7, rows: 15, cellW: 64, cellH: 24, headerW: 32, headerH: 20 });
@@ -39,7 +39,7 @@ export class EntityManager {
   rebuildParty() {
     const s = this.game.state;
     const prev = new Map(this.heroes.map((h) => [h.heroId, h]));
-    const defs = s.party.map((id) => HERO_BY_ID[id]).filter(Boolean)
+    const defs = s.party.map((id) => { const d = this.game.heroDef(id); return d ? { ...d, heroId: id } : null; }).filter(Boolean)
       .sort((a, b) => ROLE_PRIORITY[a.role] - ROLE_PRIORITY[b.role]);
     const used = new Set();
     this.heroes = defs.map((def) => {
@@ -52,8 +52,9 @@ export class EntityManager {
         if (slot) break;
       }
       slot ??= { c: 1, r: 7.5, group: 'back' };
-      const old = prev.get(def.id);
+      const old = prev.get(def.heroId);
       const e = old ?? this.#makeHero(def);
+      e.def = def; e.role = def.role; // main hero's job (and thus role/sprite) may have changed
       e.homeX = cx(slot.c); e.homeY = cy(slot.r); e.slot = slot.group;
       if (!old) { e.x = e.homeX; e.y = e.homeY; }
       return e;
@@ -63,7 +64,7 @@ export class EntityManager {
 
   #makeHero(def) {
     return {
-      id: nextId++, kind: 'hero', heroId: def.id, def, role: def.role,
+      id: nextId++, kind: 'hero', heroId: def.heroId, def, role: def.role,
       x: 0, y: 0, homeX: 0, homeY: 0, hp: 1, maxHp: 1, atk: 1, interval: 1, cd: Math.random() * 0.5,
       range: 0, speed: BALANCE.HERO_SPEED, alive: true, reviveT: 0, targetId: null,
       anim: 'idle', animT: 0, skillCd: 2 + Math.random() * 3, star: 1, level: 1, shake: 0,
@@ -89,7 +90,7 @@ export class EntityManager {
     if (isBossStage(stage)) {
       this.boss = this.#spawnMonster(stage, true);
       this.bossTimer = BALANCE.BOSS_TIME_LIMIT;
-      this.game.log(`Boss appeared: ${BOSS.name} (${this.game.stageLabel()})`, 'boss');
+      this.game.log(`보스 등장: ${BOSS.name} (${this.game.stageLabel()})`, 'boss');
     } else {
       for (let i = 0; i < BALANCE.MAX_MONSTERS; i++) this.spawnQueue.push(0.2 + i * 0.35);
     }
@@ -150,7 +151,7 @@ export class EntityManager {
         h.reviveT -= dt;
         if (h.reviveT <= 0) {
           h.alive = true; h.hp = h.maxHp; h.x = h.homeX; h.y = h.homeY;
-          this.game.log(`${h.def.name} is back from sick leave`, 'info');
+          this.game.log(`${h.def.name} 병가 복귀`, 'info');
         }
         continue;
       }
@@ -288,7 +289,7 @@ export class EntityManager {
         this.game.onMonsterKilled(target);
       } else {
         target.reviveT = BALANCE.HERO_REVIVE_SEC;
-        this.game.log(`${target.def.name} collapsed (revive in ${BALANCE.HERO_REVIVE_SEC}s)`, 'warn');
+        this.game.log(`${target.def.name} 쓰러짐 (${BALANCE.HERO_REVIVE_SEC}초 후 복귀)`, 'warn');
       }
     }
   }
@@ -312,6 +313,6 @@ export class EntityManager {
     }
     h.anim = 'attack'; h.animT = 0;
     this.floaters.push({ x: h.x, y: h.y - 34, text: h.skillName ?? type.toUpperCase(), color: '#8e44ad', t: 0, big: true });
-    this.game.log(`${h.def.name} used ${h.skillName ?? type}`, 'skill');
+    this.game.log(`${h.def.name}: ${h.skillName ?? type} 발동`, 'skill');
   }
 }

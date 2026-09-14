@@ -1,10 +1,12 @@
-// Pure gacha logic with two pity counters (soft 50 => Executive+, hard 100 => CEO).
+// Pure gacha logic with two pity counters (soft 50 => A or better, hard 100 => S).
 import { BALANCE } from '../config/balance.js';
 import { GRADES, GRADE_ORDER, heroesOfGrade } from '../data/heroes.js';
 
-export const initialPity = () => ({ pulls: 0, sinceExecutive: 0, sinceCEO: 0 });
+const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0 });
 
-/** Roll a grade by base rates (60/30/9/1). */
+export const initialPity = () => ({ pulls: 0, sinceA: 0, sinceS: 0 });
+
+/** Roll a grade by base rates (45/30/17/7/1). */
 export function rollGradeRaw(r) {
   let acc = 0;
   for (const g of GRADE_ORDER) { acc += GRADES[g].rate; if (r < acc) return g; }
@@ -13,31 +15,31 @@ export function rollGradeRaw(r) {
 
 /**
  * Roll a grade with pity applied. Returns { grade, pity } (new pity object, input untouched).
- *  - The 100th pull without a CEO is forced to CEO.
- *  - The 50th pull without Executive-or-better is forced to at least Executive.
+ *  - The 100th pull without an S is forced to S.
+ *  - The 50th pull without A-or-better is forced to at least A.
  */
 export function rollGrade(pity, rng) {
   let grade = rollGradeRaw(rng.next());
-  const p = { pulls: pity.pulls + 1, sinceExecutive: pity.sinceExecutive + 1, sinceCEO: pity.sinceCEO + 1 };
-  if (p.sinceCEO >= BALANCE.PITY_CEO) grade = 'ceo';
-  else if (p.sinceExecutive >= BALANCE.PITY_EXECUTIVE && grade !== 'ceo') grade = 'executive';
-  if (grade === 'ceo') { p.sinceCEO = 0; p.sinceExecutive = 0; }
-  else if (grade === 'executive') p.sinceExecutive = 0;
+  const p = { pulls: pity.pulls + 1, sinceA: pity.sinceA + 1, sinceS: pity.sinceS + 1 };
+  if (p.sinceS >= BALANCE.PITY_S) grade = 'S';
+  else if (p.sinceA >= BALANCE.PITY_A && grade !== 'S') grade = 'A';
+  if (grade === 'S') { p.sinceS = 0; p.sinceA = 0; }
+  else if (grade === 'A') p.sinceA = 0;
   return { grade, pity: p };
 }
 
 /**
  * Perform one pull against a roster.
- * @param roster  { [heroId]: { owned, star, shards, level } }  (mutated)
+ * @param roster  { [heroId]: { owned, star, shards, level, enhance } }  (mutated)
  * @returns { heroId, grade, isNew, shards, pity }
  */
 export function pullOnce(pity, roster, rng) {
   const { grade, pity: nextPity } = rollGrade(pity, rng);
   const hero = rng.pick(heroesOfGrade(grade));
-  const entry = roster[hero.id] ?? (roster[hero.id] = { owned: false, star: 0, shards: 0, level: 1 });
+  const entry = roster[hero.id] ?? (roster[hero.id] = emptyHero());
   let isNew = false, shards = 0;
   if (!entry.owned) {
-    // New character: unlock at 1-star (the GDD's 10 unlock shards are consumed implicitly).
+    // New card: unlocked at ★1 right away (the GDD's 10 unlock shards are consumed implicitly).
     entry.owned = true; entry.star = 1; entry.level = entry.level || 1; isNew = true; shards = BALANCE.UNLOCK_SHARDS;
   } else {
     shards = rng.int(BALANCE.DUPLICATE_SHARDS_MIN, BALANCE.DUPLICATE_SHARDS_MAX);

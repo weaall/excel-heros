@@ -1,5 +1,5 @@
 // Bootstrap: load save → offline reward → game loop (sim + UI + canvas).
-import { BALANCE, offlineGold } from './config/balance.js';
+import { BALANCE } from './config/balance.js';
 import { GameManager } from './core/GameManager.js';
 import { SaveManager } from './core/SaveManager.js';
 import { createInitialState } from './core/state.js';
@@ -16,7 +16,7 @@ if (loaded) {
   const report = SaveManager.computeOffline(loaded, Date.now(), (stage) => game.goldPerSecAt(stage));
   if (report && report.gold > 0) { game.applyOffline(report); ui.showOffline(report); }
 } else {
-  game.log('New workbook created. Welcome aboard!', 'info');
+  game.log('새 통합 문서가 생성되었습니다. 입사를 환영합니다!', 'info');
   ui.showWelcome();
 }
 game.persist();
@@ -31,12 +31,7 @@ function simulate() {
   const now = performance.now();
   let dt = (now - lastSim) / 1000; lastSim = now;
   if (dt <= 0) return;
-  if (dt > IDLE_GAP) {
-    const seconds = Math.min(dt, BALANCE.OFFLINE_CAP_SEC);
-    const gps = game.goldPerSecAt(game.state.maxStage);
-    game.applyOffline({ seconds, elapsed: dt, capped: dt > BALANCE.OFFLINE_CAP_SEC, goldPerSec: gps, gold: offlineGold(gps, seconds) });
-    dt = STEP;
-  }
+  if (dt > IDLE_GAP) { game.applyOffline(game.idleReport(dt)); dt = STEP; }
   while (dt > 0) { const step = Math.min(dt, STEP); game.tick(step); dt -= step; }
 }
 setInterval(simulate, 50);

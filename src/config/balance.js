@@ -1,8 +1,7 @@
 // ---------------------------------------------------------------------------
 // Excel Heroes - balance constants & formulas (pure, no DOM)
-// Formulas from the GDD are kept verbatim; everything the GDD left undefined
-// (hero growth, monster ATK, gems, boss multipliers...) is derived here and
-// documented in docs/BALANCE.md.
+// GDD formulas are kept verbatim; everything the GDD left open is derived here
+// and documented in docs/BALANCE.md.
 // ---------------------------------------------------------------------------
 
 export const BALANCE = Object.freeze({
@@ -10,13 +9,21 @@ export const BALANCE = Object.freeze({
   UPGRADE_COST_BASE: 10,   UPGRADE_COST_GROWTH: 1.12, // Cost = floor(10 * 1.12^(L-1))
   MONSTER_HP_BASE: 50,     MONSTER_HP_GROWTH: 1.18,   // HP   = floor(50 * 1.18^(S-1))
   GOLD_BASE: 5,            GOLD_GROWTH: 1.15,         // Gold = floor(5  * 1.15^(S-1))
-  OFFLINE_CAP_SEC: 12 * 3600, OFFLINE_EFFICIENCY: 0.8, OFFLINE_MIN_SEC: 60,
+
+  // --- Idle / offline (user decision: open = 1.0x, closed = 0.6x up to 10h) --
+  OFFLINE_CAP_SEC: 10 * 3600, OFFLINE_EFFICIENCY: 0.6, OFFLINE_MIN_SEC: 60,
+  AD: { perDay: 3, offlineMultiplier: 2, instantHours: 1, durationSec: 5 }, // placeholder ad (no SDK)
 
   // --- Derived (not in GDD) ---------------------------------------------
   MONSTER_ATK_BASE: 1,     MONSTER_ATK_GROWTH: 1.13,
-  HERO_ATK_GROWTH: 1.10,   // per level (cost grows 1.12 -> slow soft wall, solved by stars/gacha/offline)
+  HERO_ATK_GROWTH: 1.10,   // per level (cost grows 1.12 -> slow soft wall, solved by stars/enhance/jobs)
   HERO_HP_GROWTH: 1.08,
   STAR_MULT: [1, 1.25, 1.6, 2.1, 2.8], // index = star-1
+  ENHANCE_PER_LEVEL: 0.04,  // +4% ATK & HP per enhance level
+  ENHANCE_MAX: 50,
+  ENHANCE_COST_BASE: 10, ENHANCE_COST_GROWTH: 1.2, // enhance cards
+  SHARD_CARD_VALUE: { D: 1, C: 2, B: 4, A: 8, S: 16 }, // enhance cards per shard when converting
+  DISMISS_CARD_BONUS: 10,   // extra shards' worth of cards when a whole card is dismissed
 
   KILLS_PER_STAGE: 20,
   BOSS_EVERY: 10,
@@ -38,8 +45,8 @@ export const BALANCE = Object.freeze({
 
   GACHA_SINGLE_COST: 100,
   GACHA_TEN_COST: 900,
-  PITY_EXECUTIVE: 50,
-  PITY_CEO: 100,
+  PITY_A: 50,               // 50 pulls without A+ -> guaranteed A or better
+  PITY_S: 100,              // 100 pulls without S -> guaranteed S
   DUPLICATE_SHARDS_MIN: 5,
   DUPLICATE_SHARDS_MAX: 10,
   UNLOCK_SHARDS: 10,
@@ -52,10 +59,16 @@ export const BALANCE = Object.freeze({
   SKILL_BOOST_STAR: 4,
   SKILL_BOOST_MULT: 1.5,
 
+  // Main hero job promotion: enhance cards + highest cleared stage requirement, per tier (D->C, C->B, B->A, A->S)
+  MAIN_PROMOTE_CARDS: [20, 60, 150, 400],
+  MAIN_PROMOTE_STAGE: [5, 15, 30, 50],
+  MAIN_SKILL_TIER: 1,       // job tier at which the main hero's skill unlocks (사원)
+  MAIN_SKILL_BOOST_TIER: 3, // 과장
+
   TEAM_UPGRADES: {
-    coffee:  { name: 'Coffee Machine',  desc: '+2% attack speed / lv', per: 0.02, base: 50, growth: 1.25, max: 50 },
-    payroll: { name: 'Payroll Bonus',   desc: '+5% gold / lv',         per: 0.05, base: 50, growth: 1.25, max: 100 },
-    chairs:  { name: 'Ergonomic Chairs',desc: '+5% party HP / lv',     per: 0.05, base: 40, growth: 1.22, max: 100 },
+    coffee:  { name: '커피 머신',   desc: '공격 속도 +2% / Lv', per: 0.02, base: 50, growth: 1.25, max: 50 },
+    payroll: { name: '성과급 제도', desc: '골드 획득 +5% / Lv', per: 0.05, base: 50, growth: 1.25, max: 100 },
+    chairs:  { name: '인체공학 의자', desc: '파티 HP +5% / Lv', per: 0.05, base: 40, growth: 1.22, max: 100 },
   },
 
   SAVE_INTERVAL_MS: 10_000,
@@ -88,12 +101,14 @@ export function stageLabel(stage) {
 }
 
 export const starMult = (star) => B.STAR_MULT[Math.min(B.MAX_STAR, Math.max(1, star)) - 1];
+export const enhanceMult = (enhance) => 1 + B.ENHANCE_PER_LEVEL * Math.min(B.ENHANCE_MAX, Math.max(0, enhance | 0));
+export const enhanceCost = (enhance) => Math.floor(B.ENHANCE_COST_BASE * B.ENHANCE_COST_GROWTH ** Math.max(0, enhance | 0));
 
-export function heroATK(base, level, star) {
-  return Math.floor(base * B.HERO_ATK_GROWTH ** (Math.max(1, level) - 1) * starMult(star));
+export function heroATK(base, level, star, enhance = 0) {
+  return Math.floor(base * B.HERO_ATK_GROWTH ** (Math.max(1, level) - 1) * starMult(star) * enhanceMult(enhance));
 }
-export function heroHP(base, level, star, hpBonus = 0) {
-  return Math.floor(base * B.HERO_HP_GROWTH ** (Math.max(1, level) - 1) * starMult(star) * (1 + hpBonus));
+export function heroHP(base, level, star, hpBonus = 0, enhance = 0) {
+  return Math.floor(base * B.HERO_HP_GROWTH ** (Math.max(1, level) - 1) * starMult(star) * enhanceMult(enhance) * (1 + hpBonus));
 }
 
 export function teamUpgradeCost(key, level) {
@@ -116,3 +131,6 @@ export function estimateGoldPerSec(stage, partyDPS, goldMult = 1) {
   const killsPerSec = Math.min(B.MAX_MONSTERS, 1 / killTime);
   return baseGold(stage) * goldMult * killsPerSec;
 }
+
+/** Quest/daily rewards are relative: N times the gold-per-kill of the player's best stage. */
+export const relativeGold = (maxStage, kills, goldMult = 1) => Math.floor(baseGold(Math.max(1, maxStage)) * kills * goldMult);

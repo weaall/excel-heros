@@ -1,58 +1,78 @@
-// Hero roster. Names are Excel/office themed so the roster table reads like an HR sheet.
+// Hero roster (D ~ S grade cards) + main hero job tree. Names are office-themed.
 export const GRADES = Object.freeze({
-  standard:  { id: 'standard',  name: 'Standard',  rate: 0.60, promote: [10, 20, 40, 80],   color: '#5f6b7a', base: { atk: 6,  hp: 100 } },
-  advanced:  { id: 'advanced',  name: 'Advanced',  rate: 0.30, promote: [15, 30, 60, 120],  color: '#2b7cd3', base: { atk: 8,  hp: 130 } },
-  executive: { id: 'executive', name: 'Executive', rate: 0.09, promote: [20, 40, 80, 160],  color: '#8e44ad', base: { atk: 11, hp: 160 } },
-  ceo:       { id: 'ceo',       name: 'CEO',       rate: 0.01, promote: [25, 50, 100, 200], color: '#d4a017', base: { atk: 15, hp: 200 } },
+  D: { id: 'D', name: 'D', label: '일반',  rate: 0.45, promote: [10, 20, 40, 80],   color: '#7f8c8d', bg: '#ecf0f1', base: { atk: 6,  hp: 100 } },
+  C: { id: 'C', name: 'C', label: '희귀',  rate: 0.30, promote: [15, 30, 60, 120],  color: '#27ae60', bg: '#e9f7ef', base: { atk: 8,  hp: 130 } },
+  B: { id: 'B', name: 'B', label: '고급',  rate: 0.17, promote: [20, 40, 80, 160],  color: '#2b7cd3', bg: '#e8f1fb', base: { atk: 11, hp: 160 } },
+  A: { id: 'A', name: 'A', label: '영웅',  rate: 0.07, promote: [25, 50, 100, 200], color: '#8e44ad', bg: '#f4ecf7', base: { atk: 15, hp: 200 } },
+  S: { id: 'S', name: 'S', label: '전설',  rate: 0.01, promote: [30, 60, 120, 240], color: '#d4a017', bg: '#fdf6e3', base: { atk: 20, hp: 250 } },
 });
-export const GRADE_ORDER = ['standard', 'advanced', 'executive', 'ceo'];
+export const GRADE_ORDER = ['D', 'C', 'B', 'A', 'S'];
 
 // Roles: multipliers on grade base stats + combat behaviour. range in grid cells.
 export const ROLES = Object.freeze({
-  tank:   { id: 'tank',   name: 'Tank',   atk: 0.6, hp: 2.0, interval: 1.2, range: 0.6, slot: ['front', 'mid', 'back'] },
-  melee:  { id: 'melee',  name: 'Melee',  atk: 1.0, hp: 1.0, interval: 1.0, range: 0.6, slot: ['mid', 'front', 'back'] },
-  ranged: { id: 'ranged', name: 'Ranged', atk: 1.1, hp: 0.7, interval: 1.2, range: 5.0, slot: ['back', 'mid', 'front'] },
-  healer: { id: 'healer', name: 'Healer', atk: 0.5, hp: 0.8, interval: 1.5, range: 5.0, slot: ['back', 'mid', 'front'] },
+  tank:   { id: 'tank',   name: '탱커',   atk: 0.6, hp: 2.0, interval: 1.2, range: 0.6, slot: ['front', 'mid', 'back'] },
+  melee:  { id: 'melee',  name: '근접',   atk: 1.0, hp: 1.0, interval: 1.0, range: 0.6, slot: ['mid', 'front', 'back'] },
+  ranged: { id: 'ranged', name: '원거리', atk: 1.1, hp: 0.7, interval: 1.2, range: 5.0, slot: ['back', 'mid', 'front'] },
+  healer: { id: 'healer', name: '힐러',   atk: 0.5, hp: 0.8, interval: 1.5, range: 5.0, slot: ['back', 'mid', 'front'] },
 });
 
-// Skills (unlocked at ★2, boosted at ★4). power = multiplier of ATK (or of maxHP for heal).
+// Skills. power = multiplier of ATK (or % for buff/heal).
 export const SKILLS = Object.freeze({
-  strike: { name: 'Power Strike', desc: 'Single target ×{p} damage', cooldown: 8 },
-  sweep:  { name: 'Range Sweep',  desc: 'All enemies ×{p} damage',   cooldown: 10 },
-  buff:   { name: 'Team Sync',    desc: 'Party ATK +{p}% for 5s',    cooldown: 15 },
-  heal:   { name: 'Wellness Day', desc: 'Heal party {p}% max HP',    cooldown: 12 },
-  ult:    { name: 'Executive Order', desc: 'All enemies ×{p} damage + 2s stun', cooldown: 14 },
+  strike: { name: '강타',       desc: '단일 대상 ×{p} 피해',            cooldown: 8 },
+  sweep:  { name: '범위 정리',  desc: '모든 적에게 ×{p} 피해',           cooldown: 10 },
+  buff:   { name: '팀 싱크',    desc: '5초간 파티 공격력 +{p}%',         cooldown: 15 },
+  heal:   { name: '웰니스 데이', desc: '파티 전체 최대 HP의 {p}% 회복',   cooldown: 12 },
+  ult:    { name: '경영 지시',  desc: '모든 적에게 ×{p} 피해 + 2초 기절', cooldown: 14 },
 });
 
-/** @type {Array<{id:string,name:string,grade:string,role:string,skill:{type:string,power:number},palette:object}>} */
+/** Gacha pool (main hero is NOT in the pool). */
 export const HEROES = [
-  // Standard (6) ----------------------------------------------------------
-  { id: 'intern',   name: 'Intern Kim',        grade: 'standard', role: 'melee',  skill: { type: 'strike', power: 3 },   palette: { H: '#2b2b2b', B: '#ffffff', P: '#2f3d5c', W: '#9aa5b1' }, starter: true },
-  { id: 'clerk',    name: 'Clerk Park',        grade: 'standard', role: 'ranged', skill: { type: 'strike', power: 3 },   palette: { H: '#6b3e1e', B: '#c8d6e5', P: '#3b3b3b', W: '#4b6584' } },
-  { id: 'guard',    name: 'Security Guard',    grade: 'standard', role: 'tank',   skill: { type: 'buff',   power: 20 },  palette: { H: '#111111', B: '#1f2a44', P: '#1f2a44', W: '#8395a7' } },
-  { id: 'barista',  name: 'Office Barista',    grade: 'standard', role: 'healer', skill: { type: 'heal',   power: 25 },  palette: { H: '#c97b4a', B: '#6d4c41', P: '#3e2723', W: '#ffcc80' } },
-  { id: 'courier',  name: 'Mail Courier',      grade: 'standard', role: 'melee',  skill: { type: 'strike', power: 3 },   palette: { H: '#e0b04a', B: '#f39c12', P: '#34495e', W: '#95a5a6' } },
-  { id: 'temp',     name: 'Temp Worker',       grade: 'standard', role: 'ranged', skill: { type: 'sweep',  power: 1.2 }, palette: { H: '#7f8c8d', B: '#95a5a6', P: '#2c3e50', W: '#bdc3c7' } },
-  // Advanced (5) ----------------------------------------------------------
-  { id: 'vlookup',  name: 'VLOOKUP Analyst',   grade: 'advanced', role: 'ranged', skill: { type: 'sweep',  power: 1.5 }, palette: { H: '#1b3a6b', B: '#2b7cd3', P: '#1b3a6b', W: '#74b9ff' } },
-  { id: 'pivot',    name: 'Pivot Table Mgr',   grade: 'advanced', role: 'tank',   skill: { type: 'buff',   power: 25 },  palette: { H: '#4a3b2a', B: '#1e5eff', P: '#0b2a6b', W: '#a3c4ff' } },
-  { id: 'macro',    name: 'Macro Engineer',    grade: 'advanced', role: 'melee',  skill: { type: 'sweep',  power: 1.5 }, palette: { H: '#1a1a1a', B: '#0984e3', P: '#2d3436', W: '#00cec9' } },
-  { id: 'hr',       name: 'HR Specialist',     grade: 'advanced', role: 'healer', skill: { type: 'heal',   power: 30 },  palette: { H: '#5c2e0a', B: '#74b9ff', P: '#2d3436', W: '#ff7675' } },
-  { id: 'auditor',  name: 'Internal Auditor',  grade: 'advanced', role: 'melee',  skill: { type: 'strike', power: 4 },   palette: { H: '#3d3d3d', B: '#273c75', P: '#192a56', W: '#dcdde1' } },
-  // Executive (3) ---------------------------------------------------------
-  { id: 'cfo',      name: 'CFO',               grade: 'executive', role: 'ranged', skill: { type: 'sweep', power: 2 },   palette: { H: '#ececec', B: '#6c5ce7', P: '#2d3436', W: '#ffeaa7' } },
-  { id: 'cto',      name: 'CTO',               grade: 'executive', role: 'melee',  skill: { type: 'strike', power: 5 },  palette: { H: '#2d3436', B: '#a29bfe', P: '#2d3436', W: '#00b894' } },
-  { id: 'coo',      name: 'COO',               grade: 'executive', role: 'tank',   skill: { type: 'buff',  power: 35 },  palette: { H: '#636e72', B: '#8e44ad', P: '#2c2c54', W: '#dfe6e9' } },
-  // CEO (2) ---------------------------------------------------------------
-  { id: 'ceo',      name: 'The CEO',           grade: 'ceo', role: 'ranged', skill: { type: 'ult', power: 4 },           palette: { H: '#f5f6fa', B: '#d4a017', P: '#2f3640', W: '#fbc531' } },
-  { id: 'chairman', name: 'Chairman',          grade: 'ceo', role: 'tank',   skill: { type: 'ult', power: 3 },           palette: { H: '#dcdde1', B: '#e1b12c', P: '#353b48', W: '#f5f6fa' } },
+  // D (6) -------------------------------------------------------------------
+  { id: 'staff_park', name: '박사원',        grade: 'D', role: 'melee',  skill: { type: 'strike', power: 3 },   palette: { H: '#3b2a1a', B: '#dfe6e9', P: '#2f3d5c', W: '#9aa5b1' } },
+  { id: 'parttime',   name: '알바 이씨',     grade: 'D', role: 'ranged', skill: { type: 'strike', power: 3 },   palette: { H: '#6b3e1e', B: '#f8c291', P: '#3b3b3b', W: '#4b6584' } },
+  { id: 'guard',      name: '경비 아저씨',   grade: 'D', role: 'tank',   skill: { type: 'buff',   power: 20 },  palette: { H: '#555555', B: '#1f2a44', P: '#1f2a44', W: '#8395a7' } },
+  { id: 'barista',    name: '카페 바리스타', grade: 'D', role: 'healer', skill: { type: 'heal',   power: 25 },  palette: { H: '#c97b4a', B: '#6d4c41', P: '#3e2723', W: '#ffcc80' } },
+  { id: 'courier',    name: '택배 기사',     grade: 'D', role: 'melee',  skill: { type: 'strike', power: 3 },   palette: { H: '#2b2b2b', B: '#f39c12', P: '#34495e', W: '#95a5a6' } },
+  { id: 'contract',   name: '계약직 최',     grade: 'D', role: 'ranged', skill: { type: 'sweep',  power: 1.2 }, palette: { H: '#7f8c8d', B: '#95a5a6', P: '#2c3e50', W: '#bdc3c7' } },
+  // C (5) -------------------------------------------------------------------
+  { id: 'vlookup',    name: 'VLOOKUP 분석가', grade: 'C', role: 'ranged', skill: { type: 'sweep',  power: 1.5 }, palette: { H: '#1b3a6b', B: '#55efc4', P: '#1b3a6b', W: '#00b894' } },
+  { id: 'pivot',      name: '피벗 매니저',    grade: 'C', role: 'tank',   skill: { type: 'buff',   power: 25 },  palette: { H: '#4a3b2a', B: '#00b894', P: '#0b6b4b', W: '#a3ffd6' } },
+  { id: 'macro',      name: '매크로 엔지니어', grade: 'C', role: 'melee', skill: { type: 'sweep',  power: 1.5 }, palette: { H: '#1a1a1a', B: '#1abc9c', P: '#2d3436', W: '#00cec9' } },
+  { id: 'hr_jung',    name: '인사팀 정대리',  grade: 'C', role: 'healer', skill: { type: 'heal',   power: 30 },  palette: { H: '#5c2e0a', B: '#7bed9f', P: '#2d3436', W: '#ff7675' } },
+  { id: 'audit_han',  name: '감사팀 한대리',  grade: 'C', role: 'melee',  skill: { type: 'strike', power: 4 },   palette: { H: '#3d3d3d', B: '#2ecc71', P: '#192a56', W: '#dcdde1' } },
+  // B (4) -------------------------------------------------------------------
+  { id: 'acct_lead',  name: '회계팀장',      grade: 'B', role: 'ranged', skill: { type: 'sweep',  power: 1.8 }, palette: { H: '#2d3436', B: '#74b9ff', P: '#2d3436', W: '#ffeaa7' } },
+  { id: 'dev_lead',   name: '개발팀장',      grade: 'B', role: 'melee',  skill: { type: 'strike', power: 4.5 }, palette: { H: '#1e272e', B: '#0984e3', P: '#2d3436', W: '#00cec9' } },
+  { id: 'ga_lead',    name: '총무팀장',      grade: 'B', role: 'tank',   skill: { type: 'buff',   power: 30 },  palette: { H: '#636e72', B: '#2b7cd3', P: '#1b3a6b', W: '#dfe6e9' } },
+  { id: 'welfare',    name: '복지팀장',      grade: 'B', role: 'healer', skill: { type: 'heal',   power: 35 },  palette: { H: '#b33939', B: '#a3c4ff', P: '#2f3640', W: '#ff9ff3' } },
+  // A (3) -------------------------------------------------------------------
+  { id: 'cfo',        name: 'CFO',           grade: 'A', role: 'ranged', skill: { type: 'sweep',  power: 2 },   palette: { H: '#ececec', B: '#6c5ce7', P: '#2d3436', W: '#ffeaa7' } },
+  { id: 'cto',        name: 'CTO',           grade: 'A', role: 'melee',  skill: { type: 'strike', power: 5 },   palette: { H: '#2d3436', B: '#a29bfe', P: '#2d3436', W: '#00b894' } },
+  { id: 'coo',        name: 'COO',           grade: 'A', role: 'tank',   skill: { type: 'buff',   power: 35 },  palette: { H: '#636e72', B: '#8e44ad', P: '#2c2c54', W: '#dfe6e9' } },
+  // S (2) -------------------------------------------------------------------
+  { id: 'ceo',        name: '대표이사',      grade: 'S', role: 'ranged', skill: { type: 'ult', power: 4 },      palette: { H: '#f5f6fa', B: '#d4a017', P: '#2f3640', W: '#fbc531' } },
+  { id: 'chairman',   name: '회장님',        grade: 'S', role: 'tank',   skill: { type: 'ult', power: 3 },      palette: { H: '#dcdde1', B: '#e1b12c', P: '#353b48', W: '#f5f6fa' } },
 ];
 
 export const HERO_BY_ID = Object.fromEntries(HEROES.map((h) => [h.id, h]));
 export const heroesOfGrade = (grade) => HEROES.filter((h) => h.grade === grade);
-export const STARTER_HERO = HEROES.find((h) => h.starter).id;
 
-export function heroBaseStats(hero) {
-  const g = GRADES[hero.grade], r = ROLES[hero.role];
+// --- Main hero -------------------------------------------------------------
+export const MAIN_ID = 'main';
+const MAIN_PAL = { H: '#2b2b2b', P: '#2f3d5c' };
+/** Job tree: 인턴(D) → 사원(C) → 대리(B) → 과장(A) → 부장 3종(S, branch). */
+export const MAIN_JOBS = Object.freeze({
+  intern:  { id: 'intern',  tier: 0, grade: 'D', name: '김인턴',   title: '인턴',     role: 'melee',  skill: { type: 'strike', power: 3 },   next: ['staff'],   palette: { ...MAIN_PAL, B: '#ffffff', W: '#9aa5b1' } },
+  staff:   { id: 'staff',   tier: 1, grade: 'C', name: '김사원',   title: '사원',     role: 'melee',  skill: { type: 'strike', power: 3.5 }, next: ['senior'],  palette: { ...MAIN_PAL, B: '#dff9fb', W: '#95afc0' } },
+  senior:  { id: 'senior',  tier: 2, grade: 'B', name: '김대리',   title: '대리',     role: 'melee',  skill: { type: 'strike', power: 4 },   next: ['manager'], palette: { ...MAIN_PAL, B: '#c7ecee', W: '#7ed6df' } },
+  manager: { id: 'manager', tier: 3, grade: 'A', name: '김과장',   title: '과장',     role: 'melee',  skill: { type: 'strike', power: 5 },   next: ['sales', 'finance', 'admin'], palette: { ...MAIN_PAL, B: '#535c68', W: '#f9ca24' } },
+  sales:   { id: 'sales',   tier: 4, grade: 'S', name: '김부장',   title: '영업부장', role: 'melee',  skill: { type: 'strike', power: 6.5 }, next: [], palette: { ...MAIN_PAL, B: '#eb4d4b', W: '#f9ca24' }, desc: '단일 딜 특화. 보스전에 강함' },
+  finance: { id: 'finance', tier: 4, grade: 'S', name: '김부장',   title: '재무부장', role: 'ranged', skill: { type: 'sweep',  power: 2.5 }, next: [], palette: { ...MAIN_PAL, B: '#22a6b3', W: '#f9ca24' }, desc: '원거리 광역 딜. 사냥 속도 특화' },
+  admin:   { id: 'admin',   tier: 4, grade: 'S', name: '김부장',   title: '총무부장', role: 'tank',   skill: { type: 'ult',    power: 3 },   next: [], palette: { ...MAIN_PAL, B: '#f0932b', W: '#f9ca24' }, desc: '탱커 + 전체 기절. 생존 특화' },
+});
+export const MAIN_TIER_TITLES = ['인턴', '사원', '대리', '과장', '부장'];
+
+export function heroBaseStats(def) {
+  const g = GRADES[def.grade], r = ROLES[def.role];
   return { atk: g.base.atk * r.atk, hp: g.base.hp * r.hp, interval: r.interval, range: r.range };
 }

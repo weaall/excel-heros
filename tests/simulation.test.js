@@ -4,26 +4,29 @@ import assert from 'node:assert/strict';
 import { GameManager } from '../src/core/GameManager.js';
 import { createInitialState } from '../src/core/state.js';
 import { BALANCE } from '../src/config/balance.js';
+import { MAIN_ID } from '../src/data/heroes.js';
 
 const memSave = () => ({ saved: 0, save() { this.saved++; }, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
+const own = (s, id, level = 1) => { s.heroes[id] = { owned: true, star: 1, shards: 0, level, enhance: 0 }; };
 
 function run(game, seconds, step = 0.05) {
   for (let t = 0; t < seconds; t += step) game.tick(step);
 }
 
-test('a lone starter hero clears Phase 1-1 and earns gold', () => {
+test('the lone main hero clears Phase 1-1 and earns gold', () => {
   const g = new GameManager({ state: createInitialState(), save: memSave() });
-  run(g, 240);
+  run(g, 300);
   assert.ok(g.state.stats.totalKills >= BALANCE.KILLS_PER_STAGE, `kills=${g.state.stats.totalKills}`);
-  assert.ok(g.state.stage >= 2, `stage=${g.state.stage}`);
+  assert.ok(g.state.maxCleared >= 1, `maxCleared=${g.state.maxCleared}`); // may retreat from 1-2 solo; that is by design
   assert.ok(g.state.gold > 0);
   assert.ok(g.state.gems > BALANCE.STARTING_GEMS, 'first clear granted gems');
 });
 
 test('a full 5-hero party progresses through several stages and the tank soaks aggro', () => {
   const s = createInitialState();
-  for (const id of ['intern', 'guard', 'clerk', 'barista', 'courier']) s.heroes[id] = { owned: true, star: 1, shards: 0, level: 5 };
-  s.party = ['intern', 'guard', 'clerk', 'barista', 'courier'];
+  for (const id of ['guard', 'parttime', 'barista', 'courier']) own(s, id, 5);
+  s.heroes[MAIN_ID].level = 5;
+  s.party = [MAIN_ID, 'guard', 'parttime', 'barista', 'courier'];
   const g = new GameManager({ state: s, save: memSave() });
   const front = g.entities.heroes.find((h) => h.slot === 'front');
   assert.equal(front.role, 'tank', 'tank takes the front slot');
@@ -33,15 +36,14 @@ test('a full 5-hero party progresses through several stages and the tank soaks a
 });
 
 test('boss timeout retreats one stage; boss kill advances', () => {
-  const s = createInitialState(); s.stage = 10; s.maxStage = 10; s.maxCleared = 9;
+  const s = createInitialState(); s.stage = 10; s.maxStage = 10; s.maxCleared = 9; s.heroes[MAIN_ID].level = 20;
   const g = new GameManager({ state: s, save: memSave() });
   assert.ok(g.entities.boss, 'boss spawned on stage 10');
   run(g, BALANCE.BOSS_TIME_LIMIT + 2);
   assert.equal(g.state.stage, 9, 'retreated after timeout');
   assert.equal(g.state.stats.bossFails, 1);
 
-  const s2 = createInitialState(); s2.stage = 10; s2.maxStage = 10; s2.maxCleared = 9;
-  s2.heroes.intern.level = 60;
+  const s2 = createInitialState(); s2.stage = 10; s2.maxStage = 10; s2.maxCleared = 9; s2.heroes[MAIN_ID].level = 60;
   const g2 = new GameManager({ state: s2, save: memSave() });
   run(g2, 25);
   assert.equal(g2.state.stage, 11, 'boss killed -> Phase 2-1');
@@ -50,7 +52,7 @@ test('boss timeout retreats one stage; boss kill advances', () => {
 });
 
 test('autoBoss=false loops the stage before a boss', () => {
-  const s = createInitialState(); s.stage = 9; s.maxStage = 9; s.settings.autoBoss = false; s.heroes.intern.level = 60;
+  const s = createInitialState(); s.stage = 9; s.maxStage = 9; s.settings.autoBoss = false; s.heroes[MAIN_ID].level = 60;
   const g = new GameManager({ state: s, save: memSave() });
   run(g, 120);
   assert.equal(g.state.stage, 9);
@@ -60,8 +62,8 @@ test('autoBoss=false loops the stage before a boss', () => {
 test('player actions: upgrade, team upgrade, pull, promote, party toggle', () => {
   const s = createInitialState(); s.gold = 10_000; s.gems = 5_000;
   const g = new GameManager({ state: s, save: memSave() });
-  assert.ok(g.upgradeHero('intern'));
-  assert.equal(g.state.heroes.intern.level, 2);
+  assert.ok(g.upgradeHero(MAIN_ID));
+  assert.equal(g.state.heroes[MAIN_ID].level, 2);
   assert.ok(g.upgradeTeam('coffee'));
   assert.ok(g.speedMult() > 1);
   const res = g.pull(10);
@@ -69,17 +71,50 @@ test('player actions: upgrade, team upgrade, pull, promote, party toggle', () =>
   assert.equal(g.state.gems, 5_000 - BALANCE.GACHA_TEN_COST);
   assert.ok(g.state.party.length > 1, 'new hires auto-deployed');
   assert.ok(g.state.party.length <= BALANCE.PARTY_SIZE);
-  const n = g.upgradeCheapestLoop(50);
-  assert.ok(n > 0);
-  // promotion
-  g.state.heroes.intern.shards = 10;
-  assert.ok(g.promote('intern'));
-  assert.equal(g.state.heroes.intern.star, 2);
-  assert.ok(g.heroView('intern').skillUnlocked);
+  assert.ok(g.upgradeCheapestLoop(50) > 0);
+  // promotion of a gacha card (main hero uses job promotion instead)
+  own(g.state, 'staff_park'); g.state.heroes.staff_park.shards = 10;
+  assert.ok(g.promote('staff_park'));
+  assert.equal(g.state.heroes.staff_park.star, 2);
+  assert.ok(g.heroView('staff_park').skillUnlocked);
+  assert.ok(!g.promote(MAIN_ID), 'main hero cannot star-promote');
   // party toggle
-  const other = g.state.party.find((id) => id !== 'intern');
+  const other = g.state.party.find((id) => id !== MAIN_ID);
   assert.ok(g.toggleParty(other)); assert.ok(!g.state.party.includes(other));
   assert.ok(g.toggleParty(other)); assert.ok(g.state.party.includes(other));
+});
+
+test('main hero job promotion: needs cards + stage, branches at 과장 → 부장, changes role', () => {
+  const s = createInitialState();
+  const g = new GameManager({ state: s, save: memSave() });
+  assert.ok(!g.promoteMain('staff'), 'no cards yet');
+  g.state.cards = 10_000;
+  assert.ok(!g.promoteMain('staff'), 'stage requirement not met');
+  g.state.maxCleared = 100;
+  assert.ok(g.promoteMain('staff')); assert.equal(g.heroDef(MAIN_ID).grade, 'C');
+  assert.ok(g.heroView(MAIN_ID).skillUnlocked, 'skill unlocks at 사원');
+  assert.ok(g.promoteMain('senior')); assert.ok(g.promoteMain('manager'));
+  assert.ok(!g.promoteMain('intern'), 'invalid branch');
+  assert.ok(g.promoteMain('finance'));
+  assert.equal(g.heroDef(MAIN_ID).grade, 'S');
+  assert.equal(g.entities.heroes.find((h) => h.heroId === MAIN_ID).role, 'ranged', 'entity picks up the new job role');
+  assert.ok(g.mainPromotionInfo().maxed);
+  assert.equal(g.state.cards, 10_000 - BALANCE.MAIN_PROMOTE_CARDS.reduce((a, b) => a + b, 0));
+});
+
+test('enhance cards: convert shards, enhance, dismiss benched card', () => {
+  const s = createInitialState();
+  own(s, 'cfo'); s.heroes.cfo.shards = 5; s.heroes.main.level = 30;
+  const g = new GameManager({ state: s, save: memSave() });
+  assert.equal(g.convertShards('cfo'), 5 * BALANCE.SHARD_CARD_VALUE.A);
+  assert.equal(g.state.heroes.cfo.shards, 0);
+  const atkBefore = g.heroView(MAIN_ID).atk;
+  assert.ok(g.enhance(MAIN_ID));
+  assert.ok(g.heroView(MAIN_ID).atk > atkBefore);
+  assert.ok(!g.dismiss(MAIN_ID), 'main hero cannot be dismissed');
+  const before = g.state.cards;
+  assert.ok(g.dismiss('cfo') > 0);
+  assert.ok(!g.state.heroes.cfo.owned && g.state.cards > before);
 });
 
 test('autosave fires every 10 seconds of play', () => {

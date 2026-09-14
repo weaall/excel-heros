@@ -140,3 +140,48 @@ body.stealth .xl-table.log, body.stealth .section-title { display: none; }
   .progress { width: 110px; }
   .xl-table td.name { max-width: 110px; }
 }
+
+/* ------------------------------------------------------------ v2: cards, quests, ads -- */
+.g-D { color: #7f8c8d; } .g-C { color: #27ae60; } .g-B { color: #2b7cd3; } .g-A { color: #8e44ad; } .g-S { color: #d4a017; font-weight: 700; }
+tr.g-S td { background: #fdf6e3; } tr.g-A td { background: #f4ecf7; }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #e74c3c; margin-left: 4px; vertical-align: top; }
+.clickable { cursor: pointer; } .clickable:hover { text-decoration: underline; }
+
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; padding: 8px; justify-items: center; }
+.card { position: relative; cursor: pointer; transition: transform .1s; border-radius: 4px; }
+.card:hover { transform: translateY(-2px); }
+.card canvas { display: block; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.25); image-rendering: pixelated; }
+.card.in-party canvas { box-shadow: 0 0 0 2px var(--xl-green), 0 1px 3px rgba(0,0,0,.25); }
+.card.locked { opacity: .8; }
+.card-badge { position: absolute; top: 4px; right: 4px; background: var(--xl-green); color: #fff; font-size: 9px; padding: 1px 5px; border-radius: 2px; font-weight: 600; }
+.card-badge.main { top: 20px; background: #e67e22; }
+.card-badge.new { background: #e74c3c; }
+.card-grid.result { padding: 4px 0; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+.card-grid.result canvas { width: 76px; height: auto; }
+#roster-table { display: none; }
+body.stealth #card-grid { display: none; }
+body.stealth #roster-table { display: table; }
+
+.detail-head { display: flex; gap: 10px; align-items: flex-start; }
+.detail-head canvas { flex: none; border-radius: 4px; image-rendering: pixelated; }
+.detail-stats { flex: 1; min-width: 0; }
+.detail-line { margin: 2px 0; font-size: 11.5px; }
+.detail-line.skill { color: #6c3483; }
+.detail-actions { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 4px; }
+.promo-box { margin-top: 8px; padding: 8px; background: #fafafa; border: 1px solid var(--line); }
+.promo-box h4 { margin: 0 0 4px; font-size: 12px; }
+.promo-options { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.promo-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100px; text-align: center; }
+.promo-opt canvas { width: 80px; height: auto; image-rendering: pixelated; }
+.ok { color: var(--xl-green); font-weight: 600; } .bad { color: #c0392b; font-weight: 600; }
+
+#quest-table tr.done td { background: var(--xl-green-light); }
+#quest-table tr.claimed td { color: #999; }
+.quest-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; }
+.ad-box { display: flex; align-items: center; gap: 10px; padding: 6px 8px; flex-wrap: wrap; }
+.ad-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 20; display: flex; align-items: center; justify-content: center; color: #fff; }
+.ad-overlay[hidden] { display: none; }
+.ad-card { text-align: center; }
+.ad-title { font-size: 14px; letter-spacing: .1em; opacity: .8; }
+.ad-count { font-size: 64px; font-weight: 700; margin: 8px 0; }
+.ad-card .muted { color: #bbb; }
