@@ -106,7 +106,13 @@ export class EntityManager {
       range: (isBoss ? 0.9 : 0.55) * GRID.cellW,
       speed: isBoss ? 26 : BALANCE.MONSTER_SPEED * (0.85 + Math.random() * 0.3),
       alive: true, targetId: null, anim: 'walk', animT: Math.random(), stun: 0, shake: 0, lunge: 0,
-      offX: isBoss ? 40 : 22 + Math.random() * 34, offY: isBoss ? 0 : Math.random() * 72 - 36,
+      // Stop point relative to the target: spread around it, but always inside attack range.
+      ...(() => {
+        const range = (isBoss ? 0.9 : 0.55) * GRID.cellW;
+        const a = isBoss ? 0 : (Math.random() * 2 - 1) * (Math.PI / 3);
+        const r = range * 0.85;
+        return { offX: Math.cos(a) * r, offY: Math.sin(a) * r };
+      })(),
       w: isBoss ? 64 : 32, h: isBoss ? 48 : 32,
     };
     e.maxHp = e.hp;
@@ -152,8 +158,11 @@ export class EntityManager {
       h.hp = Math.min(h.maxHp, h.hp + h.maxHp * BALANCE.HERO_REGEN_PCT * dt);
       h.cd -= dt * speedMult; h.skillCd -= dt;
 
-      let target = this.#byId(monsters, h.targetId);
-      if (!target || !target.alive) { target = this.#nearest(h, monsters); h.targetId = target?.id ?? null; }
+      // Melee/tank only consider monsters they are allowed to walk to (no oscillation at the advance limit).
+      const reachLimit = h.homeX + (h.role === 'tank' ? 1 : BALANCE.MELEE_ADVANCE_CELLS) * GRID.cellW + h.range + 24;
+      const candidates = (h.role === 'melee' || h.role === 'tank') ? monsters.filter((m) => m.x <= reachLimit) : monsters;
+      let target = this.#byId(candidates, h.targetId);
+      if (!target || !target.alive) { target = this.#nearest(h, candidates); h.targetId = target?.id ?? null; }
 
       if (h.role === 'healer') {
         const low = heroes.filter((a) => a.hp < a.maxHp * 0.6).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
@@ -183,9 +192,10 @@ export class EntityManager {
           this.#damage(target, dmg, false);
         } else if (h.anim === 'walk') h.anim = 'idle';
       } else if (h.role === 'melee' || h.role === 'tank') {
-        const maxAdvance = (h.role === 'tank' ? 1 : BALANCE.MELEE_ADVANCE_CELLS) * GRID.cellW;
-        if (target.x - h.homeX <= maxAdvance + h.range) this.#moveToward(h, target.x - h.range * 0.8, target.y, dt);
-        else this.#returnHome(h, dt);
+        // Walk to a point `range*0.8` short of the target, along the line between them.
+        const dx = target.x - h.x, dy = target.y - h.y, d = Math.hypot(dx, dy) || 1;
+        const stop = h.range * 0.8;
+        this.#moveToward(h, target.x - (dx / d) * stop, target.y - (dy / d) * stop, dt);
       } else this.#returnHome(h, dt);
       if (h.anim === 'attack' && h.animT > 0.35) h.anim = 'idle';
     }
@@ -201,7 +211,7 @@ export class EntityManager {
       if (!target) continue;
       const dist = Math.hypot(target.x - m.x, target.y - m.y);
       m.cd -= dt;
-      if (dist <= m.range + (m.isBoss ? 16 : 14)) {
+      if (dist <= m.range + 6) {
         m.anim = 'idle';
         if (m.cd <= 0) {
           m.cd = m.interval; m.lunge = 0.2;
