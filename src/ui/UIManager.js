@@ -42,10 +42,33 @@ export class UIManager {
   }
 
   // ----------------------------------------------------------------- bind --
+  /** Column letters across the whole sheet width and row numbers down its height (8 tall canvas rows, then 22px rows). */
   #buildGridHeaders() {
-    const cols = $('#col-headers'), rows = $('#row-headers');
-    for (let c = 0; c < GRID.cols; c++) cols.append(el('span', {}, String.fromCharCode(65 + c)));
-    for (let r = 0; r < GRID.rows; r++) rows.append(el('span', {}, String(r + 1)));
+    const sheets = $('.sheets'); const W = sheets.clientWidth || 900, H = sheets.clientHeight || 640;
+    const colCount = Math.max(GRID.cols, Math.ceil((W - 28) / GRID.cellW) + 1);
+    const letters = (i) => (i < 26 ? String.fromCharCode(65 + i) : String.fromCharCode(64 + Math.floor(i / 26)) + String.fromCharCode(65 + (i % 26)));
+    const cols = $('#col-headers'), rows = $('#row-headers'); cols.innerHTML = ''; rows.innerHTML = '';
+    for (let c = 0; c < colCount; c++) cols.append(el('span', {}, letters(c)));
+    for (let r = 0; r < GRID.rows; r++) rows.append(el('span', { class: 'tall' }, String(r + 1)));
+    const small = Math.max(14, Math.ceil((H - 28 - GRID.rows * GRID.cellH) / 22) + 1);
+    for (let r = 0; r < small; r++) rows.append(el('span', {}, String(GRID.rows + 1 + r)));
+    // other sheets: same worksheet frame (letters + numbers) around their content
+    for (const sec of document.querySelectorAll('.sheet:not(.ws)')) {
+      const body = el('div', { class: 'ws-body generic' }); while (sec.firstChild) body.append(sec.firstChild);
+      const wc = el('div', { class: 'ws-cols' }), wr = el('div', { class: 'ws-rows' });
+      for (let c = 0; c < colCount; c++) wc.append(el('span', {}, letters(c)));
+      for (let r = 0; r < Math.ceil(H / 22) + 40; r++) wr.append(el('span', {}, String(r + 1)));
+      sec.append(el('div', { class: 'ws-corner' }), wc, wr, body); sec.classList.add('ws');
+    }
+    if (!this.resizeBound) { this.resizeBound = true; let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => this.#rebuildHeaderCounts(), 150); }); }
+  }
+  #rebuildHeaderCounts() {
+    const sheets = $('.sheets'); const W = sheets.clientWidth, H = sheets.clientHeight;
+    const colCount = Math.max(GRID.cols, Math.ceil((W - 28) / GRID.cellW) + 1);
+    const letters = (i) => (i < 26 ? String.fromCharCode(65 + i) : String.fromCharCode(64 + Math.floor(i / 26)) + String.fromCharCode(65 + (i % 26)));
+    for (const wc of document.querySelectorAll('.ws-cols')) { const sel = [...wc.children].findIndex((s) => s.classList.contains('sel')); wc.innerHTML = ''; for (let c = 0; c < colCount; c++) wc.append(el('span', { class: c === sel ? 'sel' : '' }, letters(c))); }
+    const rows = $('#row-headers'); const need = GRID.rows + Math.max(14, Math.ceil((H - 28 - GRID.rows * GRID.cellH) / 22) + 1);
+    while (rows.children.length < need) rows.append(el('span', {}, String(rows.children.length + 1)));
   }
 
   #bind() {
@@ -64,6 +87,11 @@ export class UIManager {
       else if (!$('#backstage').hidden) this.closeBackstage();
       else this.game.toggleExcel();
     });
+    // decorative Excel chrome
+    $('#rr-share').addEventListener('click', () => this.toast('공유: 이 통합 문서는 로컬에만 저장됩니다 (파일 › 저장/내보내기)'));
+    $('#rr-comments').addEventListener('click', () => this.switchSheet('quests'));
+    $('.tb-search').addEventListener('click', () => this.toast('검색: 리본 탭 홈·삽입·데이터·검토·보기에서 기능을 찾을 수 있습니다'));
+    $('#rb-collapse').addEventListener('click', () => { const b = document.querySelector('.ribbon-body'); b.classList.toggle('collapsed'); $('#rb-collapse').textContent = b.classList.contains('collapsed') ? '˅' : '˄'; });
     // quick access toolbar
     $('#qat-save').addEventListener('click', () => { this.game.persist(); this.toast('저장됨 — 통합 문서1'); });
     $('#qat-undo').addEventListener('click', () => this.toast('실행 취소할 작업이 없습니다'));
@@ -257,12 +285,13 @@ export class UIManager {
     $('#stage-label').textContent = `${g.stageLabel()} · ${phaseName(s.stage)}`;
     const mode = $('#stage-mode');
     mode.textContent = challenging ? (boss ? '보스 도전 중' : '도전 중') : '자동 사냥';
-    mode.className = `stage-mode ${challenging ? 'challenge' : 'farm'}`;
+    mode.className = `cell v stage-mode ${challenging ? 'challenge' : 'farm'}`;
     const pool = stagePool(s.stage);
     const bossDef = bossForStage(s.stage);
     $('#stage-monster').textContent = boss ? `보스: ${bossDef.name}` : pool.map((m) => m.name).join(' · ');
     const req = g.killsRequired();
     $('#kill-bar').style.width = challenging ? `${Math.min(100, (s.kills / req) * 100)}%` : '100%';
+    $('#kill-bar').style.opacity = challenging ? '1' : '0.35';
     $('#kill-text').textContent = boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : challenging ? `${s.kills} / ${req}행 처리` : `사냥 중 · 처치 ${s.kills}`;
     const ec = eliteChance(s.stage);
     const mod = stageModifier(s.stage);
@@ -587,8 +616,8 @@ export class UIManager {
   #buildLog() { const tb = $('#log-table tbody'); tb.innerHTML = ''; for (const r of this.game.logs.slice(-12)) this.#appendLog(r); }
   #appendLog(row) {
     const tb = $('#log-table tbody');
-    tb.prepend(el('tr', { class: `k-${row.kind}` }, el('td', {}, `#${row.row}`), el('td', {}, row.text)));
-    while (tb.children.length > 12) tb.lastChild.remove();
+    tb.prepend(el('tr', { class: `k-${row.kind}`, title: new Date(row.t).toLocaleTimeString('ko-KR') }, el('td', {}, `#${row.row}`), el('td', {}, row.text)));
+    while (tb.children.length > 14) tb.lastChild.remove();
   }
 
   // ------------------------------------------------------------- dialogs --

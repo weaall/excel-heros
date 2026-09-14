@@ -92,7 +92,7 @@ test('stage modifiers, phase names and 각성', async () => {
   // rush wave spawns more, faster monsters
   const s = createInitialState(); s.stage = 5; s.maxStage = 5; s.maxCleared = 4; s.heroes[MAIN_ID].level = 20;
   const g = new GameManager({ state: s, save: memSave() });
-  run(g, 2.6);
+  run(g, 1.3); // wave has spawned, nothing has reached the line yet
   const wave = g.entities.monsters.filter((m) => m.alive && !m.def.chest);
   assert.ok(wave.length >= 5, `rush wave size ${wave.length}`);
   assert.ok(wave.every((m) => m.speed > BALANCE.MONSTER_SPEED * 0.9 * 1.3 - 1e-6), 'rush speed');
