@@ -54,6 +54,7 @@ button:disabled { cursor: default; opacity: .55; }
 .rb-stack { display: flex; flex-direction: column; gap: 3px; }
 .rb-group-label { text-align: center; font-size: 11px; color: var(--muted); padding: 2px 0 0; }
 .rb-btn small { font-size: 10.5px; color: var(--muted); }
+.rb-forecast.good { color: var(--xl-green); } .rb-forecast.mid { color: #9a6700; } .rb-forecast.bad { color: #b03a2e; }
 .ribbon-group { display: flex; align-items: center; gap: 4px; }
 .ribbon-group.right { margin-left: auto; gap: 18px; }
 .rb-sep { width: 1px; align-self: stretch; margin: 4px 6px; background: var(--line-dark); }

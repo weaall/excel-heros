@@ -1,6 +1,7 @@
 import { BALANCE } from '../config/balance.js';
 import { HEROES, MAIN_ID } from '../data/heroes.js';
 import { initialPity } from './GachaManager.js';
+import { dailyQuestIds } from '../data/quests.js';
 
 export const SAVE_VERSION = 2;
 
@@ -32,8 +33,8 @@ export function createInitialState(now = Date.now()) {
     party: [MAIN_ID],
     pity: initialPity(),
     team: { coffee: 0, payroll: 0, chairs: 0 },
-    settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true },
-    daily: { date: localDateKey(now), progress: {}, claimed: {}, loginClaimed: false, allClearClaimed: false, adsUsed: 0 },
+    settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true, safeAdvance: true },
+    daily: { date: localDateKey(now), quests: dailyQuestIds(localDateKey(now)), progress: {}, claimed: {}, loginClaimed: false, allClearClaimed: false, adsUsed: 0 },
     stats: { totalKills: 0, totalGold: 0, totalPulls: 0, bossKills: 0, bossFails: 0, playSeconds: 0, enhances: 0 },
     achievements: {},     // achievement id -> claimed tier count
     prestige: { shares: 0, count: 0 }, // 회사 이전: permanent 지분 and how many times
@@ -52,6 +53,7 @@ export function migrate(raw) {
   s.team = { ...fresh.team, ...(raw.team ?? {}) };
   s.settings = { ...fresh.settings, ...(raw.settings ?? {}) };
   s.daily = { ...fresh.daily, ...(raw.daily ?? {}) };
+  if (!Array.isArray(s.daily.quests) || !s.daily.quests.length) s.daily.quests = dailyQuestIds(s.daily.date);
   s.stats = { ...fresh.stats, ...(raw.stats ?? {}) };
   s.achievements = { ...(raw.achievements ?? {}) };
   s.prestige = { ...fresh.prestige, ...(raw.prestige ?? {}) };

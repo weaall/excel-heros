@@ -5,7 +5,7 @@ import { stagePool, eliteChance, bossForStage } from '../data/monsters.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { phaseName, stageModifier } from '../data/stages.js';
 import * as Achievements from '../core/AchievementManager.js';
-import { DAILY_QUESTS, ALL_CLEAR_BONUS } from '../data/quests.js';
+import { ALL_CLEAR_BONUS } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
 import { GRID } from '../core/EntityManager.js';
 import * as Quests from '../core/QuestManager.js';
@@ -104,6 +104,7 @@ export class UIManager {
     $('#qa-ad').addEventListener('click', () => this.playAd(() => { const r = this.game.adReward('instant'); if (r) this.toast(`광고 보상 +${fmt(r.gold)} 골드`); }));
     $('#qa-gridlines').addEventListener('change', (e) => this.game.setGridlines(e.target.checked));
     $('#set-gridlines').addEventListener('change', (e) => this.game.setGridlines(e.target.checked));
+    $('#set-safe').addEventListener('change', (e) => this.game.setSafeAdvance(e.target.checked));
     $('#qa-sound').addEventListener('change', (e) => { this.sound?.unlock(); this.game.setSound(e.target.checked); });
     // worksheet cell selection on the battle canvas
     const canvas = $('#battle');
@@ -255,7 +256,7 @@ export class UIManager {
     $('#status-gems').textContent = `보석: ${fmt(s.gems)}`;
     $('#status-dps').textContent = `DPS: ${fmt(this.game.entities.dps())}`;
     $('#gold-cell').textContent = fmt(s.gold); $('#gems-top').textContent = fmt(s.gems);
-    const claimable = DAILY_QUESTS.some((q) => Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)) || !s.daily.loginClaimed || Achievements.claimableCount(s) > 0;
+    const claimable = Quests.activeQuests(s).some((q) => Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)) || !s.daily.loginClaimed || Achievements.claimableCount(s) > 0;
     $('#quest-dot').hidden = !claimable;
   }
 
@@ -297,7 +298,11 @@ export class UIManager {
     const mod = stageModifier(s.stage);
     $('#stage-hint').textContent = boss ? `${bossDef.desc} · ${BALANCE.BOSS_TIME_LIMIT}초 제한` : mod ? `${mod.name}: ${mod.desc}` : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
     const next = g.nextStage();
+    const fc = g.challengeForecast(challenging ? s.stage : next);
     $('#qa-challenge-label').textContent = challenging ? '도전 중단' : `${stageLabel(next)} 도전${isBossStage(next) ? ' (보스)' : ''}`;
+    const fcEl = $('#qa-forecast'); fcEl.textContent = `승산 ${Math.round(fc.prob * 100)}% · ${fc.label}${fc.boss && fc.bossTime ? ` · 예상 ${fc.bossTime.toFixed(0)}s` : ''}`;
+    fcEl.className = `rb-forecast ${fc.prob >= 0.7 ? 'good' : fc.prob >= BALANCE.SAFE_ADVANCE_MIN ? 'mid' : 'bad'}`;
+    if (!challenging && g.waitingAdvance) $('#stage-hint').textContent = `자동 진행 대기: ${stageLabel(next)} 승산 ${Math.round(fc.prob * 100)}% (강화하면 자동 재개)`;
     this.#refreshBestiary(boss ? [bossDef] : pool);
     this.#refreshFormulaBar();
   }
@@ -487,7 +492,7 @@ export class UIManager {
     const grid = el('div', { class: 'card-grid result' });
     for (const r of results) {
       grid.append(el('div', { class: `card ${r.isNew ? 'new' : ''}`, onclick: () => this.openDetail(r.heroId) },
-        cardCanvas(r.def, { star: this.game.state.heroes[r.heroId].star, title: r.isNew ? '신규 입사!' : `조각 +${r.shards}` }),
+        cardCanvas(r.def, { star: this.game.state.heroes[r.heroId].star, title: r.isNew ? '신규 입사!' : `조각 +${r.shards}`, sub: r.guaranteed ? '보장' : '' }),
         r.isNew ? el('span', { class: 'card-badge new' }, 'NEW') : null));
     }
     body.append(grid);
@@ -500,7 +505,7 @@ export class UIManager {
     $('#daily-date').textContent = s.daily.date;
     const login = $('#btn-login'); login.disabled = s.daily.loginClaimed; login.textContent = s.daily.loginClaimed ? '출근 완료 ✓' : '출근 도장 찍기';
     const tbody = $('#quest-table tbody'); tbody.innerHTML = '';
-    for (const q of DAILY_QUESTS) {
+    for (const q of Quests.activeQuests(s)) {
       const p = Quests.questProgress(s, q.id), done = Quests.questDone(s, q.id), claimed = Quests.questClaimed(s, q.id);
       const r = Quests.resolveReward(s, q.reward, g.goldMult());
       tbody.append(el('tr', { class: claimed ? 'claimed' : done ? 'done' : '' },
@@ -546,6 +551,7 @@ export class UIManager {
     const st = this.game.state.settings;
     $('#qa-auto').checked = st.autoAdvance; $('#set-auto').checked = st.autoAdvance; $('#set-stealth').checked = st.excel;
     $('#qa-gridlines').checked = st.gridlines !== false; $('#set-gridlines').checked = st.gridlines !== false; $('#qa-sound').checked = !!st.sound;
+    $('#set-safe').checked = st.safeAdvance !== false;
     $('#qa-auto-up').checked = !!st.autoUpgrade; $('#set-auto-up').checked = !!st.autoUpgrade;
     $('#set-sound').checked = !!st.sound; $('#btn-sound').textContent = st.sound ? '🔊 효과음' : '🔇 효과음';
     this.#refreshPrestige();

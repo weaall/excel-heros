@@ -33,8 +33,11 @@ export function rollGrade(pity, rng) {
  * @param roster  { [heroId]: { owned, star, shards, level, enhance } }  (mutated)
  * @returns { heroId, grade, isNew, shards, pity }
  */
-export function pullOnce(pity, roster, rng) {
-  const { grade, pity: nextPity } = rollGrade(pity, rng);
+export function pullOnce(pity, roster, rng, minGrade = null) {
+  let { grade, pity: nextPity } = rollGrade(pity, rng);
+  if (minGrade && GRADE_ORDER.indexOf(grade) < GRADE_ORDER.indexOf(minGrade)) { // 10연차 보장 등: 등급 하한
+    grade = minGrade; nextPity = { ...nextPity, sinceA: GRADE_ORDER.indexOf(grade) >= GRADE_ORDER.indexOf('A') ? 0 : nextPity.sinceA, sinceS: grade === 'S' ? 0 : nextPity.sinceS };
+  }
   const hero = rng.pick(heroesOfGrade(grade));
   const entry = roster[hero.id] ?? (roster[hero.id] = emptyHero());
   let isNew = false, shards = 0;

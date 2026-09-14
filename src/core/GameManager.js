@@ -7,6 +7,8 @@ import { HERO_BY_ID, GRADES, SKILLS, TRAITS, heroBaseStats, MAIN_ID, MAIN_JOBS }
 import { pullOnce, promoteCost } from './GachaManager.js';
 import { createInitialState } from './state.js';
 import { stageModifier } from '../data/stages.js';
+import { bossForStage } from '../data/monsters.js';
+import { monsterHP, monsterATK, bossHP, bossATK } from '../config/balance.js';
 import { EntityManager } from './EntityManager.js';
 import * as Quests from './QuestManager.js';
 import * as Achievements from './AchievementManager.js';
@@ -22,7 +24,7 @@ export class GameManager extends Emitter {
     this.rng = rng;
     this.logs = [];
     this.rowCounter = 1000 + Math.floor(Math.random() * 500);
-    this.saveTimer = 0; this.dailyTimer = 0; this.autoTimer = 0;
+    this.saveTimer = 0; this.dailyTimer = 0; this.autoTimer = 0; this.resumeTimer = 0; this.waitingAdvance = false;
     Quests.ensureDaily(this.state, now);
     this.entities = new EntityManager(this);
     this.entities.rebuildParty();
@@ -182,9 +184,12 @@ export class GameManager extends Emitter {
     const cost = count === 10 ? BALANCE.GACHA_TEN_COST : BALANCE.GACHA_SINGLE_COST * count;
     if (this.state.gems < cost) { this.toast('보석이 부족합니다'); return null; }
     this.state.gems -= cost;
-    const results = [];
+    const results = []; let gotMin = false; const minIdx = GRADES[BALANCE.TEN_PULL_MIN_GRADE] ? ['D', 'C', 'B', 'A', 'S'].indexOf(BALANCE.TEN_PULL_MIN_GRADE) : 99;
     for (let i = 0; i < count; i++) {
-      const r = pullOnce(this.state.pity, this.state.heroes, this.rng);
+      const force = count === 10 && i === count - 1 && !gotMin ? BALANCE.TEN_PULL_MIN_GRADE : null;
+      const r = pullOnce(this.state.pity, this.state.heroes, this.rng, force);
+      if (['D', 'C', 'B', 'A', 'S'].indexOf(r.grade) >= minIdx) gotMin = true;
+      if (force) r.guaranteed = true;
       this.state.pity = r.pity; this.state.stats.totalPulls++;
       results.push({ ...r, def: HERO_BY_ID[r.heroId] });
       if (r.isNew && this.state.party.length < BALANCE.PARTY_SIZE) this.state.party.push(r.heroId); // 빈 자리에 자동 배치
@@ -287,7 +292,8 @@ export class GameManager extends Emitter {
   /** Auto-advance: keep challenging the next stage after every clear. Turning it on starts a challenge right away. */
   setAutoAdvance(v) {
     this.state.settings.autoAdvance = !!v; this.emit('settings');
-    if (v && !this.isChallenging()) this.startChallenge();
+    if (!v) this.waitingAdvance = false;
+    if (v && !this.isChallenging()) { if (!this.state.settings.safeAdvance || this.challengeForecast(this.nextStage()).prob >= BALANCE.SAFE_ADVANCE_MIN) this.startChallenge(); else { this.waitingAdvance = true; this.log(`${stageLabel(this.nextStage())} 승산이 낮아 강화 후 자동 진행 재개`, 'warn'); this.emit('challenge'); } }
   }
   /** Auto-upgrade: keep running "자동 합계" (cheapest party upgrade) every second while on. */
   setAutoUpgrade(v) {
@@ -309,10 +315,37 @@ export class GameManager extends Emitter {
   /** Stage the next challenge would target. */
   nextStage() { const s = this.state; return this.isChallenging() ? s.stage : (s.stage <= s.maxCleared ? s.stage + 1 : s.stage); }
 
+  // ------------------------------------------------------------- forecast --
+  /**
+   * 승산: how the party stacks up against a stage. ratio = (partyDPS / enemyHP) / (enemyDPS / partyHP);
+   * calibrated against headless runs — normal stages are won from ratio ≈ 7-10, boss stages from ≈ 10-15.
+   */
+  challengeForecast(stage = this.nextStage()) {
+    const dps = Math.max(1, this.partyDPS());
+    const hp = Math.max(1, this.state.party.reduce((a, id) => a + this.heroView(id).hp, 0));
+    const mod = stageModifier(stage); const boss = isBossStage(stage); const bDef = bossForStage(stage);
+    const count = Math.min(BALANCE.MAX_MONSTERS + (mod?.count ?? 0), 3 + Math.floor(stage / 10) + (mod?.count ?? 0));
+    const enemyHp = boss ? bossHP(stage) * (bDef.hp ?? 1) : monsterHP(stage) * count;
+    const enemyDps = boss ? bossATK(stage) * (bDef.atk ?? 1) / (bDef.interval ?? 2) : monsterATK(stage) * count / 1.5;
+    const ratio = (dps / enemyHp) / (enemyDps / hp);
+    const [lo, hi] = boss ? BALANCE.FORECAST.boss : BALANCE.FORECAST.normal;
+    let prob = Math.max(0, Math.min(1, Math.log(Math.max(1e-9, ratio) / lo) / Math.log(hi / lo)));
+    const bossTime = boss ? enemyHp / dps : null;
+    if (boss && bossTime > BALANCE.BOSS_TIME_LIMIT * BALANCE.FORECAST.bossTimeFrac) prob = Math.min(prob, 0.15);
+    return { stage, boss, ratio, prob, bossTime, label: prob >= 0.7 ? '유리' : prob >= BALANCE.SAFE_ADVANCE_MIN ? '접전' : '불리' };
+  }
+  /** Auto-advance that waited for a better forecast resumes as soon as the party is strong enough. */
+  #maybeResumeAdvance() {
+    const s = this.state;
+    if (!this.waitingAdvance || !s.settings.autoAdvance || this.isChallenging()) return;
+    if (!s.settings.safeAdvance || this.challengeForecast(this.nextStage()).prob >= BALANCE.SAFE_ADVANCE_MIN) { this.waitingAdvance = false; this.startChallenge(); }
+  }
+  setSafeAdvance(v) { this.state.settings.safeAdvance = !!v; this.emit('settings'); this.#maybeResumeAdvance(); }
+
   // ------------------------------------------------------------ challenge --
   /** Start fighting for the next stage (or the current, not-yet-cleared one). */
   startChallenge() {
-    const s = this.state;
+    const s = this.state; this.waitingAdvance = false;
     if (this.isChallenging()) return false;
     if (s.stage <= s.maxCleared) s.stage += 1;
     s.challenging = true; s.kills = 0; s.maxStage = Math.max(s.maxStage, s.stage);
@@ -373,7 +406,7 @@ export class GameManager extends Emitter {
     if (m.def.chest) {
       const phase = Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1;
       const cards = phase * BALANCE.CHEST.cardsPerPhase, gems = BALANCE.CHEST.gemsMin + Math.floor(Math.random() * (BALANCE.CHEST.gemsMax - BALANCE.CHEST.gemsMin + 1));
-      s.cards += cards; s.gems += gems; s.stats.chests = (s.stats.chests ?? 0) + 1;
+      s.cards += cards; s.gems += gems; s.stats.chests = (s.stats.chests ?? 0) + 1; Quests.addProgress(s, 'chests', 1); this.emit('quests');
       this.entities.floaters.push({ x: m.x, y: m.y - 70, text: `강화 카드 +${cards} · 보석 +${gems}`, color: '#f9e79f', t: 0, big: true });
       this.log(`${m.def.mimic ? '미믹 처치' : '보물 상자 개봉'}: 강화 카드 +${cards}, 보석 +${gems}`, 'info');
       this.emit('cards'); this.emit('gems');
@@ -381,7 +414,7 @@ export class GameManager extends Emitter {
     }
     const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1) * (stageModifier(s.stage)?.gold ?? 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
-    Quests.addProgress(s, 'kills', 1);
+    Quests.addProgress(s, 'kills', 1); if (m.elite) Quests.addProgress(s, 'elite', 1);
     this.entities.coinBurst(m.x, m.y, gold);
     if (m.isBoss) {
       s.stats.bossKills++; Quests.addProgress(s, 'boss', 1);
@@ -408,9 +441,17 @@ export class GameManager extends Emitter {
     s.kills = 0; s.challenging = false;
     this.emit('cleared', { stage: s.stage, boss, first });
     this.emit('stage'); this.emit('gems'); this.emit('cards'); this.emit('kills'); this.emit('quests');
-    if (s.settings.autoAdvance) this.startChallenge();
-    else { this.entities.startStage(); this.log(`${this.stageLabel()}에서 자동 사냥 중 (다음 단계 도전 대기)`, 'info'); this.emit('challenge'); }
+    const fc = this.challengeForecast(s.stage + 1);
+    if (s.settings.autoAdvance && (!s.settings.safeAdvance || fc.prob >= BALANCE.SAFE_ADVANCE_MIN)) this.startChallenge();
+    else {
+      this.entities.startStage();
+      if (s.settings.autoAdvance) { this.waitingAdvance = true; this.log(`${stageLabel(s.stage + 1)} 승산 ${Math.round(fc.prob * 100)}% — 강화 후 자동 진행 재개`, 'warn'); }
+      else this.log(`${this.stageLabel()}에서 자동 사냥 중 (다음 단계 도전 대기)`, 'info');
+      this.emit('challenge');
+    }
   }
+
+  onCombo(n) { if (n === 20) { Quests.addProgress(this.state, 'combo', 1); this.emit('quests'); } }
 
   onBossTimeout() {
     this.state.stats.bossFails++;
@@ -430,6 +471,7 @@ export class GameManager extends Emitter {
   tick(dt, now = Date.now()) {
     this.state.stats.playSeconds += dt;
     this.entities.update(dt);
+    this.resumeTimer += dt; if (this.resumeTimer >= 2) { this.resumeTimer = 0; this.#maybeResumeAdvance(); }
     if (this.state.settings.autoUpgrade) { this.autoTimer += dt; if (this.autoTimer >= BALANCE.AUTO_UPGRADE_INTERVAL) { this.autoTimer = 0; this.upgradeCheapestLoop(50); } }
     this.saveTimer += dt; this.dailyTimer += dt;
     if (this.dailyTimer >= 60) { this.dailyTimer = 0; if (Quests.ensureDaily(this.state, now)) { this.log('새로운 업무일이 시작되었습니다', 'info'); this.emit('quests'); } }

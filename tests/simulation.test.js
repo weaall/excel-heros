@@ -79,7 +79,7 @@ test('challenge button: start, clear, cancel, and failure returns to farming', (
   assert.ok(g.cancelChallenge()); assert.equal(g.state.stage, 4); assert.ok(!g.isChallenging());
   // a hopeless challenge wipes and falls back
   g.state.heroes[MAIN_ID].level = 1; g.entities.refreshHeroStats();
-  g.state.stage = 40; g.state.maxStage = 40; g.state.maxCleared = 40; g.setAutoAdvance(true);
+  g.state.stage = 40; g.state.maxStage = 40; g.state.maxCleared = 40; g.state.settings.safeAdvance = false; g.setAutoAdvance(true);
   assert.equal(g.state.stage, 41); assert.ok(g.isChallenging());
   run(g, 120);
   assert.equal(g.state.stage, 40, 'fell back to the last cleared stage');

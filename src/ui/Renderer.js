@@ -258,6 +258,8 @@ export class Renderer {
     ctx.restore();
     if (m.stun > 0) { ctx.fillStyle = '#c39bd3'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('zZ', m.x + 20, bottom - img.height - 4); }
     if (!m.isBoss) this.#hpBar(m.x, bottom + 6, m.hp / m.maxHp, m.elite ? '#f1c40f' : '#e74c3c', m.elite ? 48 : 40);
+    if (m.shield > 0) { const w = m.elite ? 48 : 40; ctx.fillStyle = 'rgba(116,185,255,0.9)'; ctx.fillRect(m.x - w / 2, bottom + 4, Math.max(2, w * Math.min(1, m.shield / m.maxHp)), 2); }
+    if (m.elite && m.def.affix && m.alive) { ctx.font = 'bold 10px "Malgun Gothic", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.strokeText(m.def.affix.name, m.x, bottom - img.height - 6); ctx.fillStyle = '#f9e79f'; ctx.fillText(m.def.affix.name, m.x, bottom - img.height - 6); }
     if (m.isBoss && m.warn && m.alive) {
       const p = 0.5 + Math.sin(this.t * 12) * 0.5;
       ctx.save(); ctx.translate(m.x, bottom - img.height - 18 - p * 4); ctx.font = 'bold 26px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

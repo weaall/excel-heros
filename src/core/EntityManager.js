@@ -123,7 +123,7 @@ export class EntityManager {
   #spawnMonster(stage, isBoss, index, forcedDef = null) {
     let def = forcedDef ?? (isBoss ? bossForStage(stage) : monsterForStage(stage, Math.random()));
     const elite = !isBoss && !forcedDef && Math.random() < eliteChance(stage) * (stageModifier(stage)?.elite ?? 1);
-    if (elite) def = asElite(def);
+    if (elite) def = asElite(def, Math.random());
     const proj = !isBoss ? (def.ranged ?? RANGED_SHAPES[def.shape]) : null;
     const range = (isBoss ? 1.5 : proj ? 3.6 + index * 0.3 : 0.9) * GRID.cellW;
     const e = {
@@ -137,7 +137,9 @@ export class EntityManager {
       alive: true, targetId: null, anim: 'walk', animT: Math.random(), stun: 0, shake: 0, lunge: 0, flash: 0, spawnT: 0,
       w: isBoss ? 96 : 64, h: isBoss ? 80 : 64,
     };
+    if (def.affix) { const a = def.affix; if (a.hp) e.hp *= a.hp; if (a.speed) e.speed *= a.speed; if (a.interval) e.interval *= a.interval; }
     e.hp = Math.floor(e.hp); e.atk = Math.floor(e.atk); e.maxHp = e.hp;
+    if (def.affix?.shield) e.shield = Math.floor(e.maxHp * def.affix.shield);
     this.monsters.push(e);
     if (elite) this.fx('ring', { x: Math.min(e.x, CANVAS_W - 40), y: e.y, color: '#f1c40f', radius: 40, life: 0.6 });
     return e;
@@ -190,7 +192,16 @@ export class EntityManager {
         }
       }
       if (!target) { if (h.anim !== 'attack') h.anim = 'idle'; continue; }
-      if (h.skillUnlocked && h.skillCd <= 0) { this.#castSkill(h, target, monsters, heroes); h.skillCd = SKILLS[h.skill.type]?.cooldown ?? h.skill.cooldown ?? 10; }
+      if (h.skillUnlocked && h.skillCd <= 0) {
+        const type = h.skill.type;
+        const worth = type === 'heal' ? heroes.some((a) => a.hp < a.maxHp * 0.75)
+          : type === 'buff' ? (monsters.length >= 2 || !!this.boss)
+          : type === 'strike' ? true : monsters.some((m) => m.arrived) || !!this.boss;
+        if (worth) {
+          const skillTarget = type === 'strike' ? (monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? monsters.slice().sort((a, b) => b.hp - a.hp)[0] ?? target) : target;
+          this.#castSkill(h, skillTarget, monsters, heroes); h.skillCd = SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10;
+        } else h.skillCd = 0.5; // re-check soon instead of wasting the cast
+      }
 
       const dist = target.x - h.x;
       const canReach = dist <= h.range && (target.arrived || h.role === 'ranged' || h.role === 'healer' || dist < 110);
@@ -216,6 +227,7 @@ export class EntityManager {
     for (const m of this.monsters) {
       if (!m.alive) continue;
       m.animT += dt; m.spawnT += dt; m.shake = Math.max(0, m.shake - dt * 8); m.flash = Math.max(0, m.flash - dt);
+      if (m.def.affix?.regen && m.hp < m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * m.def.affix.regen * dt);
       if (m.lunge > 0) m.lunge -= dt;
       if (m.stun > 0) { m.stun -= dt; continue; }
       const stopX = frontX + m.standoff;
@@ -268,10 +280,17 @@ export class EntityManager {
 
   // -------------------------------------------------------------- helpers --
   #byId(list, id) { return id == null ? null : list.find((e) => e.id === id) ?? null; }
-  /** Heroes focus the nearest monster in the line (front of the enemy queue). */
+  /**
+   * Targeting: melee/tank take the nearest monster (they have to dash to it); ranged/healer focus the boss,
+   * then elites, then whichever monster is closest to dying so kills land faster and less damage comes in.
+   */
   #pickMonsterTarget(h, monsters) {
     const inField = monsters.filter((m) => m.x < CANVAS_W + 20);
-    return inField.sort((a, b) => a.x - b.x)[0] ?? null;
+    if (!inField.length) return null;
+    if (h.role === 'melee' || h.role === 'tank') return inField.sort((a, b) => (b.arrived ? 1 : 0) - (a.arrived ? 1 : 0) || a.x - b.x)[0];
+    const boss = inField.find((m) => m.isBoss); if (boss) return boss;
+    const elite = inField.filter((m) => m.elite); if (elite.length) return elite.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+    return inField.sort((a, b) => (a.hp + (a.shield ?? 0)) / a.maxHp - (b.hp + (b.shield ?? 0)) / b.maxHp || a.x - b.x)[0];
   }
 
   /** Boss special attacks by pattern. Returns true when a special fired this turn. */
@@ -306,7 +325,7 @@ export class EntityManager {
     if (h.trait === 'focus' && target.isBoss) dmg *= 1 + tv(h, 'focus');
     if (crit) this.fx('crit', { x: target.x, y: target.y - 30, color: '#f1c40f', life: 0.35 });
     const dealt = this.#damage(target, dmg, isSkill || crit, crit);
-    if (dealt > 0) { this.combo++; this.comboT = BALANCE.COMBO.decay; }
+    if (dealt > 0) { this.combo++; this.comboT = BALANCE.COMBO.decay; this.game.onCombo?.(this.combo); }
     if (h.trait === 'lifesteal' && dealt > 0) h.hp = Math.min(h.maxHp, h.hp + dealt * tv(h, 'lifesteal'));
     if (h.trait === 'splash' && !isSkill && monsters) {
       for (const m of monsters) if (m !== target && m.alive && Math.abs(m.x - target.x) < 90) this.#damage(m, dmg * tv(h, 'splash'), false);
@@ -317,6 +336,11 @@ export class EntityManager {
   #damage(target, amount, isSkill, crit = false) {
     if (!target.alive) return 0;
     amount = Math.max(1, Math.round(amount));
+    if (target.shield > 0) { // elite 보호막 soaks damage first
+      const absorbed = Math.min(target.shield, amount); target.shield -= absorbed; amount -= absorbed; target.flash = 0.1;
+      this.floaters.push({ x: target.x, y: target.y - 50, text: absorbed ? `보호막 -${absorbed}` : '', color: '#74b9ff', t: 0 });
+      if (amount <= 0) { this.game.emit('sfx', 'hit'); return 0; }
+    }
     this.game.emit('sfx', target.kind === 'monster' ? 'hit' : 'hurt');
     if (target.kind === 'monster') this.fx('impact', { x: target.x + (Math.random() * 16 - 8), y: target.y - 24 + (Math.random() * 16 - 8), color: crit ? '#f1c40f' : '#ffffff', life: 0.18, big: isSkill || crit });
     else if (this.combo > 0) { this.floaters.push({ x: target.x, y: target.y - 70, text: `COMBO ×${this.combo} 끊김`, color: '#95a5a6', t: 0 }); this.combo = 0; }
@@ -332,6 +356,11 @@ export class EntityManager {
         const col = target.def.palette?.M ?? '#e74c3c';
         for (let i = 0; i < 10; i++) { const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 90; this.particles.push({ x: target.x, y: target.y - 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, t: 0, life: 0.5 + Math.random() * 0.3, color: Math.random() < 0.3 ? '#ffffff' : col, size: 3 + Math.random() * 3 }); }
         if (target.isBoss) { this.shake = 14; this.fx('ring', { x: target.x, y: target.y, color: '#ffffff', radius: 140, life: 0.7 }); }
+        if (target.def.affix?.explode) { // 폭발: hits the front-most living hero
+          const front = this.heroes.filter((h) => h.alive).sort((a, b) => b.x - a.x)[0];
+          this.fx('ring', { x: target.x, y: target.y, color: '#e67e22', radius: 90, life: 0.4 }); this.shake = Math.max(this.shake, 6);
+          if (front) { this.floaters.push({ x: target.x, y: target.y - 70, text: '폭발!', color: '#e67e22', t: 0, big: true }); this.#damage(front, target.atk * target.def.affix.explode * (front.trait === 'sturdy' ? 1 - tv(front, 'sturdy') : 1), false); }
+        }
         if (target.def.chest) { target.openFrame = 2; target.deadT = -0.6; this.fx('sparkle', { x: target.x, y: target.y - 20, color: '#f9e79f', n: 14 }); this.game.emit('sfx', 'chest'); }
         else this.game.emit('sfx', 'kill');
         this.game.onMonsterKilled(target);

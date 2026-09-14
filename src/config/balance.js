@@ -50,7 +50,11 @@ export const BALANCE = Object.freeze({
   PRESTIGE: { minCleared: 30, bonusPerShare: 0.03 },
   // 각성 (awakening): a ★5 card can be awakened with 강화 카드 — permanent +25% ATK/HP, trait ×1.5, skill ×1.25, gold frame
   AWAKEN: { star: 5, cards: { D: 60, C: 100, B: 160, A: 260, S: 400 }, atk: 0.25, hp: 0.25, trait: 1.5, skill: 1.25 },
-  COMBO: { perHit: 0.005, max: 0.25, decay: 3 }, // consecutive hero hits without taking damage: +0.5% dmg each, cap +25%     // seconds between automatic "자동 합계" passes when the toggle is on
+  COMBO: { perHit: 0.005, max: 0.25, decay: 3 },
+  // 승산 forecast (calibrated with headless sims, scripts/calib): power ratio = (partyDPS/enemyHP) / (enemyDPS/partyHP)
+  FORECAST: { normal: [2, 10], boss: [3, 15], bossTimeFrac: 0.9 }, // ratio at which win chance is 0% / 100%
+  SAFE_ADVANCE_MIN: 0.35,   // auto-advance waits (keeps farming) while the forecast is below this
+  TEN_PULL_MIN_GRADE: 'A',  // a 10-pull always contains at least one A // consecutive hero hits without taking damage: +0.5% dmg each, cap +25%     // seconds between automatic "자동 합계" passes when the toggle is on
 
   GEMS_FIRST_CLEAR: 10, GEMS_REPEAT_CLEAR: 1,
   GEMS_BOSS_FIRST: 50,  GEMS_BOSS_REPEAT: 10,

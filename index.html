@@ -41,7 +41,7 @@
       <div class="rb-group">
         <div class="rb-row">
           <button id="qa-upgrade-all" class="rb-btn" title="골드가 다 떨어질 때까지 가장 싼 파티 업그레이드를 자동 구매"><span class="rb-icon">Σ</span>자동 합계</button>
-          <button id="qa-challenge" class="rb-btn" title="다음 스테이지 도전 전투 시작 / 도전 중이면 중단"><span class="rb-icon">⚑</span><span id="qa-challenge-label">다음 단계 도전</span></button>
+          <button id="qa-challenge" class="rb-btn" title="다음 스테이지 도전 전투 시작 / 도전 중이면 중단"><span class="rb-icon">⚑</span><span id="qa-challenge-label">다음 단계 도전</span><small id="qa-forecast" class="rb-forecast">승산 —</small></button>
           <div class="rb-stack">
             <label class="rb-check" title="클리어할 때마다 자동으로 다음 단계에 도전 (실패하면 꺼짐)"><input type="checkbox" id="qa-auto"> 자동 진행</label>
             <label class="rb-check" title="1초마다 자동 합계를 실행해 골드를 가장 싼 업그레이드에 계속 사용"><input type="checkbox" id="qa-auto-up"> 자동 합계 유지</label>
@@ -202,6 +202,7 @@
                 <tr><td class="g-B">B · 고급</td><td class="num">17%</td><td>—</td></tr>
                 <tr><td class="g-A">A · 영웅</td><td class="num">7%</td><td><b id="pity-a">50</b>회 안에 A 이상 확정</td></tr>
                 <tr><td class="g-S">S · 전설</td><td class="num">1%</td><td><b id="pity-s">100</b>회 안에 S 확정</td></tr>
+                <tr><td colspan="3" class="muted small">10행 가져오기는 항상 A 이상 1장을 보장합니다.</td></tr>
               </tbody>
             </table>
             <p class="muted small">새 카드 → 즉시 ★1 해금. 중복 → 조각 5~10개 (★승급 재료 또는 강화 카드로 변환).</p>
@@ -303,6 +304,7 @@
               <label><input type="checkbox" id="set-auto-up"> 자동 합계 유지: 1초마다 골드를 가장 싼 파티 업그레이드에 자동 사용</label>
               <label><input type="checkbox" id="set-sound"> 효과음 (합성음 · 보스 키가 켜져 있으면 무음)</label>
               <label><input type="checkbox" id="set-gridlines"> 눈금선: 전투 화면 위에 셀 눈금선 표시</label>
+              <label><input type="checkbox" id="set-safe"> 안전 자동 진행: 승산이 35% 미만이면 자동 진행을 잠시 멈추고 사냥, 강화로 승산이 오르면 자동 재개</label>
             </div>
             </div>
             <div>

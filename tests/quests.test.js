@@ -37,7 +37,7 @@ test('login bonus once per day; all-clear bonus after every quest is claimed', (
   assert.equal(r.gems, LOGIN_BONUS.gems);
   assert.equal(Q.claimLogin(s), null);
   assert.equal(Q.claimAllClear(s), null);
-  for (const q of DAILY_QUESTS) { Q.addProgress(s, q.id, q.target); Q.claimQuest(s, q.id); }
+  for (const q of Q.activeQuests(s)) { Q.addProgress(s, q.id, q.target); Q.claimQuest(s, q.id); }
   assert.ok(Q.allQuestsClaimed(s));
   assert.ok(Q.claimAllClear(s).gems > 0);
   assert.equal(Q.claimAllClear(s), null);

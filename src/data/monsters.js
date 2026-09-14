@@ -79,4 +79,12 @@ export function monsterForStage(stage, r = Math.random()) {
 }
 
 export const eliteChance = (stage) => (stage < 5 ? 0 : Math.min(0.3, 0.02 * (stage - 4)));
-export const asElite = (def) => ({ ...def, elite: true, name: `엘리트 ${def.name}` });
+/** Elite affixes: every elite rolls one, shown above its HP bar. */
+export const AFFIXES = [
+  { id: 'fast',     name: '신속',   desc: '이동·공격 속도 +50%',                 speed: 1.5, interval: 0.7 },
+  { id: 'tough',    name: '단단한', desc: 'HP ×1.5',                              hp: 1.5 },
+  { id: 'regen',    name: '재생',   desc: '초당 최대 HP 2% 회복',                 regen: 0.02 },
+  { id: 'volatile', name: '폭발',   desc: '죽을 때 최전방 영웅에게 ATK ×3 피해',  explode: 3 },
+  { id: 'shield',   name: '보호막', desc: '최대 HP 50%만큼의 보호막을 먼저 깎아야 함', shield: 0.5 },
+];
+export const asElite = (def, r = Math.random()) => { const affix = AFFIXES[Math.min(AFFIXES.length - 1, Math.floor(r * AFFIXES.length))]; return { ...def, elite: true, affix, name: `엘리트 ${affix.name} ${def.name}` }; };
