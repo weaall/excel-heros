@@ -33,95 +33,116 @@ function outline(g) {
 const shiftDown = (g, dy) => [...blank(g[0].length, dy), ...g.slice(0, g.length - dy)];
 
 // ------------------------------------------------------------------ heroes --
-// Palette keys: S skin, H hair, B shirt, P pants, W weapon, A accent/accessory, E eye, L light, K cheek, O outline, G glasses
-const DEFAULT_HERO_PAL = { S: '#f6d5b5', E: '#1b1b1b', L: '#ffffff', K: '#ffb0b0', O: '#23262b', G: '#2d3436', A: '#c0392b' };
+// Palette keys: S skin, s skin shade, H hair, h hair shade, B shirt, b shirt shade, P pants, p pants shade,
+// W weapon, A accent/accessory, E eye, L light, K cheek, O outline, G glasses
+const DEFAULT_HERO_PAL = { S: '#f6d5b5', E: '#1b1b1b', L: '#ffffff', K: '#f3a3a3', O: '#23262b', G: '#2d3436', A: '#c0392b' };
 const ROLE_ACCENT = { tank: '#95a5a6', ranged: '#e17055', healer: '#ff7675', melee: '#c0392b' };
+const darken = (hex, f = 0.72) => {
+  const n = parseInt(hex.slice(1), 16); if (Number.isNaN(n)) return hex;
+  const c = (v) => Math.max(0, Math.min(255, Math.round(v * f))).toString(16).padStart(2, '0');
+  return `#${c(n >> 16)}${c((n >> 8) & 255)}${c(n & 255)}`;
+};
 
+// Anatomy (3/4 view, facing right): head centre (15,9) r 6.5x6, neck y14-15, torso x11..19 y16..25, legs y26..31.
+// The back (left) side of everything is shaded.
 function drawHair(g, style) {
-  const cap = (pred) => ellipse(g, 16, 8, 8.6, 5.2, 'H', pred);
+  const cap = (pred) => ellipse(g, 14.5, 7, 7.5, 5, 'H', pred);
+  const back = (toY) => rect(g, 8, 7, 3, toY - 7, 'H');
   switch (style) {
-    case 'bald': px(g, 13, 6, 'L'); px(g, 14, 6, 'L'); break;
-    case 'long': cap((x, y) => y <= 10); rect(g, 7, 9, 3, 10, 'H'); rect(g, 22, 9, 3, 10, 'H'); break;
-    case 'bun': cap((x, y) => y <= 9); ellipse(g, 16, 3, 3, 2.4, 'H'); break;
-    case 'spiky': cap((x, y) => y <= 9); for (const [x, y] of [[10, 4], [13, 2], [16, 1], [19, 2], [22, 4]]) line(g, x, y, x, 6, 'H'); break;
-    case 'side': cap((x, y) => y <= 9 && !(x > 18 && y > 7)); rect(g, 8, 9, 5, 2, 'H'); break;
-    case 'curly': cap((x, y) => y <= 10); for (const [x, y] of [[8, 6], [24, 6], [10, 3], [22, 3], [16, 1]]) ellipse(g, x, y, 1.6, 1.6, 'H'); break;
-    case 'bob': cap((x, y) => y <= 10); rect(g, 7, 9, 3, 6, 'H'); rect(g, 22, 9, 3, 6, 'H'); break;
-    case 'grey': cap((x, y) => y <= 9); px(g, 12, 5, 'L'); px(g, 19, 6, 'L'); break;
-    default: cap((x, y) => y <= 9); // short
+    case 'bald': px(g, 13, 4, 'L'); px(g, 14, 4, 'L'); break;
+    case 'long': cap((x, y) => y <= 9); back(19); break;
+    case 'bun': cap((x, y) => y <= 8); ellipse(g, 9, 5, 2.5, 2.2, 'H'); break;
+    case 'spiky': cap((x, y) => y <= 8); for (const [x, y] of [[9, 3], [12, 1], [15, 0], [18, 1], [21, 3]]) line(g, x, y, x, 5, 'H'); break;
+    case 'side': cap((x, y) => y <= 8); line(g, 16, 5, 21, 8, 'H'); line(g, 16, 6, 21, 9, 'H'); break;
+    case 'curly': cap((x, y) => y <= 9); for (const [x, y] of [[8, 5], [10, 2], [14, 0], [18, 1], [21, 4]]) ellipse(g, x, y, 1.7, 1.7, 'H'); break;
+    case 'bob': cap((x, y) => y <= 9); back(14); rect(g, 20, 8, 2, 5, 'H'); break;
+    case 'grey': cap((x, y) => y <= 8); px(g, 12, 4, 'L'); px(g, 17, 5, 'L'); break;
+    default: cap((x, y) => y <= 8); // short
   }
+  for (let y = 0; y <= 19; y++) for (let x = 7; x <= 10; x++) if (g[y][x] === 'H') g[y][x] = 'h';
 }
 
 function drawAccessory(g, acc) {
   switch (acc) {
-    case 'glasses': rect(g, 11, 10, 4, 1, 'G'); rect(g, 17, 10, 4, 1, 'G'); rect(g, 11, 14, 4, 1, 'G'); rect(g, 17, 14, 4, 1, 'G'); rect(g, 10, 11, 1, 3, 'G'); rect(g, 14, 11, 1, 3, 'G'); rect(g, 17, 11, 1, 3, 'G'); rect(g, 21, 11, 1, 3, 'G'); rect(g, 15, 12, 2, 1, 'G'); break;
-    case 'sunglasses': rect(g, 10, 11, 5, 3, 'G'); rect(g, 17, 11, 5, 3, 'G'); rect(g, 15, 12, 2, 1, 'G'); px(g, 11, 12, 'L'); px(g, 18, 12, 'L'); break;
-    case 'beard': rect(g, 12, 16, 8, 2, 'H'); rect(g, 13, 18, 6, 1, 'H'); break;
-    case 'mustache': rect(g, 13, 15, 6, 1, 'H'); break;
-    case 'tie': rect(g, 15, 19, 2, 5, 'A'); rect(g, 14, 19, 4, 1, 'A'); break;
-    case 'badge': rect(g, 12, 20, 3, 3, 'A'); px(g, 13, 21, 'L'); break;
-    case 'headset': rect(g, 7, 10, 2, 4, 'A'); rect(g, 23, 10, 2, 4, 'A'); line(g, 8, 9, 12, 4, 'A'); line(g, 12, 4, 20, 4, 'A'); line(g, 20, 4, 24, 9, 'A'); rect(g, 8, 14, 3, 1, 'A'); px(g, 11, 15, 'A'); break;
-    case 'hardhat': ellipse(g, 16, 6, 9.5, 4.5, 'A', (x, y) => y <= 7); rect(g, 6, 8, 20, 2, 'A'); px(g, 15, 3, 'L'); px(g, 16, 3, 'L'); break;
-    case 'crown': rect(g, 11, 4, 10, 2, 'A'); for (const x of [11, 15, 19]) rect(g, x, 1, 2, 3, 'A'); px(g, 15, 2, 'L'); break;
-    case 'coffee': rect(g, 5, 22, 4, 4, 'A'); rect(g, 5, 21, 4, 1, 'L'); px(g, 9, 23, 'A'); px(g, 9, 24, 'A'); break;
-    case 'clipboard': rect(g, 4, 19, 5, 7, 'L'); rect(g, 5, 18, 3, 1, 'A'); rect(g, 5, 21, 3, 1, 'A'); rect(g, 5, 23, 3, 1, 'A'); break;
-    case 'earring': px(g, 8, 14, 'A'); px(g, 24, 14, 'A'); break;
-    case 'flower': ellipse(g, 23, 6, 2, 2, 'A'); px(g, 23, 6, 'L'); break;
-    case 'scarf': rect(g, 11, 17, 10, 2, 'A'); rect(g, 20, 19, 2, 4, 'A'); break;
-    case 'lanyard': line(g, 13, 18, 15, 23, 'A'); line(g, 19, 18, 17, 23, 'A'); rect(g, 15, 23, 3, 3, 'L'); break;
+    case 'glasses':
+      rect(g, 12, 8, 3, 1, 'G'); rect(g, 12, 11, 3, 1, 'G'); px(g, 12, 9, 'G'); px(g, 12, 10, 'G'); px(g, 14, 9, 'G'); px(g, 14, 10, 'G');
+      rect(g, 17, 8, 4, 1, 'G'); rect(g, 17, 11, 4, 1, 'G'); px(g, 17, 9, 'G'); px(g, 17, 10, 'G'); px(g, 20, 9, 'G'); px(g, 20, 10, 'G');
+      rect(g, 15, 9, 2, 1, 'G'); px(g, 21, 9, 'G'); break;
+    case 'sunglasses': rect(g, 12, 9, 9, 2, 'G'); px(g, 19, 9, 'L'); px(g, 13, 9, 'L'); break;
+    case 'beard': rect(g, 13, 13, 9, 2, 'H'); rect(g, 14, 15, 7, 1, 'H'); break;
+    case 'mustache': rect(g, 17, 12, 5, 1, 'H'); break;
+    case 'tie': rect(g, 16, 17, 2, 6, 'A'); rect(g, 15, 17, 4, 1, 'A'); break;
+    case 'badge': rect(g, 12, 18, 2, 2, 'A'); px(g, 13, 18, 'L'); break;
+    case 'headset': rect(g, 20, 9, 2, 3, 'A'); line(g, 20, 8, 15, 3, 'A'); line(g, 15, 3, 10, 5, 'A'); px(g, 22, 12, 'A'); px(g, 22, 13, 'A'); break;
+    case 'hardhat': ellipse(g, 14.5, 5.5, 8, 4, 'A', (x, y) => y <= 6); rect(g, 7, 6, 17, 2, 'A'); px(g, 12, 3, 'L'); px(g, 13, 3, 'L'); break;
+    case 'crown': rect(g, 10, 1, 10, 3, 'A'); for (const x of [10, 14, 18]) rect(g, x, 0, 2, 2, 'A'); px(g, 14, 2, 'L'); break;
+    case 'coffee': rect(g, 6, 22, 4, 4, 'A'); rect(g, 6, 21, 4, 1, 'L'); px(g, 10, 23, 'A'); px(g, 10, 24, 'A'); break;
+    case 'clipboard': rect(g, 4, 18, 6, 9, 'L'); rect(g, 5, 17, 4, 1, 'A'); rect(g, 5, 20, 4, 1, 'A'); rect(g, 5, 22, 4, 1, 'A'); rect(g, 5, 24, 3, 1, 'A'); break;
+    case 'earring': px(g, 22, 12, 'A'); px(g, 22, 13, 'L'); break;
+    case 'flower': ellipse(g, 9, 4, 2, 2, 'A'); px(g, 9, 4, 'L'); break;
+    case 'scarf': rect(g, 11, 15, 9, 2, 'A'); rect(g, 9, 17, 2, 5, 'A'); break;
+    case 'lanyard': line(g, 14, 16, 15, 21, 'A'); line(g, 17, 16, 16, 21, 'A'); rect(g, 14, 21, 4, 3, 'L'); px(g, 15, 22, 'A'); break;
     default: break;
   }
 }
 
-/** Weapon in the right hand (x≈22..25). pose: 'idle' | 'raise' | 'strike' */
+/** Weapon in the front (right) hand. pose: 'idle' | 'raise' | 'strike' */
 function drawWeapon(g, role, pose) {
   if (pose === 'strike') {
-    // horizontal reach to the right
     switch (role) {
-      case 'melee': rect(g, 25, 19, 7, 2, 'W'); rect(g, 24, 18, 1, 4, 'A'); break;
-      case 'ranged': rect(g, 25, 17, 6, 5, 'W'); rect(g, 26, 18, 4, 3, 'L'); break;
-      case 'tank': ellipse(g, 27, 20, 3, 5, 'A'); px(g, 27, 20, 'L'); break;
-      case 'healer': rect(g, 26, 17, 5, 5, 'L'); rect(g, 28, 18, 1, 3, 'W'); rect(g, 27, 19, 3, 1, 'W'); break;
+      case 'melee': rect(g, 26, 19, 6, 2, 'W'); rect(g, 25, 18, 1, 4, 'A'); px(g, 31, 19, 'L'); break;
+      case 'ranged': rect(g, 25, 17, 7, 6, 'W'); rect(g, 26, 18, 5, 4, 'L'); break;
+      case 'tank': ellipse(g, 27.5, 19, 3.5, 6, 'A'); px(g, 27, 19, 'L'); px(g, 28, 19, 'L'); break;
+      case 'healer': rect(g, 25, 17, 6, 6, 'L'); rect(g, 27, 18, 2, 4, 'W'); rect(g, 26, 19, 4, 2, 'W'); break;
     }
     return;
   }
-  const raised = pose === 'raise';
+  const up = pose === 'raise';
   switch (role) {
-    case 'melee': rect(g, 24, raised ? 5 : 14, 2, raised ? 15 : 13, 'W'); rect(g, 23, raised ? 19 : 26, 4, 1, 'A'); break;
-    case 'ranged': rect(g, 22, raised ? 13 : 21, 6, 5, 'W'); rect(g, 23, raised ? 14 : 22, 4, 3, 'L'); break;
-    case 'tank': ellipse(g, 24, raised ? 16 : 22, 3, 5, 'A'); px(g, 24, raised ? 16 : 22, 'L'); break;
-    case 'healer': rect(g, 22, raised ? 12 : 20, 5, 5, 'L'); rect(g, 24, raised ? 13 : 21, 1, 3, 'W'); rect(g, 23, raised ? 14 : 22, 3, 1, 'W'); break;
+    case 'melee':
+      if (up) { rect(g, 21, 0, 2, 9, 'W'); rect(g, 19, 9, 5, 1, 'A'); px(g, 21, 0, 'L'); }
+      else { line(g, 22, 24, 29, 15, 'W'); line(g, 23, 24, 30, 15, 'W'); rect(g, 21, 23, 4, 1, 'A'); px(g, 30, 15, 'L'); }
+      break;
+    case 'ranged': rect(g, up ? 20 : 21, up ? 8 : 22, 7, 6, 'W'); rect(g, up ? 21 : 22, up ? 9 : 23, 5, 4, 'L'); break;
+    case 'tank': ellipse(g, up ? 23 : 24, up ? 13 : 21, 3.5, 6, 'A'); px(g, up ? 23 : 24, up ? 13 : 21, 'L'); break;
+    case 'healer': rect(g, up ? 20 : 21, up ? 7 : 22, 6, 6, 'L'); rect(g, up ? 22 : 23, up ? 8 : 23, 2, 4, 'W'); rect(g, up ? 21 : 22, up ? 9 : 24, 4, 2, 'W'); break;
   }
 }
 
 /**
- * Build one 32x32 hero frame.
+ * Build one 32x32 hero frame (3/4 view facing right, ~3 heads tall, shaded).
  * look: { hair, acc, acc2?, skin? }  pose: 'idle'|'walk'|'raise'|'strike'
  */
 function heroFrame(def, pose) {
   const g = blank();
   const look = def.look ?? {};
-  // legs & shoes
-  const apart = pose === 'walk';
-  rect(g, apart ? 10 : 12, 27, 3, 4, 'P'); rect(g, apart ? 19 : 17, 27, 3, 4, 'P');
-  rect(g, apart ? 9 : 11, 31, 4, 1, 'O'); rect(g, apart ? 19 : 17, 31, 4, 1, 'O');
-  // torso + collar
-  rect(g, 11, 18, 10, 9, 'B'); rect(g, 15, 18, 2, 1, 'L');
-  // arms
-  rect(g, 8, 19, 3, 6, 'B'); rect(g, 8, 25, 3, 2, 'S');                     // left arm
-  if (pose === 'strike') { rect(g, 21, 19, 5, 3, 'B'); rect(g, 26, 19, 2, 2, 'S'); }
-  else if (pose === 'raise') { rect(g, 21, 13, 3, 6, 'B'); rect(g, 21, 11, 3, 2, 'S'); }
-  else { rect(g, 21, 19, 3, 6, 'B'); rect(g, 21, 25, 3, 2, 'S'); }
-  // head
-  ellipse(g, 16, 11, 8, 7, 'S');
+  const walk = pose === 'walk';
+  // legs & shoes (back leg shaded; walking spreads the stance)
+  rect(g, walk ? 10 : 12, 26, 3, 5, 'p'); rect(g, walk ? 17 : 16, 26, 3, 5, 'P');
+  rect(g, walk ? 9 : 11, 30, 4, 2, 'O'); rect(g, walk ? 17 : 16, 30, 5, 2, 'O');
+  // torso, back shade, belt, collar
+  rect(g, 11, 16, 9, 10, 'B'); rect(g, 11, 16, 2, 10, 'b');
+  rect(g, 11, 25, 9, 1, 'O'); rect(g, 15, 16, 3, 1, 'L');
+  // neck
+  rect(g, 14, 14, 3, 2, 's');
+  // back arm
+  rect(g, 9, 17, 2, 7, 'b'); rect(g, 9, 24, 2, 2, 's');
+  // front arm (pose dependent)
+  if (pose === 'strike') { rect(g, 19, 18, 5, 3, 'B'); rect(g, 24, 18, 2, 2, 'S'); }
+  else if (pose === 'raise') { rect(g, 19, 11, 3, 7, 'B'); rect(g, 20, 9, 2, 2, 'S'); }
+  else { rect(g, 19, 17, 3, 7, 'B'); rect(g, 20, 24, 2, 2, 'S'); }
+  // head + back shade
+  ellipse(g, 15, 9, 6.5, 6, 'S');
+  for (let y = 3; y <= 15; y++) for (let x = 8; x <= 10; x++) if (g[y][x] === 'S') g[y][x] = 's';
   drawHair(g, look.hair ?? 'short');
-  // face
-  rect(g, 12, 11, 2, 3, 'E'); rect(g, 18, 11, 2, 3, 'E'); px(g, 12, 11, 'L'); px(g, 18, 11, 'L');
-  rect(g, 10, 14, 2, 1, 'K'); rect(g, 20, 14, 2, 1, 'K');
-  rect(g, 15, 16, 2, 1, 'O');
+  // face turned right: far eye narrow, near eye wide with highlight, brows, nose, mouth, cheeks
+  rect(g, 13, 9, 1, 2, 'E'); rect(g, 18, 9, 2, 2, 'E'); px(g, 18, 9, 'L');
+  px(g, 13, 8, 'h'); rect(g, 18, 8, 2, 1, 'h');
+  px(g, 21, 11, 's'); rect(g, 18, 13, 2, 1, 'O');
+  px(g, 17, 12, 'K'); px(g, 12, 12, 'K');
   drawAccessory(g, look.acc);
   drawAccessory(g, look.acc2);
-  drawWeapon(g, def.role, pose === 'walk' ? 'idle' : pose);
+  drawWeapon(g, def.role, walk ? 'idle' : pose);
   return outline(g);
 }
 
@@ -167,7 +188,7 @@ function monsterFrame(def, frame) {
   const g = blank();
   const draw = SHAPES[def.shape] ?? SHAPES.blob;
   const [cx, cy] = draw(g);
-  drawFace(g, def.face ?? {}, cx, cy);
+  drawFace(g, def.face ?? {}, cx - 2, cy);
   if (def.elite) { rect(g, cx - 5, 1, 10, 2, 'Y'); for (const x of [cx - 5, cx - 1, cx + 3]) rect(g, x, -1, 2, 2, 'Y'); rect(g, cx - 5, 0, 10, 1, 'Y'); px(g, cx, 1, 'L'); }
   const out = outline(g);
   return frame ? shiftDown(out, 1) : out;
@@ -209,7 +230,10 @@ function render(key, g, palette, scale = SCALE) {
   cache.set(key, c);
   return c;
 }
-const heroPalette = (def) => ({ ...DEFAULT_HERO_PAL, A: ROLE_ACCENT[def.role], ...(def.look?.skin ? { S: def.look.skin } : {}), ...def.palette });
+const heroPalette = (def) => {
+  const p = { ...DEFAULT_HERO_PAL, A: ROLE_ACCENT[def.role], ...(def.look?.skin ? { S: def.look.skin } : {}), ...def.palette };
+  return { ...p, s: darken(p.S, 0.86), h: darken(p.H, 0.7), b: darken(p.B, 0.72), p: darken(p.P, 0.72) };
+};
 
 /**
  * @param def   hero/job definition (data/heroes.js)
@@ -242,9 +266,9 @@ export function heroIconDataURL(def) {
   const ctx = c.getContext('2d');
   const pal = heroPalette(def);
   const g = heroFrame(def, 'idle');
-  for (let y = 0; y < 20; y++) for (let x = 6; x < 26; x++) {
+  for (let y = 0; y < 20; y++) for (let x = 5; x < 25; x++) {
     const ch = g[y][x]; if (ch === '.') continue;
-    ctx.fillStyle = pal[ch]; ctx.fillRect(x - 6, y, 1, 1);
+    ctx.fillStyle = pal[ch]; ctx.fillRect(x - 5, y, 1, 1);
   }
   const url = c.toDataURL(); cache.set(key, url); return url;
 }

@@ -35,13 +35,18 @@ test('a full 5-hero party progresses through several stages and the tank soaks a
   assert.equal(g.entities.heroes.length, 5);
 });
 
-test('boss timeout retreats one stage; boss kill advances', () => {
+test('boss timeout falls back to farming 1-9 with auto-advance off; boss kill advances', () => {
   const s = createInitialState(); s.stage = 10; s.maxStage = 10; s.maxCleared = 9; s.heroes[MAIN_ID].level = 20;
   const g = new GameManager({ state: s, save: memSave() });
-  assert.ok(g.entities.boss, 'boss spawned on stage 10');
+  assert.ok(g.entities.boss, 'boss spawned on stage 10 challenge');
   run(g, BALANCE.BOSS_TIME_LIMIT + 2);
-  assert.equal(g.state.stage, 9, 'retreated after timeout');
+  assert.equal(g.state.stage, 9, 'farming 1-9 after timeout');
+  assert.equal(g.isChallenging(), false);
+  assert.equal(g.state.settings.autoAdvance, false, 'auto-advance switched off by the failure');
   assert.equal(g.state.stats.bossFails, 1);
+  run(g, 30);
+  assert.equal(g.state.stage, 9, 'keeps farming 1-9 (no boss while farming)');
+  assert.equal(g.entities.boss, null);
 
   const s2 = createInitialState(); s2.stage = 10; s2.maxStage = 10; s2.maxCleared = 9; s2.heroes[MAIN_ID].level = 60;
   const g2 = new GameManager({ state: s2, save: memSave() });
@@ -51,12 +56,33 @@ test('boss timeout retreats one stage; boss kill advances', () => {
   assert.equal(g2.state.gems, BALANCE.STARTING_GEMS + BALANCE.GEMS_BOSS_FIRST);
 });
 
-test('autoBoss=false loops the stage before a boss', () => {
-  const s = createInitialState(); s.stage = 9; s.maxStage = 9; s.settings.autoBoss = false; s.heroes[MAIN_ID].level = 60;
+test('farming mode: no auto-advance keeps hunting the same stage forever', () => {
+  const s = createInitialState(); s.stage = 9; s.maxStage = 9; s.maxCleared = 9; s.challenging = false; s.settings.autoAdvance = false; s.heroes[MAIN_ID].level = 60;
   const g = new GameManager({ state: s, save: memSave() });
   run(g, 120);
   assert.equal(g.state.stage, 9);
-  assert.ok(g.state.stats.totalKills > BALANCE.KILLS_PER_STAGE);
+  assert.ok(g.state.stats.totalKills > BALANCE.KILLS_PER_STAGE, 'kills keep coming while farming');
+  assert.equal(g.state.maxCleared, 9, 'farming never clears stages');
+});
+
+test('challenge button: start, clear, cancel, and failure returns to farming', () => {
+  const s = createInitialState(); s.stage = 3; s.maxStage = 3; s.maxCleared = 3; s.challenging = false; s.settings.autoAdvance = false; s.heroes[MAIN_ID].level = 60;
+  const g = new GameManager({ state: s, save: memSave() });
+  assert.ok(g.startChallenge()); assert.equal(g.state.stage, 4); assert.ok(g.isChallenging());
+  assert.ok(!g.startChallenge(), 'already challenging');
+  run(g, 90);
+  assert.equal(g.state.maxCleared, 4, 'challenge cleared');
+  assert.ok(!g.isChallenging(), 'back to farming after clear (auto-advance off)');
+  assert.equal(g.state.stage, 4, 'farms the newly cleared stage');
+  assert.ok(g.startChallenge()); assert.equal(g.state.stage, 5);
+  assert.ok(g.cancelChallenge()); assert.equal(g.state.stage, 4); assert.ok(!g.isChallenging());
+  // a hopeless challenge wipes and falls back
+  g.state.heroes[MAIN_ID].level = 1; g.entities.refreshHeroStats();
+  g.state.stage = 40; g.state.maxStage = 40; g.state.maxCleared = 40; g.setAutoAdvance(true);
+  assert.equal(g.state.stage, 41); assert.ok(g.isChallenging());
+  run(g, 120);
+  assert.equal(g.state.stage, 40, 'fell back to the last cleared stage');
+  assert.equal(g.state.settings.autoAdvance, false);
 });
 
 test('player actions: upgrade, team upgrade, pull, promote, party toggle', () => {

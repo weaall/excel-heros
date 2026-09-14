@@ -26,12 +26,13 @@ export function createInitialState(now = Date.now()) {
     maxStage: 1,          // highest stage ever reached
     maxCleared: 0,        // highest stage ever cleared (first-clear gem rewards)
     kills: 0,
+    challenging: true,   // new games start by challenging Phase 1-1
     heroes,
     main: { job: 'intern' },
     party: [MAIN_ID],
     pity: initialPity(),
     team: { coffee: 0, payroll: 0, chairs: 0 },
-    settings: { excel: false, autoBoss: true },
+    settings: { excel: false, autoAdvance: true },
     daily: { date: localDateKey(now), progress: {}, claimed: {}, loginClaimed: false, allClearClaimed: false, adsUsed: 0 },
     stats: { totalKills: 0, totalGold: 0, totalPulls: 0, bossKills: 0, bossFails: 0, playSeconds: 0, enhances: 0 },
   };
@@ -56,6 +57,8 @@ export function migrate(raw) {
   if (s.heroes[MAIN_ID].star < 1) s.heroes[MAIN_ID].star = 1;
   s.stage = Math.max(1, s.stage | 0);
   s.maxStage = Math.max(s.stage, s.maxStage | 0);
+  // Saves from before the farm/challenge model: an already-cleared stage is farmed, not re-challenged.
+  if (s.challenging === undefined || (s.challenging && s.stage <= (s.maxCleared | 0))) s.challenging = s.stage > (s.maxCleared | 0);
   s.cards = Math.max(0, s.cards | 0);
   s.version = SAVE_VERSION;
   return s;

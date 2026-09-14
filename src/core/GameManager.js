@@ -19,7 +19,7 @@ export class GameManager extends Emitter {
     this.rng = rng;
     this.logs = [];
     this.rowCounter = 1000 + Math.floor(Math.random() * 500);
-    this.saveTimer = 0; this.dailyTimer = 0; this.wipeStreak = 0;
+    this.saveTimer = 0; this.dailyTimer = 0;
     Quests.ensureDaily(this.state, now);
     this.entities = new EntityManager(this);
     this.entities.rebuildParty();
@@ -222,7 +222,49 @@ export class GameManager extends Emitter {
     this.state.settings.excel = force ?? !this.state.settings.excel;
     this.emit('excel', this.state.settings.excel);
   }
-  setAutoBoss(v) { this.state.settings.autoBoss = !!v; this.emit('settings'); }
+  /** Auto-advance: keep challenging the next stage after every clear. Turning it on starts a challenge right away. */
+  setAutoAdvance(v) {
+    this.state.settings.autoAdvance = !!v; this.emit('settings');
+    if (v && !this.isChallenging()) this.startChallenge();
+  }
+
+  /** True while the party is fighting to clear the current stage (vs. farming it). */
+  isChallenging() { return !!this.state.challenging; }
+  /** The boss only appears while challenging a boss stage; farming a boss stage spawns normal monsters. */
+  bossActive() { return this.isChallenging() && isBossStage(this.state.stage); }
+  /** Stage the next challenge would target. */
+  nextStage() { const s = this.state; return this.isChallenging() ? s.stage : (s.stage <= s.maxCleared ? s.stage + 1 : s.stage); }
+
+  // ------------------------------------------------------------ challenge --
+  /** Start fighting for the next stage (or the current, not-yet-cleared one). */
+  startChallenge() {
+    const s = this.state;
+    if (this.isChallenging()) return false;
+    if (s.stage <= s.maxCleared) s.stage += 1;
+    s.challenging = true; s.kills = 0; s.maxStage = Math.max(s.maxStage, s.stage);
+    this.entities.startStage();
+    this.log(`${this.stageLabel()} 도전 시작${isBossStage(s.stage) ? ' — 보스 등장!' : ''}`, 'stage');
+    this.emit('stage'); this.emit('kills'); this.emit('challenge');
+    return true;
+  }
+  /** Give up the current challenge and farm the last safe stage. */
+  cancelChallenge() {
+    if (!this.isChallenging()) return false;
+    this.#backToFarm('도전 중단');
+    return true;
+  }
+  #backToFarm(reason) {
+    const s = this.state;
+    s.challenging = false; s.kills = 0;
+    if (s.stage > 1 && s.stage > s.maxCleared) s.stage -= 1;
+    this.entities.startStage();
+    this.log(`${reason}. ${this.stageLabel()}에서 자동 사냥`, 'warn');
+    this.emit('stage'); this.emit('kills'); this.emit('challenge');
+  }
+  #failChallenge(reason) {
+    this.state.settings.autoAdvance = false; this.emit('settings');
+    this.#backToFarm(reason);
+  }
 
   // -------------------------------------------------------------- quests --
   claimQuest(id) { const r = Quests.claimQuest(this.state, id, this.goldMult()); if (r) this.#afterReward(r); return r; }
@@ -238,7 +280,7 @@ export class GameManager extends Emitter {
     if (!Quests.useAd(this.state)) return null;
     let gold = 0;
     if (kind === 'offline' && report) gold = Math.floor(report.gold * (BALANCE.AD.offlineMultiplier - 1));
-    else gold = Math.floor(this.goldPerSecAt(this.state.maxStage) * BALANCE.AD.instantHours * 3600);
+    else gold = Math.floor(this.goldPerSecAt(this.state.stage) * BALANCE.AD.instantHours * 3600);
     this.state.gold += gold; this.state.stats.totalGold += gold;
     this.log(`광고 시청 보상 +${gold}g`, 'info');
     this.emit('gold'); this.emit('quests');
@@ -262,7 +304,7 @@ export class GameManager extends Emitter {
       this.#clearStage();
     } else {
       s.kills++; this.emit('kills');
-      if (s.kills >= BALANCE.KILLS_PER_STAGE) this.#clearStage();
+      if (this.isChallenging() && s.kills >= BALANCE.KILLS_PER_STAGE) this.#clearStage();
     }
     this.emit('gold');
   }
@@ -275,49 +317,27 @@ export class GameManager extends Emitter {
       : (first ? BALANCE.GEMS_FIRST_CLEAR : BALANCE.GEMS_REPEAT_CLEAR);
     const lucky = this.partyTraitCount('lucky') * TRAITS.lucky.value;
     const cards = first ? (Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1) * BALANCE.CARDS_FIRST_CLEAR_PER_PHASE : 0;
-    s.gems += gems + lucky; s.cards += cards; s.maxCleared = Math.max(s.maxCleared, s.stage); this.wipeStreak = 0;
+    s.gems += gems + lucky; s.cards += cards; s.maxCleared = Math.max(s.maxCleared, s.stage);
     Quests.addProgress(s, 'clears', 1);
     this.log(`${this.stageLabel()} 마감 +${gems + lucky} 보석${cards ? ` +${cards} 강화 카드` : ''}`, 'stage');
-    const next = s.stage + 1;
-    s.kills = 0;
-    if (isBossStage(next) && !s.settings.autoBoss) this.log(`자동 보스 꺼짐: ${this.stageLabel()} 반복 사냥`, 'info');
-    else { s.stage = next; s.maxStage = Math.max(s.maxStage, next); }
-    this.entities.startStage();
+    s.kills = 0; s.challenging = false;
     this.emit('stage'); this.emit('gems'); this.emit('cards'); this.emit('kills'); this.emit('quests');
+    if (s.settings.autoAdvance) this.startChallenge();
+    else { this.entities.startStage(); this.log(`${this.stageLabel()}에서 자동 사냥 중 (다음 단계 도전 대기)`, 'info'); this.emit('challenge'); }
   }
 
   onBossTimeout() {
-    const s = this.state; s.stats.bossFails++;
-    this.log(`보스 에스컬레이션 (${BALANCE.BOSS_TIME_LIMIT}초 초과). ${stageLabel(s.stage - 1)}로 후퇴`, 'warn');
-    s.stage = Math.max(1, s.stage - 1); s.kills = 0;
-    this.entities.startStage();
-    this.emit('stage'); this.emit('kills');
+    this.state.stats.bossFails++;
+    this.#failChallenge(`보스 에스컬레이션 (${BALANCE.BOSS_TIME_LIMIT}초 초과)`);
   }
 
-  /** Party wipe: restart the same stage; after several wipes in a row, retreat one stage. */
+  /** Party wipe: a failed challenge falls back to farming the previous stage; a farming wipe just restarts. */
   onPartyWiped() {
-    const s = this.state; this.wipeStreak++;
-    if (this.wipeStreak >= BALANCE.WIPE_RETREAT_AFTER && s.stage > 1) {
-      s.stage -= 1; s.kills = 0; this.wipeStreak = 0;
-      this.log(`연속 ${BALANCE.WIPE_RETREAT_AFTER}회 전멸. ${this.stageLabel()}로 후퇴`, 'warn');
-    } else if (s.stage === 1) {
-      this.log('팀 전원 번아웃. Phase 1-1에서 재정비 (튜토리얼 스테이지: 진행도 유지)', 'warn');
-    } else {
-      s.kills = 0;
-      this.log(`팀 전원 번아웃. ${this.stageLabel()} 처음부터 재시작 (${this.wipeStreak}/${BALANCE.WIPE_RETREAT_AFTER})`, 'warn');
-    }
+    const s = this.state;
+    if (this.isChallenging() && s.stage === 1 && s.maxCleared === 0) { this.entities.startStage(); this.log('팀 전원 번아웃. Phase 1-1 재정비 (튜토리얼: 진행도 유지)', 'warn'); this.emit('stage'); }
+    else if (this.isChallenging()) this.#failChallenge('팀 전원 번아웃');
+    else { this.entities.startStage(); this.log(`팀 전원 번아웃. ${this.stageLabel()} 사냥 재시작`, 'warn'); this.emit('stage'); }
     this.emit('wipe');
-    this.entities.startStage();
-    this.emit('stage'); this.emit('kills');
-  }
-
-  /** Manually re-attempt the next boss after a retreat. */
-  challengeBoss() {
-    const s = this.state; const next = s.stage + 1;
-    if (!isBossStage(next) || next > s.maxStage) return false;
-    s.stage = next; s.kills = 0; this.entities.startStage();
-    this.emit('stage'); this.emit('kills');
-    return true;
   }
 
   // ----------------------------------------------------------------- loop --
@@ -340,7 +360,7 @@ export class GameManager extends Emitter {
   /** Build an idle report for an arbitrary gap (used by the main loop for throttled tabs). */
   idleReport(seconds) {
     const capped = Math.min(seconds, BALANCE.OFFLINE_CAP_SEC);
-    const gps = this.goldPerSecAt(this.state.maxStage);
+    const gps = this.goldPerSecAt(this.state.stage);
     return { seconds: capped, elapsed: seconds, capped: seconds > BALANCE.OFFLINE_CAP_SEC, goldPerSec: gps, gold: offlineGold(gps, capped) };
   }
 

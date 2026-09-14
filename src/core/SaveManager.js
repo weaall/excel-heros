@@ -35,7 +35,7 @@ export class SaveManager {
     const elapsed = Math.floor((now - (state.lastSaved ?? now)) / 1000);
     if (elapsed < BALANCE.OFFLINE_MIN_SEC) return null;
     const seconds = Math.min(elapsed, BALANCE.OFFLINE_CAP_SEC);
-    const gps = goldPerSecFn(state.maxStage);
+    const gps = goldPerSecFn(state.stage);
     return { seconds, elapsed, capped: elapsed > BALANCE.OFFLINE_CAP_SEC, goldPerSec: gps, gold: offlineGold(gps, seconds) };
   }
 }

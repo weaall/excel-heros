@@ -91,7 +91,7 @@ export class EntityManager {
     const stage = this.game.state.stage;
     this.monsters = []; this.projectiles = []; this.spawnQueue = []; this.boss = null; this.bossTimer = 0;
     for (const h of this.heroes) { h.alive = true; h.hp = h.maxHp; h.reviveT = 0; h.x = h.homeX; h.y = h.homeY; h.targetId = null; }
-    if (isBossStage(stage)) {
+    if (this.game.bossActive()) {
       this.boss = this.#spawnMonster(stage, true);
       this.bossTimer = BALANCE.BOSS_TIME_LIMIT;
       this.game.log(`보스 등장: ${BOSS.name} (${this.game.stageLabel()})`, 'boss');

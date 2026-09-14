@@ -28,8 +28,8 @@
   <div class="ribbon-body">
     <div class="ribbon-group">
       <button id="qa-upgrade-all" class="rb-btn" title="골드가 다 떨어질 때까지 가장 싼 파티 업그레이드를 자동 구매"><span class="rb-icon">Σ</span>자동 합계</button>
-      <button id="qa-boss" class="rb-btn" title="다음 보스에 다시 도전"><span class="rb-icon">⚑</span>보스 도전</button>
-      <label class="rb-check" title="보스 스테이지 자동 진입"><input type="checkbox" id="qa-autoboss"> 자동 보스</label>
+      <button id="qa-challenge" class="rb-btn" title="다음 스테이지 도전 전투 시작 / 도전 중이면 중단"><span class="rb-icon">⚑</span><span id="qa-challenge-label">다음 단계 도전</span></button>
+      <label class="rb-check" title="클리어할 때마다 자동으로 다음 단계에 도전 (실패하면 꺼짐)"><input type="checkbox" id="qa-auto"> 자동 진행</label>
       <span class="rb-sep"></span>
       <button class="rb-btn" data-sheet="roster"><span class="rb-icon">▦</span>카드 명단</button>
       <button class="rb-btn" data-sheet="gacha"><span class="rb-icon">⇩</span>가져오기</button>
@@ -67,6 +67,7 @@
           </div>
         </div>
         <div class="stage-bar">
+          <span class="stage-mode" id="stage-mode">도전 중</span>
           <span class="stage-label" id="stage-label">Phase 1-1</span>
           <span class="stage-monster" id="stage-monster"></span>
           <div class="progress"><div class="progress-fill" id="kill-bar"></div><span class="progress-text" id="kill-text"></span></div>
@@ -152,7 +153,7 @@
           <div>
             <h3 class="section-title">설정</h3>
             <div class="settings">
-              <label><input type="checkbox" id="set-autoboss"> 보스 스테이지 자동 진입 (끄면 보스 직전 스테이지에서 반복 사냥)</label>
+              <label><input type="checkbox" id="set-auto"> 자동 진행: 클리어할 때마다 다음 단계에 자동 도전 (도전 실패 시 자동으로 꺼지고 직전 스테이지에서 사냥)</label>
               <label><input type="checkbox" id="set-stealth"> 보스 키: 전투 화면을 텍스트 표로 (Esc)</label>
             </div>
             <h3 class="section-title">통계</h3>

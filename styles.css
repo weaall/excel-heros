@@ -188,3 +188,7 @@ body.stealth #roster-table { display: table; }
 .dialog-actions { display: flex; justify-content: flex-end; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--panel); }
 .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); background: #323130; color: #fff; padding: 7px 14px; border-radius: 3px; font-size: 12.5px; z-index: 11; box-shadow: 0 2px 10px rgba(0,0,0,.3); }
 .toast[hidden] { display: none; }
+
+.stage-mode { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 2px; background: #fdebd0; color: #9a6700; }
+.stage-mode.challenge { background: #fde2e1; color: #b03a2e; }
+.stage-mode.farm { background: var(--xl-green-light); color: var(--xl-green); }

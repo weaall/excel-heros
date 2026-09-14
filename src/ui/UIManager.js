@@ -53,9 +53,9 @@ export class UIManager {
     });
 
     $('#qa-upgrade-all').addEventListener('click', () => { const n = this.game.upgradeCheapestLoop(); this.toast(n ? `자동 합계: 업그레이드 ${n}회 적용` : '골드가 부족합니다'); });
-    $('#qa-boss').addEventListener('click', () => { if (!this.game.challengeBoss()) this.toast('여기서 도전할 보스가 없습니다'); });
-    $('#qa-autoboss').addEventListener('change', (e) => this.game.setAutoBoss(e.target.checked));
-    $('#set-autoboss').addEventListener('change', (e) => this.game.setAutoBoss(e.target.checked));
+    $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
+    $('#qa-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
+    $('#set-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#set-stealth').addEventListener('change', (e) => this.game.toggleExcel(e.target.checked));
 
     $('#pull1').addEventListener('click', () => this.#pull(1));
@@ -86,7 +86,8 @@ export class UIManager {
     g.on('main', (job) => this.openModal('승진 발표', `<p><b>김인턴</b>이(가) <b>${job.title}</b>(${job.grade}급)으로 승진했습니다!</p><p class="muted">${job.desc ?? '스탯과 스킬이 강화되었습니다.'}</p>`));
     g.on('stage', () => this.#refreshStage());
     g.on('kills', () => this.#refreshStage());
-    g.on('wipe', () => this.toast('팀 전원 번아웃 — 스테이지를 처음부터 다시 시작합니다'));
+    g.on('challenge', () => { this.#refreshStage(); this.#refreshSettings(); });
+    g.on('wipe', () => this.toast(this.game.isChallenging() ? '팀 전원 번아웃 — 재정비 후 계속' : '팀 전원 번아웃 — 직전 스테이지에서 자동 사냥'));
     g.on('gems', () => this.#refreshGacha());
     g.on('quests', () => this.#refreshQuests());
     g.on('excel', (on) => this.applyStealth(on));
@@ -144,7 +145,7 @@ export class UIManager {
     const kills = g.killsRequired();
     const list = [
       `=SUM(Hero_ATK) = ${fmt(g.partyATK())}`,
-      `=PROGRESS("${g.stageLabel()}", ${s.kills}/${kills}) = ${pct(s.kills / kills)}`,
+      g.isChallenging() ? `=PROGRESS("${g.stageLabel()}", ${s.kills}/${kills}) = ${pct(s.kills / kills)}` : `=FARM("${g.stageLabel()}", KILLS=${s.kills})`,
       `=DPS(Sheet1!A1:M8) = ${fmt(g.entities.dps())}/s`,
       `=IDLE_RATE(MAX_STAGE=${s.maxStage}) = ${g.goldPerSecAt(s.maxStage).toFixed(2)} gold/s`,
     ];
@@ -154,16 +155,20 @@ export class UIManager {
 
   #refreshStage() {
     const s = this.game.state; const g = this.game;
-    const boss = isBossStage(s.stage);
+    const challenging = g.isChallenging(); const boss = g.bossActive();
     $('#stage-label').textContent = g.stageLabel();
+    const mode = $('#stage-mode');
+    mode.textContent = challenging ? (boss ? '보스 도전 중' : '도전 중') : '자동 사냥';
+    mode.className = `stage-mode ${challenging ? 'challenge' : 'farm'}`;
     const pool = stagePool(s.stage);
     $('#stage-monster').textContent = boss ? `보스: ${BOSS.name}` : pool.map((m) => m.name).join(' · ');
     const req = g.killsRequired();
-    $('#kill-bar').style.width = `${Math.min(100, (s.kills / req) * 100)}%`;
-    $('#kill-text').textContent = boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : `${s.kills} / ${req}행 처리`;
+    $('#kill-bar').style.width = challenging ? `${Math.min(100, (s.kills / req) * 100)}%` : '100%';
+    $('#kill-text').textContent = boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : challenging ? `${s.kills} / ${req}행 처리` : `사냥 중 · 처치 ${s.kills}`;
     const ec = eliteChance(s.stage);
-    $('#stage-hint').textContent = boss ? '30초 안에 처리하지 못하면 이전 스테이지로 후퇴' : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
-    $('#qa-boss').disabled = !(isBossStage(s.stage + 1) && s.stage + 1 <= s.maxStage);
+    $('#stage-hint').textContent = boss ? '30초 안에 처리하지 못하면 직전 스테이지에서 자동 사냥' : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
+    const next = g.nextStage();
+    $('#qa-challenge-label').textContent = challenging ? '도전 중단' : `${stageLabel(next)} 도전${isBossStage(next) ? ' (보스)' : ''}`;
     this.#refreshBestiary(boss ? [BOSS] : pool);
     this.#refreshFormulaBar();
   }
@@ -357,7 +362,7 @@ export class UIManager {
   // ---------------------------------------------------------- settings --
   #refreshSettings() {
     const st = this.game.state.settings;
-    $('#qa-autoboss').checked = st.autoBoss; $('#set-autoboss').checked = st.autoBoss; $('#set-stealth').checked = st.excel;
+    $('#qa-auto').checked = st.autoAdvance; $('#set-auto').checked = st.autoAdvance; $('#set-stealth').checked = st.excel;
   }
 
   #buildFormulaSheet() {
@@ -370,7 +375,7 @@ export class UIManager {
       ['영웅 ATK', '=FLOOR(Base * 1.10 ^ (Level - 1) * StarMult * (1 + 0.04 * 강화))'],
       ['영웅 HP', '=FLOOR(Base * 1.08 ^ (Level - 1) * StarMult * (1 + 0.04 * 강화) * (1 + 의자))'],
       ['보스', '=MonsterHP * 8   /   30초 제한, 실패 시 후퇴'],
-      ['전멸', `같은 스테이지 재시작, 연속 ${BALANCE.WIPE_RETREAT_AFTER}회 전멸 시 1스테이지 후퇴`],
+      ['사냥 / 도전', '기본은 현재 스테이지 무한 사냥. 도전 중 20킬(보스는 30초 내 처치)로 클리어. 실패(전멸·타임아웃) 시 직전 스테이지 사냥으로 복귀, 자동 진행 꺼짐'],
       ['오프라인 골드', '=IdleGoldPerSec(MaxStage) * MIN(Seconds, 36000) * 0.6'],
       ['천장', '50회 내 A 이상, 100회 내 S 확정'],
       ['조각 → 카드', 'D 1 · C 2 · B 4 · A 8 · S 16 장/조각'],
