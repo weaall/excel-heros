@@ -58,6 +58,14 @@ export class UIManager {
     $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
     $('#qa-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#qa-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
+    $('#btn-sound').addEventListener('click', () => { this.sound?.unlock(); this.game.setSound(!this.game.state.settings.sound); });
+    $('#set-sound').addEventListener('change', (e) => { this.sound?.unlock(); this.game.setSound(e.target.checked); });
+    $('#btn-prestige').addEventListener('click', () => {
+      const info = this.game.prestigeInfo(); if (!info.eligible) return;
+      if (confirm(`회사 이전을 진행할까요?\n\n지분 +${info.gain} (파티 ATK·골드 영구 +${Math.round(info.gain * info.perShare * 100)}%)\n\n초기화: 스테이지 · 골드 · 영웅 레벨 · 회사 업그레이드\n유지: 보유 영웅·별·강화·강화 카드·보석·직급·업적`)) {
+        const r = this.game.prestige(); if (r) this.openModal('회사 이전 완료', `<p>새 사옥으로 이전했습니다. <b>지분 +${r.gain}</b> (총 ${r.total})</p><p class="muted">파티 ATK·골드 영구 +${Math.round(r.total * r.perShare * 100)}%. Phase 1-1부터 다시 시작합니다.</p>`);
+      }
+    });
     $('#set-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
     $('#set-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#set-stealth').addEventListener('change', (e) => this.game.toggleExcel(e.target.checked));
@@ -88,7 +96,7 @@ export class UIManager {
     g.on('party', () => { this.#buildHeroTable(); this.#buildCards(); this.#refreshDetail(); });
     g.on('cards', () => { $('#cards-cell').textContent = fmt(g.state.cards); $('#cards-top').textContent = fmt(g.state.cards); this.#refreshDetail(); });
     g.on('main', (job) => this.openModal('승진 발표', `<p><b>김인턴</b>이(가) <b>${job.title}</b>(${job.grade}급)으로 승진했습니다!</p><p class="muted">${job.desc ?? '스탯과 스킬이 강화되었습니다.'}</p>`));
-    g.on('stage', () => this.#refreshStage());
+    g.on('stage', () => { this.#refreshStage(); this.#refreshPrestige(); });
     g.on('kills', () => this.#refreshStage());
     g.on('challenge', () => { this.#refreshStage(); this.#refreshSettings(); });
     g.on('wipe', () => this.toast(this.game.isChallenging() ? '팀 전원 번아웃 — 재정비 후 계속' : '팀 전원 번아웃 — 직전 스테이지에서 자동 사냥'));
@@ -387,8 +395,17 @@ export class UIManager {
     const st = this.game.state.settings;
     $('#qa-auto').checked = st.autoAdvance; $('#set-auto').checked = st.autoAdvance; $('#set-stealth').checked = st.excel;
     $('#qa-auto-up').checked = !!st.autoUpgrade; $('#set-auto-up').checked = !!st.autoUpgrade;
+    $('#set-sound').checked = !!st.sound; $('#btn-sound').textContent = st.sound ? '🔊 효과음' : '🔇 효과음';
+    this.#refreshPrestige();
   }
 
+  #refreshPrestige() {
+    const info = this.game.prestigeInfo(); const el$ = $('#prestige-info'); if (!el$) return;
+    el$.innerHTML = `현재 지분 <b>${info.shares}</b> (파티 ATK·골드 +${Math.round(info.bonus * 100)}%) · 이전 ${info.count}회<br>` +
+      (info.eligible ? `지금 이전하면 지분 <b>+${info.gain}</b> (+${Math.round(info.gain * info.perShare * 100)}%)` : `Phase ${info.minCleared / BALANCE.BOSS_EVERY}-10 클리어(스테이지 ${info.minCleared}) 후 이전 가능 · 현재 최고 클리어 ${this.game.state.maxCleared}`);
+    $('#btn-prestige').disabled = !info.eligible;
+    $('#shares-top').textContent = info.shares;
+  }
   #buildFormulaSheet() {
     $('#formula-list').innerHTML = [
       ['업그레이드 비용', '=FLOOR(10 * 1.12 ^ (Level - 1))'],

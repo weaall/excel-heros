@@ -1,7 +1,7 @@
 // Global game state, economy, stage flow and player actions. Emits events for the UI.
 import {
   BALANCE, upgradeCost, baseGold, bossGold, isBossStage, stageLabel, heroATK, heroHP,
-  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, offlineGold,
+  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, offlineGold, prestigeShares,
 } from '../config/balance.js';
 import { HERO_BY_ID, GRADES, SKILLS, TRAITS, heroBaseStats, MAIN_ID, MAIN_JOBS } from '../data/heroes.js';
 import { pullOnce, promoteCost } from './GachaManager.js';
@@ -30,7 +30,28 @@ export class GameManager extends Emitter {
 
   // ------------------------------------------------------------- derived --
   stageLabel() { return stageLabel(this.state.stage); }
-  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold; }
+  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus(); }
+  /** Permanent bonus from 지분 (prestige shares): +3% ATK and gold each. */
+  prestigeBonus() { return (this.state.prestige?.shares ?? 0) * BALANCE.PRESTIGE.bonusPerShare; }
+  prestigeInfo() {
+    const s = this.state; const gain = prestigeShares(s.maxCleared);
+    return { shares: s.prestige.shares, count: s.prestige.count, bonus: this.prestigeBonus(), gain, eligible: gain > 0, minCleared: BALANCE.PRESTIGE.minCleared, perShare: BALANCE.PRESTIGE.bonusPerShare };
+  }
+  /** 회사 이전: reset stage/gold/levels/team upgrades for permanent 지분. Heroes, cards, gems, job, achievements and stats stay. */
+  prestige() {
+    const info = this.prestigeInfo(); if (!info.eligible) return null;
+    const s = this.state;
+    s.prestige.shares += info.gain; s.prestige.count += 1;
+    s.stage = 1; s.maxStage = 1; s.maxCleared = 0; s.kills = 0; s.gold = 0; s.challenging = true;
+    for (const e of Object.values(s.heroes)) e.level = 1;
+    for (const k of Object.keys(s.team)) s.team[k] = 0;
+    this.logs = [];
+    this.log(`회사 이전 완료: 지분 +${info.gain} (총 ${s.prestige.shares}, 파티 ATK·골드 +${Math.round(this.prestigeBonus() * 100)}%)`, 'stage');
+    this.entities = new EntityManager(this); this.entities.rebuildParty(); this.entities.startStage();
+    this.persist(); this.emit('prestige', info); this.emit('reset');
+    return { ...info, total: s.prestige.shares };
+  }
+  setSound(v) { this.state.settings.sound = !!v; this.emit('settings'); }
   /** 도감 보너스: owned heroes and their stars buff party ATK and gold income. */
   collection() {
     const owned = HEROES.filter((h) => this.state.heroes[h.id]?.owned);
@@ -59,7 +80,7 @@ export class GameManager extends Emitter {
     const eCost = enhanceCost(entry.enhance);
     const view = {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
-      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk)),
+      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus())),
       hp: heroHP(base.hp, entry.level, star, this.hpBonus(), entry.enhance),
       interval: base.interval, range: base.range,
       cost: upgradeCost(entry.level),
@@ -107,7 +128,7 @@ export class GameManager extends Emitter {
     const v = this.heroView(id);
     if (!v.entry.owned || this.state.gold < v.cost) return false;
     this.state.gold -= v.cost; v.entry.level += 1;
-    Quests.addProgress(this.state, 'upgrades', 1);
+    Quests.addProgress(this.state, 'upgrades', 1); this.emit('sfx', 'upgrade');
     this.entities.refreshHeroStats(); this.entities.levelUpFx(id);
     this.emit('gold'); this.emit('roster'); this.emit('quests');
     return true;
@@ -317,6 +338,15 @@ export class GameManager extends Emitter {
   // ---------------------------------------------------------- stage flow --
   onMonsterKilled(m) {
     const s = this.state;
+    if (m.def.chest) {
+      const phase = Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1;
+      const cards = phase * BALANCE.CHEST.cardsPerPhase, gems = BALANCE.CHEST.gemsMin + Math.floor(Math.random() * (BALANCE.CHEST.gemsMax - BALANCE.CHEST.gemsMin + 1));
+      s.cards += cards; s.gems += gems; s.stats.chests = (s.stats.chests ?? 0) + 1;
+      this.entities.floaters.push({ x: m.x, y: m.y - 70, text: `강화 카드 +${cards} · 보석 +${gems}`, color: '#f9e79f', t: 0, big: true });
+      this.log(`${m.def.mimic ? '미믹 처치' : '보물 상자 개봉'}: 강화 카드 +${cards}, 보석 +${gems}`, 'info');
+      this.emit('cards'); this.emit('gems');
+      return;
+    }
     const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
     Quests.addProgress(s, 'kills', 1);

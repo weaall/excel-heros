@@ -13,6 +13,7 @@
     <span class="app-icon">X</span>
     <span class="title-text">통합 문서1 - Excel</span>
     <span class="spacer"></span>
+    <button id="btn-sound" class="tb-btn" title="효과음 켜기/끄기 (보스 키가 켜져 있으면 항상 무음)">🔇 효과음</button>
     <button id="btn-stealth" class="tb-btn" title="보스 키 — 전투 화면만 숨기기 (Esc)">🔒 보스 키</button>
     <span class="win-btn">—</span><span class="win-btn">☐</span><span class="win-btn close">✕</span>
   </header>
@@ -41,6 +42,7 @@
       <div class="rb-stat">보석 <b id="gems-top">0</b></div>
       <div class="rb-stat">강화 카드 <b id="cards-top">0</b></div>
       <div class="rb-stat">파티 DPS <b id="party-dps">0</b></div>
+      <div class="rb-stat" title="회사 이전으로 얻은 지분 — 1주당 파티 ATK·골드 +3%">지분 <b id="shares-top">0</b></div>
     </div>
   </div>
 
@@ -163,6 +165,13 @@
               <label><input type="checkbox" id="set-auto"> 자동 진행: 클리어할 때마다 다음 단계에 자동 도전 (도전 실패 시 자동으로 꺼지고 직전 스테이지에서 사냥)</label>
               <label><input type="checkbox" id="set-stealth"> 보스 키: 전투 화면을 텍스트 표로 (Esc)</label>
               <label><input type="checkbox" id="set-auto-up"> 자동 합계 유지: 1초마다 골드를 가장 싼 파티 업그레이드에 자동 사용</label>
+              <label><input type="checkbox" id="set-sound"> 효과음 (합성음 · 보스 키가 켜져 있으면 무음)</label>
+            </div>
+            <h3 class="section-title">회사 이전 <span class="muted">(프레스티지)</span></h3>
+            <div class="settings">
+              <p class="muted small" id="prestige-info"></p>
+              <p class="muted small">스테이지·골드·영웅 레벨·회사 업그레이드가 초기화되고, 보유 영웅·별·강화·강화 카드·보석·직급·업적은 유지됩니다. 지분 1주당 파티 ATK·골드 영구 +3%.</p>
+              <div class="settings-actions"><button id="btn-prestige" class="xl-btn primary" disabled>회사 이전 (지분 획득)</button></div>
             </div>
             <h3 class="section-title">통계</h3>
             <table class="xl-table compact"><tbody id="stats-list"></tbody></table>

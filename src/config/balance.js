@@ -43,7 +43,11 @@ export const BALANCE = Object.freeze({
   CARDS_FIRST_CLEAR_PER_PHASE: 2, // 강화 카드 on first clear = phase * this
   // 도감 보너스: every owned hero (and every star on them) buffs the whole party, so duplicates/leftover cards still matter
   COLLECTION: { atkPerHero: 0.01, atkPerStar: 0.005, goldPerHero: 0.01 },
-  AUTO_UPGRADE_INTERVAL: 1.0,     // seconds between automatic "자동 합계" passes when the toggle is on
+  AUTO_UPGRADE_INTERVAL: 1.0,
+  // 보물 상자: a chest may join a normal wave; killing it drops cards + gems. 30% are mimics that bite back.
+  CHEST: { chance: 0.06, mimicChance: 0.3, hpMult: 0.6, gemsMin: 3, gemsMax: 8, cardsPerPhase: 1 },
+  // 회사 이전 (prestige): reset progression for permanent 지분 (+3% ATK & gold each). Needs Phase 3 cleared.
+  PRESTIGE: { minCleared: 30, bonusPerShare: 0.03 },     // seconds between automatic "자동 합계" passes when the toggle is on
 
   GEMS_FIRST_CLEAR: 10, GEMS_REPEAT_CLEAR: 1,
   GEMS_BOSS_FIRST: 50,  GEMS_BOSS_REPEAT: 10,
@@ -136,6 +140,9 @@ export function estimateGoldPerSec(stage, partyDPS, goldMult = 1) {
   const killsPerSec = Math.min(B.MAX_MONSTERS, 1 / killTime);
   return baseGold(stage) * goldMult * killsPerSec;
 }
+
+/** 지분 earned by prestiging at `maxCleared`: 30 → 5, 50 → 11, 100 → 31. */
+export const prestigeShares = (maxCleared) => (maxCleared < B.PRESTIGE.minCleared ? 0 : Math.floor((maxCleared / 10) ** 1.5));
 
 /** Quest/daily rewards are relative: N times the gold-per-kill of the player's best stage. */
 export const relativeGold = (maxStage, kills, goldMult = 1) => Math.floor(baseGold(Math.max(1, maxStage)) * kills * goldMult);

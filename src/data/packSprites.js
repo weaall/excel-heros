@@ -64,7 +64,12 @@ export const MONSTER_MAP = {
   monkey: { tiny: 21 }, bull: { tiny: 122 }, mushroom: { tiny: 14 }, eyeball: { tiny: 5 }, hand: { tiny: 6 }, golem: { tiny: 47 }, flame: { tiny: 45 },
   orb: { tiny: 89 }, rabbit: { tiny: 133 }, chicken: { tiny: 149 }, cat: { tiny: 116 }, rat: { tiny: 92 }, snake: { tiny: 41 }, robot: { tiny: 80 },
   boss: 'big_demon', boss_zombie: 'big_zombie', boss_ogre: 'ogre',
+  // props: [x, y] of frame 0 on the sheet, 16x16 frames laid out to the right
+  chest: { rect: [304, 416], frames: 3 }, mimic: { rect: [304, 432], frames: 3 },
 };
+/** Floor props (16x16 unless noted) used as scrolling dungeon decoration. */
+export const PROPS = { crate: [288, 410, 16, 22], flask_red: [288, 336, 16, 16], flask_blue: [304, 336, 16, 16], flask_green: [320, 336, 16, 16], coin: [288, 384, 8, 8] };
+export function drawProp(ctx, prop, dx, dy, scale = 2) { if (!sheet || !prop) return false; const [sx, sy, w, h] = prop; ctx.drawImage(sheet, sx, sy, w, h, dx, dy, w * scale, h * scale); return true; }
 export const BOSS_CREATURE = 'big_demon';
 
 // --- frame builders ------------------------------------------------------------------
@@ -115,10 +120,17 @@ export function packMonsterFrame(mon, frame = 0, hueShift = 0) {
   const spec = MONSTER_MAP[typeId];
   if (!spec) return null;
   const fi = frame % 4;
-  const key = `m:${typeId}:${fi}:${hueShift}:${mon.elite ? 'e' : ''}`;
+  const key = `m:${typeId}:${fi}:${hueShift}:${mon.elite ? 'e' : ''}:${mon.openFrame ?? 0}`;
   if (cache.has(key)) return cache.get(key);
   let c, ctx;
-  if (typeof spec === 'object' && spec.tiny != null) {
+  if (typeof spec === 'object' && spec.rect) {
+    // static prop sprite (chest): frame index selects the open-animation frame; not mirrored
+    [c, ctx] = canvas(64, 64);
+    const f = Math.min(spec.frames - 1, mon.openFrame ?? 0);
+    ctx.filter = hueShift ? `hue-rotate(${hueShift}deg)` : 'none';
+    ctx.drawImage(sheet, spec.rect[0] + 16 * f, spec.rect[1], 16, 16, 16, 28, 32, 32);
+    ctx.filter = 'none';
+  } else if (typeof spec === 'object' && spec.tiny != null) {
     if (!tiny) return null;
     [c, ctx] = canvas(64, 64);
     const sx = (spec.tiny % 10) * 16, sy = Math.floor(spec.tiny / 10) * 16;

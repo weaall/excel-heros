@@ -53,6 +53,9 @@ export const BOSSES = [
   { id: 'boss_zombie', name: '야근 좀비 부장',   shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#27ae60', D: '#145a32' }, pattern: 'sweep', hp: 1.25, atk: 0.9, speed: 30, interval: 2.4, desc: '3번째 공격마다 앞 두 명을 휩쓸기' },
   { id: 'boss_ogre',   name: '갑질 거래처 오우거', shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#e67e22', D: '#935116' }, pattern: 'stomp', hp: 1,    atk: 1.15, speed: 45, interval: 2.2, desc: '4번째 공격은 전원 발구르기(50%)' },
 ];
+/** Treasure chests join normal waves occasionally. The mimic looks the same until it bites. */
+export const CHEST = { id: 'chest', name: '보물 상자', shape: 'cube', chest: true, palette: { M: '#b9770e', D: '#7e5109', E: '#f9e79f' } };
+export const MIMIC = { id: 'mimic', name: '보물 상자?', shape: 'cube', chest: true, mimic: true, palette: { M: '#b9770e', D: '#7e5109', E: '#f9e79f' } };
 export const bossForStage = (stage) => BOSSES[phaseOf(stage) % BOSSES.length];
 export const BOSS = BOSSES[0];
 

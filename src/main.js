@@ -5,6 +5,7 @@ import { SaveManager } from './core/SaveManager.js';
 import { createInitialState } from './core/state.js';
 import { Renderer } from './ui/Renderer.js';
 import { UIManager } from './ui/UIManager.js';
+import { SoundManager } from './ui/Sound.js';
 import { loadSpriteSheets } from './data/spriteSheets.js';
 import { loadPack } from './data/packSprites.js';
 
@@ -18,6 +19,8 @@ const loaded = save.load();
 const game = new GameManager({ state: loaded ?? createInitialState(), save });
 const renderer = new Renderer(document.getElementById('battle'), game);
 const ui = new UIManager(game, renderer);
+ui.sound = new SoundManager(game);
+document.addEventListener('pointerdown', () => ui.sound.unlock(), { once: true });
 
 if (loaded) {
   const report = SaveManager.computeOffline(loaded, Date.now(), (stage) => game.goldPerSecAt(stage));
@@ -48,7 +51,8 @@ let lastDraw = performance.now();
 function frame(now) {
   const dt = Math.min(0.5, (now - lastDraw) / 1000); lastDraw = now;
   ui.update(dt);
-  if (!game.state.settings.excel) renderer.draw(dt);
+  // a rendering bug must never kill the frame loop (the sim keeps running regardless)
+  if (!game.state.settings.excel) { try { renderer.draw(dt); } catch (e) { if (!frame.warned) { frame.warned = true; console.error("[render]", e); } } }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

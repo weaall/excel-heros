@@ -2,7 +2,7 @@
 // particles, hit flashes, screen shake, stage banners and the boss cut-in.
 import { CANVAS_W, CANVAS_H, GROUND_Y } from '../core/EntityManager.js';
 import { heroSprite, monsterSprite, flashSprite } from '../data/sprites.js';
-import { TILES, drawTile, packReady } from '../data/packSprites.js';
+import { TILES, PROPS, drawTile, drawProp, packReady } from '../data/packSprites.js';
 import { GRADES } from '../data/heroes.js';
 import { stageLabel, BALANCE } from '../config/balance.js';
 import { bossForStage } from '../data/monsters.js';
@@ -79,6 +79,14 @@ export class Renderer {
         const tile = TILES.floor[k < 0.62 ? 0 : Math.floor(k * TILES.floor.length)];
         drawTile(ctx, tile, i * TILE - floorOff, row * TILE);
       }
+    }
+    // floor props along the wall base and the bottom edge (crates, flasks, coins) — world-anchored like the tiles
+    const PROP_KEYS = ['crate', 'flask_red', 'flask_blue', 'flask_green', 'coin'];
+    for (let i = -1; i <= CANVAS_W / TILE + 1; i++) {
+      const col = col0 + i, k = hash(col * 31 + phase * 17), dx = i * TILE - floorOff;
+      if (k < 0.14) drawProp(ctx, PROPS[PROP_KEYS[Math.min(PROP_KEYS.length - 1, Math.floor(k / 0.14 * PROP_KEYS.length))]], dx, WALL_ROWS * TILE - (k < 0.028 ? 16 : 0), 2);
+      const k2 = hash(col * 53 + phase * 29 + 7);
+      if (k2 > 0.9) drawProp(ctx, PROPS.crate, dx, CANVAS_H - 44, 2);
     }
     // phase tint so deeper phases feel different, plus a soft vignette at the wall base
     if (phase > 0) { ctx.fillStyle = `hsla(${(phase * 47) % 360}, 60%, 40%, 0.12)`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }

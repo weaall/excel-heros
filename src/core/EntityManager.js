@@ -4,7 +4,7 @@
 // and monsters fire projectiles that hit on arrival. Also owns projectiles, floaters, particles, effects.
 import { BALANCE, monsterHP, monsterATK, bossHP, bossATK, isBossStage } from '../config/balance.js';
 import { TRAITS, SKILLS } from '../data/heroes.js';
-import { monsterForStage, bossForStage, eliteChance, asElite } from '../data/monsters.js';
+import { monsterForStage, bossForStage, eliteChance, asElite, CHEST, MIMIC } from '../data/monsters.js';
 
 export const GRID = Object.freeze({ cols: 13, rows: 8, cellW: 64, cellH: 52 });
 export const CANVAS_W = GRID.cols * GRID.cellW;   // 832
@@ -101,11 +101,23 @@ export class EntityManager {
     }
     const count = Math.min(BALANCE.MAX_MONSTERS, 3 + Math.floor(stage / 10));
     for (let i = 0; i < count; i++) this.#spawnMonster(stage, false, i);
+    if (Math.random() < BALANCE.CHEST.chance) this.spawnChest(Math.random() < BALANCE.CHEST.mimicChance, count);
   }
 
-  #spawnMonster(stage, isBoss, index) {
-    let def = isBoss ? bossForStage(stage) : monsterForStage(stage, Math.random());
-    const elite = !isBoss && Math.random() < eliteChance(stage);
+  /** A treasure chest (or mimic) walks in with the wave. Chests never attack; mimics bite like a melee monster. */
+  spawnChest(mimic = false, index = 0) {
+    const stage = this.game.state.stage;
+    const e = this.#spawnMonster(stage, false, index, mimic ? MIMIC : CHEST);
+    e.hp = e.maxHp = Math.max(1, Math.floor(monsterHP(stage) * BALANCE.CHEST.hpMult * (mimic ? 1.6 : 1)));
+    e.atk = mimic ? Math.floor(monsterATK(stage) * 1.3) : 0; e.interval = 1.2; e.speed = BALANCE.MONSTER_SPEED * 0.8;
+    e.elite = false; e.proj = null; e.standoff = GRID.cellW * 0.9 + index * 34;
+    this.fx('sparkle', { x: Math.min(e.x, CANVAS_W - 40), y: e.y - 20, color: '#f9e79f', n: 8 });
+    return e;
+  }
+
+  #spawnMonster(stage, isBoss, index, forcedDef = null) {
+    let def = forcedDef ?? (isBoss ? bossForStage(stage) : monsterForStage(stage, Math.random()));
+    const elite = !isBoss && !forcedDef && Math.random() < eliteChance(stage);
     if (elite) def = asElite(def);
     const proj = !isBoss ? (def.ranged ?? RANGED_SHAPES[def.shape]) : null;
     const range = (isBoss ? 1.5 : proj ? 3.6 + index * 0.3 : 0.9) * GRID.cellW;
@@ -203,7 +215,9 @@ export class EntityManager {
       const stopX = frontX + m.standoff;
       if (m.x > stopX + 2) { m.x = Math.max(stopX, m.x - m.speed * dt); m.anim = 'walk'; continue; }
       m.arrived = true; m.anim = 'idle'; m.cd -= dt;
+      if (m.def.chest && !m.def.mimic) continue;   // treasure chests just sit there
       if (m.cd > 0) continue;
+      if (m.def.mimic) m.openFrame = 2;              // the mimic shows its teeth once it starts biting
       m.cd = m.interval; m.lunge = 0.2; m.hits++;
       if (m.isBoss && this.#bossPattern(m, heroes, frontX)) continue;
       if (m.proj || (m.isBoss && m.def.pattern === 'fire' && Math.random() < 0.35)) {
@@ -294,6 +308,7 @@ export class EntityManager {
   #damage(target, amount, isSkill, crit = false) {
     if (!target.alive) return 0;
     amount = Math.max(1, Math.round(amount));
+    this.game.emit('sfx', target.kind === 'monster' ? 'hit' : 'hurt');
     const dealt = Math.min(amount, target.hp);
     target.hp -= amount; target.shake = 1; target.flash = 0.12;
     const color = target.kind === 'monster' ? (crit ? '#ff7675' : isSkill ? '#f1c40f' : '#ffffff') : '#e74c3c';
@@ -306,6 +321,8 @@ export class EntityManager {
         const col = target.def.palette?.M ?? '#e74c3c';
         for (let i = 0; i < 10; i++) { const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 90; this.particles.push({ x: target.x, y: target.y - 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, t: 0, life: 0.5 + Math.random() * 0.3, color: Math.random() < 0.3 ? '#ffffff' : col, size: 3 + Math.random() * 3 }); }
         if (target.isBoss) { this.shake = 14; this.fx('ring', { x: target.x, y: target.y, color: '#ffffff', radius: 140, life: 0.7 }); }
+        if (target.def.chest) { target.openFrame = 2; target.deadT = -0.6; this.fx('sparkle', { x: target.x, y: target.y - 20, color: '#f9e79f', n: 14 }); this.game.emit('sfx', 'chest'); }
+        else this.game.emit('sfx', 'kill');
         this.game.onMonsterKilled(target);
       } else {
         target.reviveT = BALANCE.HERO_REVIVE_SEC;
@@ -348,6 +365,7 @@ export class EntityManager {
         break;
     }
     h.anim = 'attack'; h.animT = 0;
+    this.game.emit('sfx', type === 'ult' ? 'ult' : 'skill');
     this.floaters.push({ x: h.x, y: h.y - 58, text: h.skillName ?? type.toUpperCase(), color: '#8e44ad', t: 0, big: true });
     this.game.log(`${h.def.name}: ${h.skillName ?? type} 발동`, 'skill');
   }
