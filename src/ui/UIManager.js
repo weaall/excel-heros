@@ -256,7 +256,7 @@ export class UIManager {
     const id = this.detailId; const g = this.game; const v = g.heroView(id); const e = v.entry; const s = g.state;
     $('#modal-title').textContent = v.isMain ? `${v.def.name} · ${v.def.title} (메인 영웅)` : `${v.def.name} · ${v.grade.name}급 ${v.grade.label}`;
     const body = $('#modal-body'); body.innerHTML = '';
-    body.append(el('div', { class: 'detail-head' }, portraitCanvas(v.def, 4),
+    body.append(el('div', { class: 'detail-head' }, portraitCanvas(v.def, 2),
       el('div', { class: 'detail-stats' },
         el('div', { class: 'detail-line', html: `<b style="color:${v.grade.color}">${v.def.grade}</b> · ${ROLES[v.def.role].name}${v.isMain ? ` · ${MAIN_TIER_TITLES[v.def.tier]}` : ` · ${stars(v.star)}`}` }),
         el('div', { class: 'detail-line' }, e.owned ? `Lv ${e.level}  ·  강화 +${e.enhance}` : '미보유 (데이터 가져오기에서 획득)'),
