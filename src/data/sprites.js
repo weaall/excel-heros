@@ -4,6 +4,8 @@
 // from primitives. Monsters use shaded shapes with hand-drawn faces. Soft per-colour outlines.
 import { GRADES } from './heroes.js';
 import { sheetFrame } from './spriteSheets.js';
+import { MONSTER_MAPS, MONSTER_ACCENTS } from './monsterArt.js';
+import { BODY_IDLE, LEGS, ARM, HAIR } from './heroArt.js';
 
 export const SCALE = 2;
 export const SRC = 32;
@@ -54,168 +56,52 @@ const lighten = (hex, t = 0.3) => { const n = parseInt(hex.slice(1), 16); if (Nu
 // ------------------------------------------------------------------ heroes --
 // Keys: S skin · s shade · t light | H hair · h shade · i light | B shirt · b shade · c light | P pants · p shade
 //       W weapon · w shade · A accent · a shade | E black · L white · I iris · K cheek · G light grey · g grey · O black (shoes)
-const DEFAULT_HERO_PAL = { S: '#f6d0b0', E: '#1b1b1b', L: '#ffffff', I: '#4e342e', K: '#f19a9a', G: '#b2bec3', g: '#6c7a89', O: '#23262b', A: '#c0392b' };
+const DEFAULT_HERO_PAL = { S: '#f3cfae', E: '#1b1b1b', L: '#ffffff', I: '#3b6fe0', K: '#f19a9a', G: '#b2bec3', g: '#6c7a89', O: '#2b2330', A: '#c0392b' };
 const ROLE_ACCENT = { tank: '#8fa3ad', ranged: '#e17055', healer: '#ff7675', melee: '#c0392b' };
 
-// Base body, idle, facing right (3/4). Head x10..22 y3..13 · neck y14 · torso x12..21 y15..21 · belt y22 · legs y23..28 · shoes y29..30
-const BODY_IDLE = [
-  '................................',
-  '................................',
-  '................................',
-  '.............SSSSSS.............',
-  '............sSSSttSS............',
-  '...........ssSSSttSSS...........',
-  '..........ssSSSSSSSSSS..........',
-  '..........ssSShSSShhSS..........',
-  '..........ssSSESSSLESSS.........',
-  '..........ssSSESSSEESSs.........',
-  '..........ssSKSSSSSSKs..........',
-  '...........sSSSSSSOOS...........',
-  '............sSSSSSSS............',
-  '.............sSSSSS.............',
-  '...............ssss.............',
-  '............BBBLBLBBB...........',
-  '..........bbbbBBLBBBccBB........',
-  '..........bbbbBBBBBBccBc........',
-  '..........bbbbBBBBBBccBc........',
-  '..........bbbbBBBBBBccBc........',
-  '..........bbbbBBBBBBccBc........',
-  '..........ssbbBBBBBBccSS........',
-  '............OOOOAOOOO...........',
-  '............ppPPPPPPP...........',
-  '.............ppP.PPP............',
-  '.............ppP.PPP............',
-  '.............ppP.PPP............',
-  '.............ppP.PPP............',
-  '.............ppP.PPP............',
-  '............OOOO.OOOOO..........',
-  '............GOOO.GOOOO..........',
-  '................................',
-];
-// leg/shoe variants (rows y23..30, full width)
-const LEGS = {
-  idle: BODY_IDLE.slice(23, 31),
-  walkA: [ // stride: back leg left, front leg right
-    '............ppPPPPPPP...........',
-    '...........ppP...PPPP...........',
-    '..........ppP.....PPP...........',
-    '..........ppP.....PPP...........',
-    '.........ppP.......PPP..........',
-    '.........ppP.......PPP..........',
-    '........OOOO.......OOOOO........',
-    '........GOOO.......GOOOO........',
-  ],
-  walkB: [ // stride: legs crossed the other way
-    '............ppPPPPPPP...........',
-    '.............pPPPPP.............',
-    '..............pPPPP.............',
-    '..............pPPP..............',
-    '..............pPPP..............',
-    '..............pPPP..............',
-    '.............OOOOOO.............',
-    '.............GOOOOO.............',
-  ],
-};
-// front arm variants: rows y9..21, cols x21..30 (10 wide)
-const FRONT_ARM = {
-  idle: null, // baked into BODY_IDLE
-  raise: [
-    '...SS.....', // y9
-    '...SS.....', // y10
-    '...BB.....', // y11
-    '...BB.....', // y12
-    '..BB......', // y13
-    '..BB......', // y14
-    '.BB.......', // y15
-    '.B........', // y16
-  ],
-  strike: [
-    '.BBBBBB.SS', // y17 → placed at y17
-    '.BBBBBcSS.', // y18
-  ],
-};
-
-function drawHairMap(g, style) {
-  // maps are placed at x9, y0 (15 wide); 'H' base, 'h' shade, 'i' light
-  const cap = [
-    '...............',
-    '.....HHHHH.....',
-    '...HHiiHHHHH...',
-    '..HHHiiHHHHHH..',
-    '.hHHHHHHHHHHHH.',
-    '.hhHHHHHHHHHHH.',
-    '.hhHH...H..HH..',
-    '.hhH...........',
-    '..h............',
-  ];
-  switch (style) {
-    case 'bald': px(g, 14, 5, 't'); px(g, 15, 5, 't'); px(g, 16, 4, 't'); return;
-    case 'spiky': stamp(g, [
-      '...H..H..H..H..',
-      '..HH.HHi.HH.HH.',
-      '.HHHHHHHHHHHHH.',
-      '.hHHHiiHHHHHHH.',
-      '.hhHHHHHHHHHHH.',
-      '.hhHH...H..HH..',
-      '.hhH...........',
-      '..h............',
-    ], 9, 0); return;
-    case 'curly': stamp(g, [
-      '....HH.HH.HH...',
-      '..HHHHiHHHHHHH.',
-      '.HHHHHiiHHHHHHH',
-      'hHHHHHHHHHHHHHH',
-      'hhHHHHHHHHHHHHh',
-      'hhHHH...H..HHHh',
-      '.hhH.........H.',
-      '..h............',
-    ], 9, 1); return;
-    default: stamp(g, cap, 9, 0);
+// Hero composition: hand-pixelled base from heroArt.js (two-head chibi facing right, bar eyes),
+// plus hair/accessory/prop/weapon stamps. Anchors: eyes y12-13 · face x10..23 · body x9..20 y19..26
+// · back hand (9,22) · front hand (20,22) · raise hand (23,10) · strike hand (27,20).
+function drawHairStyle(g, style) {
+  if (style === 'bald') {
+    for (let y = 2; y <= 17; y++) for (let x = 0; x < 32; x++) { if (g[y][x] === 'H') g[y][x] = 'S'; else if (g[y][x] === 'h') g[y][x] = 's'; }
+    px(g, 13, 4, 't'); px(g, 14, 4, 't'); px(g, 15, 3, 't'); return;
   }
-  if (style === 'long') { stamp(g, ['hhH', 'hhH', 'hhH', 'hhH', 'hhH', 'hhH', 'hhH', 'hhH', 'hhH', 'hhH', '.hH'], 9, 6); rect(g, 22, 6, 1, 5, 'H'); }
-  if (style === 'bob') { stamp(g, ['hhH', 'hhH', 'hhH', 'hhH', 'hhH', '.hH'], 9, 6); stamp(g, ['HH', 'HH', 'HH', 'HH', 'HH'], 22, 6); }
-  if (style === 'bun') { stamp(g, ['.HH.', 'HHHi', 'HHHH', '.HH.'], 8, 1); }
-  if (style === 'side') { stamp(g, ['HHHH.....', '.HHHH....', '...HHHH..', '.....HHH.', '.......HH'], 15, 4); }
-  if (style === 'grey') { px(g, 13, 3, 'L'); px(g, 14, 2, 'L'); px(g, 18, 2, 'L'); px(g, 19, 3, 'L'); }
-  if (style === 'cap') { clear(g, 9, 0, 15, 6); stamp(g, [
-    '.....AAAAA.....',
-    '...AAAaAAAAA...',
-    '..AAAAAAAAAAA..',
-    '.aAAAAAAAAAAAA.',
-    '.aaAAAAAAAAAAAAAA',
-    '........aaaaaaaaa',
-  ], 9, 1); rect(g, 10, 6, 3, 2, 'h'); }
+  const h = HAIR[style]; if (h) stamp(g, h.rows, h.x, h.y);
+  if (style === 'grey') { px(g, 11, 5, 'i'); px(g, 12, 4, 'i'); px(g, 17, 3, 'i'); px(g, 18, 4, 'i'); }
+  else if (style !== 'cap') { px(g, 12, 4, 'i'); px(g, 13, 3, 'i'); px(g, 14, 3, 'i'); }
+  if (style === 'cap') rect(g, 10, 6, 4, 3, 'h');
 }
 
-function drawAccessory(g, acc, bx = 10, by = 21) {
+function drawAccessory(g, acc, bx = 9, by = 22) {
   switch (acc) {
-    // face
-    case 'glasses': stamp(g, ['GGG.GGGG.', 'G.GGG..GG', 'G.G.G..G.', 'GGG.GGGG.'], 13, 7); px(g, 14, 8, 'L'); px(g, 18, 8, 'L'); break;
-    case 'sunglasses': stamp(g, ['gggggggg', 'ggg.gggg'], 13, 8); px(g, 19, 8, 'L'); px(g, 14, 8, 'L'); px(g, 21, 8, 'g'); break;
-    case 'beard': stamp(g, ['HHHHHHHH', '.hHHHHHH', '..hHHHH.'], 14, 11); break;
-    case 'mustache': stamp(g, ['HHHH'], 17, 10); px(g, 16, 11, 'h'); break;
-    case 'headset': stamp(g, ['....AAAA....', '...A....A...', '..A......A..', '.A........A.', '.A........AA', '..........AL', '..........AA', '...........A'], 11, 3); px(g, 23, 11, 'A'); px(g, 23, 12, 'g'); break;
-    case 'hardhat': clear(g, 10, 1, 13, 5); stamp(g, ['....AAAAA....', '..AAAALAAAAA.', '.AAAAAAAAAAAA', 'aAAAAAAAAAAAAa', 'aaaaaaaaaaaaaa', '.aaaaaaaaaaaa.'], 10, 1); break;
-    case 'crown': stamp(g, ['A..A..A..A', 'AALAALAALA', 'AAAAAAAAAA', 'aaaaaaaaaa'], 12, 0); break;
-    case 'earring': px(g, 22, 10, 'A'); px(g, 22, 11, 'L'); break;
-    case 'flower': stamp(g, ['.A.', 'ALA', '.A.'], 8, 3); px(g, 9, 5, 'a'); break;
-    case 'pen': stamp(g, ['AAAL'], 20, 5); break;
+    // face / head
+    case 'glasses': stamp(g, ['GGGGG.GGGGGGG', 'G...G.G.....G', 'G...GGG.....G', 'GGGGG.GGGGGGG'], 10, 11); break;
+    case 'sunglasses': stamp(g, ['gggggEggggggg', 'gLgggEgLggggg'], 10, 12); break;
+    case 'beard': stamp(g, ['HHHHHHHHHH', '.HHHHHHHH.', '..HHHHHH..'], 11, 16); break;
+    case 'mustache': stamp(g, ['HHHHHH'], 15, 15); break;
+    case 'headset': stamp(g, ['AA', 'AL', 'AA'], 23, 12); line(g, 23, 11, 16, 3, 'A'); line(g, 16, 3, 8, 7, 'A'); px(g, 24, 15, 'A'); px(g, 25, 16, 'A'); px(g, 25, 17, 'g'); break;
+    case 'hardhat': stamp(g, ['......AAAAAAAAAA......', '....AAAAAAAAAAAAAA....', '...AAAAAAaAAAAAAAAA...', '..AAAAAAAAAAAAAAAAAA..', '.AAAAAAAAAAAAAAAAAAAA.', 'aaaaaaaaaaaaaaaaaaaaaa'], 4, 0); break;
+    case 'crown': stamp(g, ['A..A..A..A..A', 'AALAALAALAALA', 'AAAAAAAAAAAAA'], 9, 0); break;
+    case 'earring': px(g, 23, 15, 'A'); px(g, 23, 16, 'L'); break;
+    case 'flower': stamp(g, ['.A.', 'ALA', '.A.'], 5, 4); break;
+    case 'pen': stamp(g, ['AAAL'], 22, 9); break;
     // torso
-    case 'tie': stamp(g, ['.A.', '.A.', '.A.', 'AAA', 'ALA', 'AAA', '.a.'], 15, 15); break;
-    case 'badge': stamp(g, ['AL', 'aa'], 13, 17); break;
-    case 'scarf': stamp(g, ['AAAAAAAAAA', 'aAAAAaAAAa'], 12, 14); stamp(g, ['AA', 'aA', 'AA', 'aA', 'AA'], 10, 16); break;
-    case 'lanyard': stamp(g, ['A.A', 'A.A', '.A.'], 15, 15); stamp(g, ['LLL', 'LAL', 'LLL'], 15, 18); break;
-    case 'apron': stamp(g, ['.L.L.', '.L.L.', 'LLLLL', 'LLLLL', 'LLLLL', 'LgggL', 'LLLLL'], 14, 15); break;
-    case 'suspenders': rect(g, 14, 15, 1, 7, 'a'); rect(g, 18, 15, 1, 7, 'a'); break;
-    case 'hoodie': stamp(g, ['.BB', 'BBB', 'BBB', 'BBB', 'BBB', 'BBb', 'Bbb', '.bb'], 7, 6); stamp(g, ['bbbbbbbbbb'], 12, 14); rect(g, 15, 16, 1, 4, 'L'); rect(g, 17, 16, 1, 4, 'L'); break;
-    case 'watch': px(g, 22, 21, 'g'); px(g, 23, 21, 'L'); break;
-    case 'radio': stamp(g, ['.g', 'gg', 'gA', 'gg'], 20, 20); break;
-    // back-hand props (bx,by = back hand)
+    case 'tie': stamp(g, ['.A.', '.A.', 'AAA', 'ALA', 'AAA', '.a.'], 14, 19); break;
+    case 'badge': stamp(g, ['AL', 'aa'], 11, 20); break;
+    case 'scarf': stamp(g, ['AAAAAAAAAAAA', 'aAAAaAAAaAAa'], 9, 18); stamp(g, ['AA', 'aA', 'AA', 'aA'], 8, 20); break;
+    case 'lanyard': stamp(g, ['A...A', '.A.A.', '..A..'], 13, 19); stamp(g, ['LLL', 'LAL', 'LLL'], 14, 21); break;
+    case 'apron': stamp(g, ['.L.L.', 'LLLLL', 'LLLLL', 'LLLLL', 'LgggL', 'LLLLL'], 13, 20); break;
+    case 'suspenders': rect(g, 13, 19, 1, 7, 'a'); rect(g, 17, 19, 1, 7, 'a'); break;
+    case 'hoodie': stamp(g, ['bbbbbbbbbbbb'], 9, 18); rect(g, 14, 20, 1, 4, 'L'); rect(g, 16, 20, 1, 4, 'L'); break;
+    case 'watch': px(g, 21, 23, 'g'); px(g, 22, 23, 'L'); break;
+    case 'radio': stamp(g, ['gg', 'gA', 'gg'], 19, 24); break;
+    // back-hand props
     case 'coffee': stamp(g, ['LLLLL', 'AAAA.', 'AAAAA', 'AAAAA', 'aaaa.'], bx - 3, by - 4); px(g, bx - 2, by - 7, 'L'); px(g, bx - 1, by - 8, 'L'); px(g, bx - 1, by - 6, 'L'); break;
     case 'clipboard': stamp(g, ['.AAA.', 'LLLLL', 'LAAAL', 'LLLLL', 'LAAAL', 'LLLLL', 'LAA.L', 'LLLLL', 'ggggg'], bx - 5, by - 7); break;
     case 'calculator': stamp(g, ['gggg', 'gLLg', 'gggg', 'gLgL', 'gggg', 'gLgL', 'gggg', 'gLgL'], bx - 4, by - 6); break;
     case 'briefcase': stamp(g, ['..aa..', 'AAAAAA', 'AAAAAA', 'aaaLaa', 'AAAAAA', 'AAAAAA'], bx - 6, by - 4); break;
-    case 'cane': stamp(g, ['AAA'], bx - 1, by); line(g, bx, by + 1, bx - 1, by + 9, 'W'); break;
+    case 'cane': stamp(g, ['AAA'], bx - 1, by); line(g, bx, by + 1, bx - 1, by + 8, 'W'); break;
     case 'files': stamp(g, ['AA...', 'LLLLL', 'LLLLL', 'LgggL', 'LLLLL', 'LgggL', 'LLLLL', 'LggLL', 'LLLLL'], bx - 5, by - 7); break;
     case 'phone': stamp(g, ['ggg', 'gLg', 'gLg', 'gLg', 'gLg', 'ggg'], bx - 2, by - 5); break;
     case 'magnifier': stamp(g, ['.gg.', 'gLLg', 'gLLg', '.gg.'], bx - 5, by - 6); line(g, bx - 1, by - 2, bx + 1, by, 'W'); break;
@@ -225,17 +111,17 @@ function drawAccessory(g, acc, bx = 10, by = 21) {
   }
 }
 
-/** Weapon at the front hand. (hx,hy) = top-left of the 2x2 hand. */
+/** Weapon at the front hand. (hx,hy) = top-left of the hand. */
 function drawWeapon(g, role, pose, hx, hy) {
   switch (role) {
     case 'melee':
-      if (pose === 'raise') { stamp(g, ['.L', 'wW', 'wW', 'wW', 'wW', 'wW', 'wW', 'AAAA'], hx - 1, hy - 8); }
-      else if (pose === 'strike') { stamp(g, ['aA', 'A.'], hx + 2, hy - 1); stamp(g, ['LLLLLLL', 'WWWWWWL', 'wwwwww.'], hx + 3, hy); }
-      else { stamp(g, ['......LW', '.....LWw', '....LWw.', '...LWw..', '..LWw...', '.LWw....', 'AAAA....'], hx + 1, hy - 6); }
+      if (pose === 'raise') { stamp(g, ['.L', 'WL', 'WL', 'WL', 'WL', 'WL', 'WL'], hx, hy - 7); stamp(g, ['AAAA'], hx - 1, hy - 1); }
+      else if (pose === 'strike') { stamp(g, ['A', 'A', 'A', 'A'], hx + 1, hy - 1); stamp(g, ['LLLLLLLL', 'WWWWWWWL', 'wwwwwww.'], hx + 2, hy); }
+      else { stamp(g, ['AAAA'], hx - 1, hy + 1); stamp(g, ['LW', '.LW', '..LW', '...LW', '....LW', '.....Lw'], hx + 2, hy + 2); }
       break;
-    case 'ranged': { const [x, y] = pose === 'raise' ? [hx + 1, hy - 5] : pose === 'strike' ? [hx + 2, hy - 3] : [hx + 1, hy - 3]; stamp(g, ['WWWWWWW', 'WLLLLLW', 'WLwwwLW', 'WLLLLLW', 'WWWWWWW', 'gggggggg'], x, y); px(g, x + 3, y + 5, 'L'); break; }
-    case 'tank': { const [x, y] = pose === 'raise' ? [hx + 1, hy - 5] : pose === 'strike' ? [hx + 2, hy - 4] : [hx + 1, hy - 5]; stamp(g, ['.AAAA.', 'AALaAA', 'AaLLaA', 'AaLaaA', 'AaLaaA', 'AALaAA', '.AAAA.', '..AA..'], x, y); break; }
-    case 'healer': { const [x, y] = pose === 'raise' ? [hx + 1, hy - 5] : pose === 'strike' ? [hx + 2, hy - 3] : [hx + 1, hy - 3]; stamp(g, ['..gg..', 'LLLLLL', 'LLWWLL', 'LWWWWL', 'LLWWLL', 'LLLLLL', 'gggggg'], x, y); break; }
+    case 'ranged': { const [x, y] = pose === 'raise' ? [hx + 1, hy - 4] : pose === 'strike' ? [hx + 2, hy - 2] : [hx + 1, hy - 3]; stamp(g, ['WWWWWWW', 'WLLLLLW', 'WLwwwLW', 'WLLLLLW', 'WWWWWWW', 'gggggggg'], x, y); px(g, x + 3, y + 5, 'L'); break; }
+    case 'tank': { const [x, y] = pose === 'raise' ? [hx + 1, hy - 4] : pose === 'strike' ? [hx + 2, hy - 3] : [hx + 1, hy - 4]; stamp(g, ['..WWWW..', '.WAAAAW.', 'WAAaAAAW', 'WAALAAAW', 'WAAAAAAW', 'WAAaAAAW', '.WAAAAW.', '..WWWW..'], x, y); break; }
+    case 'healer': { const [x, y] = pose === 'raise' ? [hx + 1, hy - 4] : pose === 'strike' ? [hx + 2, hy - 2] : [hx + 1, hy - 3]; stamp(g, ['..gg..', 'LLLLLL', 'LLWWLL', 'LWWWWL', 'LLWWLL', 'LLLLLL', 'gggggg'], x, y); break; }
   }
 }
 
@@ -245,24 +131,20 @@ function heroFrame(def, pose) {
   const g = blank();
   const tx = pose === 'strike' ? -3 : 0;
   stamp(g, BODY_IDLE, tx, 0);
-  // legs
-  if (pose === 'walkA' || pose === 'walkB') { clear(g, 0, 23, 32, 8); stamp(g, LEGS[pose], tx, 23); }
-  // arms
-  if (pose === 'walkA') { clear(g, 10 + tx, 16, 2, 6); stamp(g, ['bb', 'bb', 'bb', 'bb', 'bb', 'ss'], 9 + tx, 16); }
-  let hand = [22 + tx, 21]; // top-left of front hand (2 wide)
-  if (pose === 'raise') { clear(g, 22 + tx, 16, 2, 6); stamp(g, FRONT_ARM.raise, 21 + tx, 9); hand = [24 + tx, 9]; }
-  else if (pose === 'strike') { clear(g, 22 + tx, 16, 2, 6); stamp(g, FRONT_ARM.strike, 21 + tx, 17); hand = [29 + tx, 17]; }
-  // head bob for breathing: redraw head one pixel lower
-  if (pose === 'idle2') { const head = BODY_IDLE.slice(3, 14); clear(g, 8 + tx, 3, 16, 11); stamp(g, head, tx, 1); }
+  if (pose === 'walkA' || pose === 'walkB') { clear(g, 0, 27, 32, 4); stamp(g, LEGS[pose], tx, 27); }
+  let hand = [20 + tx, 22];
+  if (pose === 'raise') { clear(g, 20 + tx, 22, 1, 1); stamp(g, ARM.raise.rows, ARM.raise.x + tx, ARM.raise.y); hand = [23 + tx, 10]; }
+  else if (pose === 'strike') { clear(g, 20 + tx, 22, 1, 1); stamp(g, ARM.strike.rows, ARM.strike.x + tx, ARM.strike.y); hand = [27 + tx, 20]; }
   const hy = pose === 'idle2' ? 1 : 0;
-  // hair (drawn relative to the head)
-  const hair = blank(); drawHairMap(hair, look.hair ?? 'short'); stamp(g, hair.map((r) => r.join('')), tx, hy);
-  // accessories & props (torso ones don't move with the head)
-  const bx = 10 + tx + (pose === 'walkA' ? -1 : 0), by = 21;
-  for (const a of [look.acc, look.acc2, look.prop]) {
-    const isHead = ['glasses', 'sunglasses', 'beard', 'mustache', 'headset', 'hardhat', 'crown', 'earring', 'flower', 'pen'].includes(a);
-    const layer = blank(); drawAccessory(layer, a, bx - tx, by); stamp(g, layer.map((r) => r.join('')), tx, isHead ? hy : 0);
-  }
+  if (hy) { const head = BODY_IDLE.slice(2, 18); clear(g, 0, 2, 32, 16); stamp(g, head, tx, 3); }
+  // hair + head accessories move with the head; torso items stay
+  const headLayer = blank(); drawHairStyle(headLayer, look.hair ?? 'short');
+  const HEAD_ACCS = ['glasses', 'sunglasses', 'beard', 'mustache', 'headset', 'hardhat', 'crown', 'earring', 'flower', 'pen'];
+  const bodyLayer = blank();
+  for (const a of [look.acc, look.acc2, look.prop]) drawAccessory(HEAD_ACCS.includes(a) ? headLayer : bodyLayer, a, 9, 22);
+  if ((look.hair ?? 'short') === 'bald') { for (let y = 2; y <= 17; y++) for (let x = 0; x < 32; x++) if (g[y + hy]?.[x + tx] === 'H') g[y + hy][x + tx] = 'S'; else if (g[y + hy]?.[x + tx] === 'h') g[y + hy][x + tx] = 's'; }
+  stamp(g, headLayer.map((r) => r.join('')), tx, hy);
+  stamp(g, bodyLayer.map((r) => r.join('')), tx, 0);
   drawWeapon(g, def.role, pose, hand[0], hand[1]);
   return outline(g);
 }
@@ -307,9 +189,18 @@ export const MONSTER_SHAPES = Object.keys(SHAPES);
 
 function monsterFrame(def, frame) {
   const g = blank();
+  const typeId = String(def.id).split(':')[0];
+  const map = MONSTER_MAPS[typeId];
+  if (map) {
+    // hand-pixelled creature (already outlined): centre horizontally, sit on the ground line
+    const w = map[0].length, h = map.length;
+    stamp(g, map, Math.floor((32 - w) / 2), 30 - h);
+    if (def.elite) stamp(g, ['C..C..C..C', 'CCLCCLCCLC', 'CCCCCCCCCC'], 11, Math.max(0, 30 - h - 3));
+    return frame ? shiftDown(g, 1) : g;
+  }
   const [cx, cy] = (SHAPES[def.shape] ?? SHAPES.blob)(g);
   drawFace(g, def.face ?? {}, cx, cy);
-  if (def.elite) stamp(g, ['Y..Y..Y..Y', 'YYLYYLYYLY', 'YYYYYYYYYY'], cx - 5, 0);
+  if (def.elite) stamp(g, ['C..C..C..C', 'CCLCCLCCLC', 'CCCCCCCCCC'], cx - 5, 0);
   const out = outline(g);
   return frame ? shiftDown(out, 1) : out;
 }
@@ -352,10 +243,15 @@ function render(key, g, palette, scale = SCALE) {
   return c;
 }
 const heroPalette = (def) => {
-  const p = { ...DEFAULT_HERO_PAL, A: ROLE_ACCENT[def.role], ...(def.look?.skin ? { S: def.look.skin } : {}), ...def.palette };
-  return { ...p, s: darken(p.S, 0.85), t: lighten(p.S, 0.35), h: darken(p.H, 0.66), i: lighten(p.H, 0.42), b: darken(p.B, 0.7), c: lighten(p.B, 0.25), p: darken(p.P, 0.7), w: darken(p.W, 0.65), a: darken(p.A, 0.68) };
+  const p = { ...DEFAULT_HERO_PAL, A: ROLE_ACCENT[def.role], ...(def.look?.skin ? { S: def.look.skin } : {}), ...(def.look?.eyes ? { I: def.look.eyes } : {}), ...def.palette };
+  return { ...p, s: darken(p.S, 0.86), t: lighten(p.S, 0.35), h: darken(p.H, 0.72), i: lighten(p.H, 0.3), b: darken(p.B, 0.74), c: lighten(p.B, 0.25), p: darken(p.P, 0.7), w: darken(p.W, 0.65), a: darken(p.A, 0.68), J: lighten(p.I, 0.4) };
 };
-const monsterPalette = (mon) => { const p = { ...MONSTER_DEFAULT, ...mon.palette }; return { ...p, l: lighten(p.M, 0.3), D: p.D ?? darken(p.M) }; };
+const monsterPalette = (mon) => {
+  const typeId = String(mon.id).split(':')[0];
+  const Y = MONSTER_ACCENTS[typeId] ?? '#f1c40f';
+  const p = { ...MONSTER_DEFAULT, ...mon.palette, E: '#1b1b1b', C: '#f1c40f', Y, y: darken(Y, 0.7) };
+  return { ...p, l: lighten(p.M, 0.3), D: p.D ?? darken(p.M) };
+};
 
 const HERO_POSES = { idle: ['idle', 'idle2'], walk: ['walkA', 'idle', 'walkB', 'idle'], attack: ['raise', 'strike', 'idle'] };
 export function heroSprite(def, anim = 'idle', frame = 0, scale = SCALE) {
@@ -390,7 +286,7 @@ export function heroIconDataURL(def) {
   const c = document.createElement('canvas'); c.width = 22; c.height = 22;
   const ctx = c.getContext('2d');
   const pal = heroPalette(def); const g = heroFrame(def, 'idle');
-  for (let y = 0; y < 14; y++) for (let x = 8; x < 25; x++) { const ch = g[y][x]; if (ch === '.') continue; ctx.fillStyle = colorOf(ch, pal); ctx.fillRect((x - 8) * 1.3, y * 1.5, 2, 2); }
+  for (let y = 2; y < 19; y++) for (let x = 4; x < 26; x++) { const ch = g[y][x]; if (ch === '.') continue; ctx.fillStyle = colorOf(ch, pal); ctx.fillRect((x - 4), (y - 2) * 1.3, 1.2, 1.5); }
   const url = c.toDataURL(); cache.set(key, url); return url;
 }
 

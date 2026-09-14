@@ -15,6 +15,8 @@ export const MONSTER_TYPES = [
   { id: 'bug',       shape: 'bug',       name: '런타임 버그',   face: { eyes: 'angry',  mouth: 'teeth' } },
   { id: 'cloud',     shape: 'cloud',     name: '동기화 충돌',   face: { eyes: 'round',  mouth: 'o' } },
   { id: 'cursor',    shape: 'cursor',    name: '커서 도둑',     face: { eyes: 'one',    mouth: 'smile' } },
+  { id: 'monkey',    shape: 'monkey',    name: '복붙 원숭이',   face: { eyes: 'round',  mouth: 'smile' } },
+  { id: 'bull',      shape: 'bull',      name: '마감 황소',     face: { eyes: 'angry',  mouth: 'teeth' } },
 ];
 
 export const PALETTES = [
