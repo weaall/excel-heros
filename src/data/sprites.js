@@ -6,6 +6,7 @@ import { GRADES } from './heroes.js';
 import { sheetFrame } from './spriteSheets.js';
 import { MONSTER_MAPS, MONSTER_ACCENTS } from './monsterArt.js';
 import { BODY_IDLE, LEGS, ARM, HAIR } from './heroArt.js';
+import { packHeroFrame, packHeroIcon, packMonsterFrame } from './packSprites.js';
 
 export const SCALE = 2;
 export const SRC = 32;
@@ -256,6 +257,7 @@ const monsterPalette = (mon) => {
 const HERO_POSES = { idle: ['idle', 'idle2'], walk: ['walkA', 'idle', 'walkB', 'idle'], attack: ['raise', 'strike', 'idle'] };
 export function heroSprite(def, anim = 'idle', frame = 0, scale = SCALE) {
   const sheet = sheetFrame(def.id, anim, frame, scale / SCALE); if (sheet) return sheet;
+  const pack = packHeroFrame(def, anim, frame, scale / SCALE); if (pack) return pack;
   const poses = HERO_POSES[anim] ?? HERO_POSES.idle;
   const pose = poses[frame % poses.length];
   const key = `h:${def.id}:${pose}:${scale}`;
@@ -266,6 +268,7 @@ export const heroFrameCount = (anim) => (HERO_POSES[anim] ?? HERO_POSES.idle).le
 
 export function monsterSprite(mon, frame = 0) {
   const sheet = sheetFrame('m:' + String(mon.id).split(':')[0], 'idle', frame, 1); if (sheet) return sheet;
+  const pack = packMonsterFrame(mon, frame, mon.hue ?? 0); if (pack) return pack;
   const key = `m:${mon.id}:${mon.elite ? 'e' : ''}:${frame}`;
   if (cache.has(key)) return cache.get(key);
   const g = mon.shape === 'ticket' ? bossFrame(mon, frame) : monsterFrame(mon, frame);
@@ -281,6 +284,7 @@ export function flashSprite(img) {
 }
 
 export function heroIconDataURL(def) {
+  const packIcon = packHeroIcon(def); if (packIcon) return packIcon;
   const key = `icon:${def.id}`;
   if (cache.has(key)) return cache.get(key);
   const c = document.createElement('canvas'); c.width = 22; c.height = 22;
@@ -305,9 +309,9 @@ export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '' }
   ctx.fillStyle = g.color; ctx.beginPath(); ctx.roundRect(6, 6, 20, 15, 3); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = 'bold 11px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(def.grade, 16, 14);
   ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(CARD_W / 2, 104, 30, 6, 0, 0, Math.PI * 2); ctx.fill();
-  const img = heroSprite(def, 'idle', 0, 3);
+  const img = heroSprite(def, 'idle', 0, 1);
   if (!owned) ctx.globalAlpha = 0.35;
-  ctx.drawImage(img, (CARD_W - 96) / 2, 12); ctx.globalAlpha = 1;
+  ctx.drawImage(img, 0, 0, img.width, img.height, (CARD_W - 96) / 2, 12, 96, 96); ctx.globalAlpha = 1;
   ctx.fillStyle = g.color; ctx.fillRect(0, 112, CARD_W, 38);
   ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(fit(ctx, def.name, CARD_W - 10), CARD_W / 2, 124);
   ctx.font = '10px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.92)';
@@ -319,8 +323,8 @@ export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '' }
   return c;
 }
 
-export function portraitCanvas(def, scale = 5) {
-  const g = GRADES[def.grade]; const size = SRC * scale + 16;
+export function portraitCanvas(def, scale = 4) {
+  const g = GRADES[def.grade]; const size = 64 * scale + 16;
   const c = document.createElement('canvas'); c.width = size; c.height = size;
   const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = g.bg; ctx.fillRect(0, 0, size, size);
@@ -328,7 +332,8 @@ export function portraitCanvas(def, scale = 5) {
   for (let i = 12; i < size; i += 16) { ctx.moveTo(i + 0.5, 0); ctx.lineTo(i + 0.5, size); ctx.moveTo(0, i + 0.5); ctx.lineTo(size, i + 0.5); }
   ctx.stroke();
   ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(size / 2, size - 10, 6 * scale, 1.2 * scale, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.drawImage(heroSprite(def, 'idle', 0, scale), 8, 8);
+  const img = heroSprite(def, 'idle', 0, 1);
+  ctx.drawImage(img, 0, 0, img.width, img.height, 8, 8, 64 * scale, 64 * scale);
   ctx.strokeStyle = g.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, size - 2, size - 2);
   return c;
 }

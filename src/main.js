@@ -6,9 +6,11 @@ import { createInitialState } from './core/state.js';
 import { Renderer } from './ui/Renderer.js';
 import { UIManager } from './ui/UIManager.js';
 import { loadSpriteSheets } from './data/spriteSheets.js';
+import { loadPack } from './data/packSprites.js';
 
 // Hand-made sprite sheets (assets/sprites/manifest.json) override the procedural art when present.
-const sheetCount = await loadSpriteSheets();
+const [sheetCount, packOk] = await Promise.all([loadSpriteSheets(), loadPack()]);
+if (!packOk) console.warn('[pack] CC0 sprite pack unavailable; using procedural art');
 if (sheetCount) console.info(`[sprites] ${sheetCount} sheet(s) loaded`);
 
 const save = new SaveManager();

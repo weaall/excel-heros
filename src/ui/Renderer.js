@@ -176,7 +176,7 @@ export class Renderer {
 
   #drawMonster(m) {
     const { ctx } = this;
-    const frame = Math.floor(m.animT * 3) % 2;
+    const frame = Math.floor(m.animT * (m.anim === 'walk' ? 8 : 5)) % 4;
     const img = monsterSprite(m.def, frame);
     const knock = m.flash ? 6 * (m.flash / 0.12) : 0;
     const lunge = m.lunge > 0 ? -12 * (m.lunge / 0.2) : 0;

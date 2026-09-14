@@ -43,7 +43,7 @@ export function stagePool(stage) {
   const start = (phase * 2) % MONSTER_TYPES.length;
   return [0, 1, 2].map((k) => {
     const t = MONSTER_TYPES[(start + k) % MONSTER_TYPES.length];
-    return { ...t, id: `${t.id}:${phase % PALETTES.length}`, name: `${pal.name} ${t.name}`, palette: { M: pal.M, D: pal.D, E: pal.E } };
+    return { ...t, id: `${t.id}:${phase % PALETTES.length}`, name: `${pal.name} ${t.name}`, palette: { M: pal.M, D: pal.D, E: pal.E }, hue: (phase % PALETTES.length) * 36 };
   });
 }
 

@@ -57,3 +57,9 @@ tests/                         node:test 단위 + 시뮬레이션 테스트
 ```
 
 DevTools 콘솔에서 `EH.game.state` 로 상태를 보고, `EH.game.state.gold = 1e9` 식으로 밸런스 실험이 가능합니다.
+
+## 아트 크레딧 (CC0)
+
+- 영웅·몬스터·보스 스프라이트: **16x16 DungeonTileset II v1.7** by 0x72 — <https://0x72.itch.io/dungeontileset-ii> (CC0). 캐릭터별로 색조(hue)를 바꿔 28명을 10개 베이스로 만듭니다. 파일: `assets/sprites/0x72/sheet.png`
+- 추가 생물 스프라이트(예비): **Tiny Creatures** by Clint Bellanger — <https://opengameart.org/content/tiny-creatures> (CC0). 파일: `assets/sprites/tiny-creatures/tilemap_packed.png`
+- 팩이 없거나 매핑이 없는 캐릭터는 `src/data/heroArt.js` / `src/data/monsterArt.js`의 코드 생성 도트로 대체됩니다.
