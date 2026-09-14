@@ -296,7 +296,7 @@ export function heroIconDataURL(def) {
 
 // --- Card illustrations ------------------------------------------------------
 export const CARD_W = 112, CARD_H = 150;
-export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '' } = {}) {
+export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', awakened = false } = {}) {
   const g = GRADES[def.grade];
   const c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H;
   const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -319,6 +319,12 @@ export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '' }
   if (sub) { ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.fillStyle = '#333'; ctx.textAlign = 'right'; ctx.fillText(sub, CARD_W - 7, 14); }
   ctx.strokeStyle = g.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, CARD_W - 2, CARD_H - 2);
   if (def.grade === 'S') { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1; ctx.strokeRect(4.5, 4.5, CARD_W - 9, CARD_H - 9); }
+  if (awakened) { // 각성: gold double frame + corner gem
+    ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, CARD_W - 3, CARD_H - 3);
+    ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 1; ctx.strokeRect(5.5, 5.5, CARD_W - 11, CARD_H - 11);
+    ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.moveTo(CARD_W - 16, 4); ctx.lineTo(CARD_W - 4, 16); ctx.lineTo(CARD_W - 16, 28); ctx.lineTo(CARD_W - 28, 16); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#7d5a00'; ctx.font = 'bold 9px "Malgun Gothic", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('각', CARD_W - 16, 16);
+  }
   if (!owned) { ctx.fillStyle = 'rgba(120,120,120,0.35)'; ctx.fillRect(0, 0, CARD_W, 112); }
   return c;
 }

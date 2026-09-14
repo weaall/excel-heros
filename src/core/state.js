@@ -9,7 +9,7 @@ export const localDateKey = (now = Date.now()) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0 });
+export const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0, awakened: false });
 
 export function createInitialState(now = Date.now()) {
   const heroes = {};

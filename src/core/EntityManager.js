@@ -3,7 +3,8 @@
 // right in waves and line up opposite. Melee heroes dash out and back to strike, ranged heroes
 // and monsters fire projectiles that hit on arrival. Also owns projectiles, floaters, particles, effects.
 import { BALANCE, monsterHP, monsterATK, bossHP, bossATK, isBossStage } from '../config/balance.js';
-import { TRAITS, SKILLS } from '../data/heroes.js';
+import { TRAITS, SKILLS, GRADES } from '../data/heroes.js';
+import { stageModifier } from '../data/stages.js';
 import { monsterForStage, bossForStage, eliteChance, asElite, CHEST, MIMIC } from '../data/monsters.js';
 
 export const GRID = Object.freeze({ cols: 13, rows: 8, cellW: 64, cellH: 52 });
@@ -15,6 +16,7 @@ const LINE_GAP = 60;                                // spacing between heroes in
 
 const ROLE_PRIORITY = { tank: 0, melee: 1, healer: 2, ranged: 3 };
 const T = (k) => TRAITS[k].value;
+const tv = (h, k) => TRAITS[k].value * (h.traitMult ?? 1);   // a hero's own trait value (awakened heroes ×1.5)
 const RANGED_SHAPES = { sheet: 'paper', chart: 'bar', cursor: 'arrow', cloud: 'drop', hourglass: 'sand' };
 const TRAVEL_TIME = 1.6;      // seconds of scrolling between waves
 const SCROLL_SPEED = 150;     // px/s background scroll while travelling
@@ -33,6 +35,7 @@ export class EntityManager {
     this.scroll = 0;            // background scroll offset (px)
     this.traveling = false; this.travelT = 0;
     this.wave = 0;
+    this.combo = 0; this.comboT = 0; this.flashT = 0;   // hit combo (resets when a hero is hurt), ult screen flash
   }
 
   // ---------------------------------------------------------------- party --
@@ -62,12 +65,13 @@ export class EntityManager {
   }
 
   refreshHeroStats() {
-    this.rallyMult = 1 + T('rally') * this.heroes.filter((h) => h.trait === 'rally').length;
+    for (const e of this.heroes) e.traitMult = this.game.heroView(e.heroId).traitMult ?? 1;
+    this.rallyMult = 1 + this.heroes.filter((h) => h.trait === 'rally').reduce((a, h) => a + tv(h, 'rally'), 0);
     for (const e of this.heroes) {
       const v = this.game.heroView(e.heroId);
       const ratio = e.maxHp ? e.hp / e.maxHp : 1;
       e.atk = v.atk; e.maxHp = v.hp; e.hp = Math.min(e.maxHp, Math.max(1, Math.round(e.maxHp * ratio)));
-      e.interval = v.interval / (e.trait === 'swift' ? 1 + T('swift') : 1);
+      e.interval = v.interval / (e.trait === 'swift' ? 1 + tv(e, 'swift') : 1);
       e.range = (e.role === 'tank' ? TANK_REACH : e.role === 'melee' ? MELEE_REACH : v.range) * GRID.cellW;
       e.star = v.entry.star; e.level = v.entry.level;
       e.skill = v.def.skill; e.skillUnlocked = v.skillUnlocked; e.skillPower = v.skillPower; e.skillName = v.skillName;
@@ -99,8 +103,9 @@ export class EntityManager {
       this.game.log(`보스 등장: ${this.boss.def.name} (${this.game.stageLabel()}) — ${this.boss.def.desc}`, 'boss');
       return;
     }
-    const count = Math.min(BALANCE.MAX_MONSTERS, 3 + Math.floor(stage / 10));
-    for (let i = 0; i < count; i++) this.#spawnMonster(stage, false, i);
+    const mod = stageModifier(stage);
+    const count = Math.min(BALANCE.MAX_MONSTERS + (mod?.count ?? 0), 3 + Math.floor(stage / 10) + (mod?.count ?? 0));
+    for (let i = 0; i < count; i++) { const m = this.#spawnMonster(stage, false, i); if (mod?.speed) m.speed *= mod.speed; }
     if (Math.random() < BALANCE.CHEST.chance) this.spawnChest(Math.random() < BALANCE.CHEST.mimicChance, count);
   }
 
@@ -117,7 +122,7 @@ export class EntityManager {
 
   #spawnMonster(stage, isBoss, index, forcedDef = null) {
     let def = forcedDef ?? (isBoss ? bossForStage(stage) : monsterForStage(stage, Math.random()));
-    const elite = !isBoss && !forcedDef && Math.random() < eliteChance(stage);
+    const elite = !isBoss && !forcedDef && Math.random() < eliteChance(stage) * (stageModifier(stage)?.elite ?? 1);
     if (elite) def = asElite(def);
     const proj = !isBoss ? (def.ranged ?? RANGED_SHAPES[def.shape]) : null;
     const range = (isBoss ? 1.5 : proj ? 3.6 + index * 0.3 : 0.9) * GRID.cellW;
@@ -141,7 +146,8 @@ export class EntityManager {
   // --------------------------------------------------------------- update --
   update(dt) {
     this.time += dt;
-    this.shake = Math.max(0, this.shake - dt * 30);
+    this.shake = Math.max(0, this.shake - dt * 30); this.flashT = Math.max(0, this.flashT - dt);
+    if (this.combo > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
     const heroes = this.heroes.filter((e) => e.alive), monsters = this.monsters.filter((e) => e.alive);
     if (this.atkBuff.until < this.time) this.atkBuff.mult = 1;
     const speedMult = this.game.speedMult();
@@ -165,7 +171,7 @@ export class EntityManager {
       }
       if (this.traveling) continue;
       h.animT += dt;
-      h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (BALANCE.HERO_REGEN_PCT + (h.trait === 'regen' ? T('regen') : 0)) * dt);
+      h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (BALANCE.HERO_REGEN_PCT + (h.trait === 'regen' ? tv(h, 'regen') : 0)) * dt);
       h.cd -= dt * speedMult; h.skillCd -= dt;
 
       let target = this.#byId(monsters, h.targetId);
@@ -199,7 +205,7 @@ export class EntityManager {
           // melee dash: strike lands slightly after the wind-up
           h.dashTo = target.x - 38;
           const snapshot = monsters;
-          this.projectiles.push({ x: h.x, y: h.y, tx: h.x, ty: h.y, t: 0, dur: 0.16, kind: 'none', onHit: () => { if (target.alive) { this.fx('slash', { x: target.x, y: target.y - 6, color: '#ffffff', angle: Math.random() * 0.8 - 0.4, life: 0.18 }); this.#heroHit(h, target, 1, false, snapshot); } } });
+          this.projectiles.push({ x: h.x, y: h.y, tx: h.x, ty: h.y, t: 0, dur: 0.16, kind: 'none', onHit: () => { if (target.alive) { this.fx('slash', { x: target.x, y: target.y - 6, color: GRADES[h.def.grade]?.color ?? '#ffffff', angle: Math.random() * 0.8 - 0.4, life: 0.18, big: h.awakened }); this.#heroHit(h, target, 1, false, snapshot); } } });
         }
       }
       if (h.anim === 'attack' && h.animT > 0.45) h.anim = 'idle';
@@ -219,6 +225,7 @@ export class EntityManager {
       if (m.cd > 0) continue;
       if (m.def.mimic) m.openFrame = 2;              // the mimic shows its teeth once it starts biting
       m.cd = m.interval; m.lunge = 0.2; m.hits++;
+      if (m.isBoss) { const p = m.def.pattern; m.warn = (p === 'sweep' && (m.hits + 1) % 3 === 0) || (p === 'stomp' && (m.hits + 1) % 4 === 0); }
       if (m.isBoss && this.#bossPattern(m, heroes, frontX)) continue;
       if (m.proj || (m.isBoss && m.def.pattern === 'fire' && Math.random() < 0.35)) {
         // ranged monsters shoot a random party member so damage spreads across the line
@@ -240,7 +247,7 @@ export class EntityManager {
         p.hit = true;
         if (p.hostile) {
           const tgt = this.heroes.find((h) => h.id === p.targetId);
-          if (tgt?.alive) { this.#damage(tgt, p.dmg * (tgt.trait === 'sturdy' ? 1 - T('sturdy') : 1), false); this.fx('puff', { x: tgt.x, y: tgt.y - 10, color: p.color, life: 0.25 }); }
+          if (tgt?.alive) { this.#damage(tgt, p.dmg * (tgt.trait === 'sturdy' ? 1 - tv(tgt, 'sturdy') : 1), false); this.fx('puff', { x: tgt.x, y: tgt.y - 10, color: p.color, life: 0.25 }); }
         } else if (p.onHit) p.onHit();
       }
     }
@@ -287,20 +294,22 @@ export class EntityManager {
   }
 
   #monsterHit(m, target, mult = 1) {
-    this.#damage(target, m.atk * mult * (target.trait === 'sturdy' ? 1 - T('sturdy') : 1), false);
+    this.#damage(target, m.atk * mult * (target.trait === 'sturdy' ? 1 - tv(target, 'sturdy') : 1), false);
     this.fx('puff', { x: target.x + 10, y: target.y - 12, color: '#e74c3c', life: 0.22 });
     if (m.isBoss) this.shake = Math.max(this.shake, 5);
   }
 
   #heroHit(h, target, mult, isSkill, monsters) {
-    let dmg = h.atk * mult * this.atkBuff.mult * this.rallyMult;
+    let dmg = h.atk * mult * this.atkBuff.mult * this.rallyMult * (1 + Math.min(BALANCE.COMBO.max, this.combo * BALANCE.COMBO.perHit));
     let crit = false;
-    if (h.trait === 'crit' && Math.random() < T('crit')) { dmg *= 2; crit = true; }
-    if (h.trait === 'focus' && target.isBoss) dmg *= 1 + T('focus');
+    if (h.trait === 'crit' && Math.random() < tv(h, 'crit')) { dmg *= 2; crit = true; }
+    if (h.trait === 'focus' && target.isBoss) dmg *= 1 + tv(h, 'focus');
+    if (crit) this.fx('crit', { x: target.x, y: target.y - 30, color: '#f1c40f', life: 0.35 });
     const dealt = this.#damage(target, dmg, isSkill || crit, crit);
-    if (h.trait === 'lifesteal' && dealt > 0) h.hp = Math.min(h.maxHp, h.hp + dealt * T('lifesteal'));
+    if (dealt > 0) { this.combo++; this.comboT = BALANCE.COMBO.decay; }
+    if (h.trait === 'lifesteal' && dealt > 0) h.hp = Math.min(h.maxHp, h.hp + dealt * tv(h, 'lifesteal'));
     if (h.trait === 'splash' && !isSkill && monsters) {
-      for (const m of monsters) if (m !== target && m.alive && Math.abs(m.x - target.x) < 90) this.#damage(m, dmg * T('splash'), false);
+      for (const m of monsters) if (m !== target && m.alive && Math.abs(m.x - target.x) < 90) this.#damage(m, dmg * tv(h, 'splash'), false);
     }
     return dealt;
   }
@@ -309,6 +318,8 @@ export class EntityManager {
     if (!target.alive) return 0;
     amount = Math.max(1, Math.round(amount));
     this.game.emit('sfx', target.kind === 'monster' ? 'hit' : 'hurt');
+    if (target.kind === 'monster') this.fx('impact', { x: target.x + (Math.random() * 16 - 8), y: target.y - 24 + (Math.random() * 16 - 8), color: crit ? '#f1c40f' : '#ffffff', life: 0.18, big: isSkill || crit });
+    else if (this.combo > 0) { this.floaters.push({ x: target.x, y: target.y - 70, text: `COMBO ×${this.combo} 끊김`, color: '#95a5a6', t: 0 }); this.combo = 0; }
     const dealt = Math.min(amount, target.hp);
     target.hp -= amount; target.shake = 1; target.flash = 0.12;
     const color = target.kind === 'monster' ? (crit ? '#ff7675' : isSkill ? '#f1c40f' : '#ffffff') : '#e74c3c';
@@ -347,7 +358,7 @@ export class EntityManager {
         for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#f1c40f', angle: 0.4, life: 0.25 }); this.#heroHit(h, m, power * boost, true); }
         break;
       case 'ult':
-        this.game.emit('ult', { hero: h });
+        this.game.emit('ult', { hero: h }); this.flashT = 0.18;
         this.fx('ring', { x: h.x, y: h.y, color: '#8e44ad', radius: 460, life: 0.6 }); this.shake = Math.max(this.shake, 10);
         for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: -0.6, life: 0.3, big: true }); this.#heroHit(h, m, power * boost, true); if (m.alive) { m.stun = Math.max(m.stun, 2); this.fx('stars', { x: m.x, y: m.y - 44, color: '#f1c40f', life: 2 }); } }
         break;

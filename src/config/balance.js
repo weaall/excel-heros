@@ -47,7 +47,10 @@ export const BALANCE = Object.freeze({
   // 보물 상자: a chest may join a normal wave; killing it drops cards + gems. 30% are mimics that bite back.
   CHEST: { chance: 0.06, mimicChance: 0.3, hpMult: 0.6, gemsMin: 3, gemsMax: 8, cardsPerPhase: 1 },
   // 회사 이전 (prestige): reset progression for permanent 지분 (+3% ATK & gold each). Needs Phase 3 cleared.
-  PRESTIGE: { minCleared: 30, bonusPerShare: 0.03 },     // seconds between automatic "자동 합계" passes when the toggle is on
+  PRESTIGE: { minCleared: 30, bonusPerShare: 0.03 },
+  // 각성 (awakening): a ★5 card can be awakened with 강화 카드 — permanent +25% ATK/HP, trait ×1.5, skill ×1.25, gold frame
+  AWAKEN: { star: 5, cards: { D: 60, C: 100, B: 160, A: 260, S: 400 }, atk: 0.25, hp: 0.25, trait: 1.5, skill: 1.25 },
+  COMBO: { perHit: 0.005, max: 0.25, decay: 3 }, // consecutive hero hits without taking damage: +0.5% dmg each, cap +25%     // seconds between automatic "자동 합계" passes when the toggle is on
 
   GEMS_FIRST_CLEAR: 10, GEMS_REPEAT_CLEAR: 1,
   GEMS_BOSS_FIRST: 50,  GEMS_BOSS_REPEAT: 10,

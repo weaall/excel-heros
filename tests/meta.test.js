@@ -83,3 +83,34 @@ test('파티 자동 편성 picks the strongest heroes and guarantees a tank and 
   assert.equal(g.entities.heroes[0].role, 'tank');
   assert.equal(createInitialState().settings.gridlines, true);
 });
+
+test('stage modifiers, phase names and 각성', async () => {
+  const { stageModifier, phaseName, phaseTheme } = await import('../src/data/stages.js');
+  assert.equal(stageModifier(5).id, 'rush'); assert.equal(stageModifier(18).id, 'elite'); assert.equal(stageModifier(3), null); assert.equal(stageModifier(10), null);
+  assert.equal(phaseName(1), '인사팀 지하 창고'); assert.equal(phaseName(11), '회계팀 서버실'); assert.equal(phaseName(101), '인사팀 지하 창고 2차');
+  assert.ok(phaseTheme(25).hue >= 0);
+  // rush wave spawns more, faster monsters
+  const s = createInitialState(); s.stage = 5; s.maxStage = 5; s.maxCleared = 4; s.heroes[MAIN_ID].level = 20;
+  const g = new GameManager({ state: s, save: memSave() });
+  run(g, 2.6);
+  const wave = g.entities.monsters.filter((m) => m.alive && !m.def.chest);
+  assert.ok(wave.length >= 5, `rush wave size ${wave.length}`);
+  assert.ok(wave.every((m) => m.speed > BALANCE.MONSTER_SPEED * 0.9 * 1.3 - 1e-6), 'rush speed');
+  // 각성
+  const s2 = createInitialState(); s2.heroes.guard = { owned: true, star: 5, shards: 0, level: 10, enhance: 0 }; s2.cards = 1000; s2.party = [MAIN_ID, 'guard'];
+  const g2 = new GameManager({ state: s2, save: memSave() });
+  const before = g2.heroView('guard');
+  assert.ok(before.canAwaken); assert.equal(before.awakenCost, BALANCE.AWAKEN.cards.D);
+  assert.ok(g2.awaken('guard'));
+  const after = g2.heroView('guard');
+  assert.equal(after.awakened, true); assert.equal(g2.state.cards, 1000 - BALANCE.AWAKEN.cards.D);
+  assert.ok(Math.abs(after.atk - before.atk * (1 + BALANCE.AWAKEN.atk)) <= 1, 'awaken ATK');
+  assert.equal(after.traitMult, BALANCE.AWAKEN.trait);
+  assert.equal(g2.awaken('guard'), false, 'only once');
+  const guard = g2.entities.heroes.find((h) => h.heroId === 'guard');
+  assert.equal(guard.traitMult, BALANCE.AWAKEN.trait);
+  assert.ok(!g2.heroView(MAIN_ID).canAwaken, 'main hero uses job promotion instead');
+  // combo counts hero hits and resets when a hero is hurt
+  run(g2, 20);
+  assert.ok(g2.entities.combo >= 0 && Number.isFinite(g2.entities.combo));
+});

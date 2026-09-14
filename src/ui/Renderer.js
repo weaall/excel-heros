@@ -6,6 +6,7 @@ import { TILES, PROPS, drawTile, drawProp, packReady } from '../data/packSprites
 import { GRADES } from '../data/heroes.js';
 import { stageLabel, BALANCE } from '../config/balance.js';
 import { bossForStage } from '../data/monsters.js';
+import { phaseTheme, phaseName, stageModifier } from '../data/stages.js';
 import { fmt } from '../utils/format.js';
 
 const TILE = 32;                       // 16px tiles drawn at 2x
@@ -24,7 +25,7 @@ export class Renderer {
     game.on('challengeStart', ({ stage, boss }) => {
       this.banner = boss
         ? { kind: 'boss', text: `${bossForStage(stage).name} 등장!`, sub: `${bossForStage(stage).desc} · ${BALANCE.BOSS_TIME_LIMIT}초 안에 처리`, t: 0, life: 2.4 }
-        : { kind: 'challenge', text: `${stageLabel(stage)} 도전`, sub: `오류 ${BALANCE.KILLS_PER_STAGE}건 처리 시 클리어`, t: 0, life: 1.6 };
+        : { kind: 'challenge', text: `${stageLabel(stage)} 도전`, sub: `${phaseName(stage)}${stageModifier(stage) ? ` · ${stageModifier(stage).name}: ${stageModifier(stage).desc}` : ` · 오류 ${BALANCE.KILLS_PER_STAGE}건 처리 시 클리어`}`, t: 0, life: stageModifier(stage) ? 2.2 : 1.6 };
     });
     game.on('cleared', ({ stage, boss, first }) => {
       this.banner = { kind: 'clear', text: boss ? '보스 처리 완료!' : `${stageLabel(stage)} 마감!`, sub: first ? '첫 클리어 보상 지급' : '반복 클리어', t: 0, life: 1.5 };
@@ -48,7 +49,9 @@ export class Renderer {
     this.#drawProjectiles(em);
     this.#drawFloaters(em);
     this.#drawBuff(em);
+    this.#drawCombo(em);
     ctx.restore();
+    if (em.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${(em.flashT / 0.18) * 0.55})`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
     this.#drawSelection();
     this.#drawBanner(dt);
   }
@@ -112,7 +115,8 @@ export class Renderer {
       if (k2 > 0.9) drawProp(ctx, PROPS.crate, dx, CANVAS_H - 44, 2);
     }
     // phase tint so deeper phases feel different, plus a soft vignette at the wall base
-    if (phase > 0) { ctx.fillStyle = `hsla(${(phase * 47) % 360}, 60%, 40%, 0.12)`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
+    const theme = phaseTheme(this.game.state.stage);
+    if (theme.tint > 0) { ctx.fillStyle = `hsla(${theme.hue}, 60%, 40%, ${theme.tint})`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
     const g = ctx.createLinearGradient(0, WALL_ROWS * TILE, 0, WALL_ROWS * TILE + 40);
     g.addColorStop(0, 'rgba(0,0,0,0.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(0, WALL_ROWS * TILE, CANVAS_W, 40);
   }
@@ -139,6 +143,19 @@ export class Renderer {
     ctx.fillStyle = '#f1c40f'; ctx.fillRect(x, y + h + 2, w * Math.min(1, em.bossTimer / BALANCE.BOSS_TIME_LIMIT), 4);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(`${b.def.name}   ${fmt(b.hp)} / ${fmt(b.maxHp)}   ⏱ ${em.bossTimer.toFixed(1)}s`, x + w / 2, y + h / 2);
+  }
+
+  /** Hit combo counter (top-right), Excel style. */
+  #drawCombo(em) {
+    if (em.combo < 3) return;
+    const { ctx } = this; const k = Math.min(1, em.combo / 50);
+    const pulse = 1 + Math.max(0, 0.25 - (BALANCE.COMBO.decay - em.comboT) * 2) ;
+    ctx.save(); ctx.translate(CANVAS_W - 14, 46); ctx.scale(pulse, pulse); ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 22px Consolas, monospace'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillStyle = k < 0.3 ? '#ecf0f1' : k < 0.7 ? '#f1c40f' : '#e74c3c';
+    ctx.strokeText(`${em.combo} HIT`, 0, 0); ctx.fillText(`${em.combo} HIT`, 0, 0);
+    ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#bdc3c7'; ctx.strokeText(`=COUNTIF(HITS) · DMG +${Math.round(Math.min(BALANCE.COMBO.max, em.combo * BALANCE.COMBO.perHit) * 100)}%`, 0, 18); ctx.fillText(`=COUNTIF(HITS) · DMG +${Math.round(Math.min(BALANCE.COMBO.max, em.combo * BALANCE.COMBO.perHit) * 100)}%`, 0, 18);
+    ctx.restore();
   }
 
   #drawBuff(em) {
@@ -207,7 +224,9 @@ export class Renderer {
       ctx.fillText(`${Math.ceil(h.reviveT)}s`, h.x, h.y + 16);
       return;
     }
-    if (h.star >= 5 || h.def.grade === 'S') { ctx.save(); ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 14 + Math.sin(this.t * 4) * 5; ctx.strokeStyle = 'rgba(241,196,15,0.9)'; ctx.lineWidth = 2; ctx.strokeRect(sx + 12, sy + 2, 40, 62); ctx.restore(); }
+    if (dash !== 0) { ctx.save(); ctx.globalAlpha = 0.28; ctx.drawImage(img, Math.round(h.x - 32), sy); ctx.globalAlpha = 0.14; ctx.drawImage(img, Math.round(h.x + dash * 0.5 - 32), sy); ctx.restore(); }
+    if (h.awakened) { ctx.save(); ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 16 + Math.sin(this.t * 5) * 6; ctx.strokeStyle = 'rgba(255,209,102,0.95)'; ctx.lineWidth = 2; ctx.strokeRect(sx + 12, sy + 2, 40, 62); ctx.restore(); }
+    else if (h.star >= 5 || h.def.grade === 'S') { ctx.save(); ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 14 + Math.sin(this.t * 4) * 5; ctx.strokeStyle = 'rgba(241,196,15,0.9)'; ctx.lineWidth = 2; ctx.strokeRect(sx + 12, sy + 2, 40, 62); ctx.restore(); }
     ctx.drawImage(img, sx, sy);
     if (h.flash > 0) { ctx.globalAlpha = Math.min(1, h.flash / 0.12) * 0.5; ctx.drawImage(flashSprite(img), sx, sy); ctx.globalAlpha = 1; }
     this.#hpBar(h.x, h.y + 6, h.hp / h.maxHp, '#27ae60', 40);
@@ -239,6 +258,11 @@ export class Renderer {
     ctx.restore();
     if (m.stun > 0) { ctx.fillStyle = '#c39bd3'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('zZ', m.x + 20, bottom - img.height - 4); }
     if (!m.isBoss) this.#hpBar(m.x, bottom + 6, m.hp / m.maxHp, m.elite ? '#f1c40f' : '#e74c3c', m.elite ? 48 : 40);
+    if (m.isBoss && m.warn && m.alive) {
+      const p = 0.5 + Math.sin(this.t * 12) * 0.5;
+      ctx.save(); ctx.translate(m.x, bottom - img.height - 18 - p * 4); ctx.font = 'bold 26px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.strokeText('!', 0, 0); ctx.fillStyle = p > 0.5 ? '#e74c3c' : '#f9e79f'; ctx.fillText('!', 0, 0); ctx.restore();
+    }
   }
 
   // ------------------------------------------------------------- effects --
@@ -267,6 +291,18 @@ export class Renderer {
           ctx.globalAlpha = (1 - k) * 0.7; ctx.fillStyle = f.color;
           for (let i = 0; i < 4; i++) { const a = i * 1.57 + 0.4, rr = 6 + k * 14; ctx.beginPath(); ctx.arc(f.x + Math.cos(a) * rr, f.y + Math.sin(a) * rr, 5 - k * 3, 0, Math.PI * 2); ctx.fill(); }
           ctx.globalAlpha = 1; break;
+        }
+        case 'impact': {
+          const n = f.big ? 8 : 6, len = (f.big ? 18 : 11) * (0.4 + k), r0 = 3 + k * 6;
+          ctx.save(); ctx.translate(f.x, f.y); ctx.globalAlpha = 1 - k; ctx.strokeStyle = f.color; ctx.lineWidth = f.big ? 3 : 2; ctx.lineCap = 'round'; ctx.beginPath();
+          for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + 0.3; ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); ctx.lineTo(Math.cos(a) * (r0 + len), Math.sin(a) * (r0 + len)); }
+          ctx.stroke(); ctx.restore(); break;
+        }
+        case 'crit': {
+          ctx.save(); ctx.translate(f.x, f.y - k * 10); ctx.rotate(k * 0.6); ctx.globalAlpha = 1 - k; ctx.fillStyle = f.color;
+          const R = 16 + k * 10, r = R * 0.45; ctx.beginPath();
+          for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, rr = i % 2 ? r : R; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+          ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); break;
         }
         case 'muzzle': { ctx.globalAlpha = 1 - k; ctx.fillStyle = f.color; ctx.fillRect(f.x, f.y - 3, 10 + k * 8, 6); ctx.fillStyle = '#fff'; ctx.fillRect(f.x + 2, f.y - 1, 6, 2); ctx.globalAlpha = 1; break; }
         case 'stars': {
@@ -301,6 +337,10 @@ export class Renderer {
       const k = Math.min(1, p.t / p.dur);
       const arc = p.hostile ? 26 : 16;
       const x = p.x + (p.tx - p.x) * k, y = p.y + (p.ty - p.y) * k - Math.sin(k * Math.PI) * arc;
+      if (p.kind !== 'heal') { // fading trail behind the projectile
+        for (let i = 1; i <= 3; i++) { const kk = Math.max(0, k - i * 0.07); const tx = p.x + (p.tx - p.x) * kk, ty = p.y + (p.ty - p.y) * kk - Math.sin(kk * Math.PI) * arc; ctx.globalAlpha = 0.35 - i * 0.1; ctx.fillStyle = p.color || '#fff'; ctx.beginPath(); ctx.arc(tx, ty, 4 - i, 0, Math.PI * 2); ctx.fill(); }
+        ctx.globalAlpha = 1;
+      }
       ctx.save(); ctx.translate(Math.round(x), Math.round(y));
       switch (p.kind) {
         case 'paper': ctx.rotate(k * 6); ctx.fillStyle = '#fff'; ctx.fillRect(-6, -8, 12, 16); ctx.fillStyle = p.color; ctx.fillRect(-4, -5, 8, 2); ctx.fillRect(-4, -1, 6, 2); ctx.fillRect(-4, 3, 8, 2); break;

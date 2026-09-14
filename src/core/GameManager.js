@@ -6,6 +6,7 @@ import {
 import { HERO_BY_ID, GRADES, SKILLS, TRAITS, heroBaseStats, MAIN_ID, MAIN_JOBS } from '../data/heroes.js';
 import { pullOnce, promoteCost } from './GachaManager.js';
 import { createInitialState } from './state.js';
+import { stageModifier } from '../data/stages.js';
 import { EntityManager } from './EntityManager.js';
 import * as Quests from './QuestManager.js';
 import * as Achievements from './AchievementManager.js';
@@ -91,13 +92,17 @@ export class GameManager extends Emitter {
     const star = Math.max(1, entry.star);
     const skillUnlocked = isMain ? def.tier >= BALANCE.MAIN_SKILL_TIER : entry.star >= BALANCE.SKILL_UNLOCK_STAR;
     const boosted = isMain ? def.tier >= BALANCE.MAIN_SKILL_BOOST_TIER : entry.star >= BALANCE.SKILL_BOOST_STAR;
-    const skillPower = boosted ? BALANCE.SKILL_BOOST_MULT : 1;
+    const awakened = !!entry.awakened;
+    const skillPower = (boosted ? BALANCE.SKILL_BOOST_MULT : 1) * (awakened ? BALANCE.AWAKEN.skill : 1);
+    const awakenCost = BALANCE.AWAKEN.cards[def.grade];
     const nextCost = isMain ? null : promoteCost(def.grade, star);
     const eCost = enhanceCost(entry.enhance);
     const view = {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
-      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus())),
-      hp: heroHP(base.hp, entry.level, star, this.hpBonus(), entry.enhance),
+      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus()) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1)),
+      hp: Math.floor(heroHP(base.hp, entry.level, star, this.hpBonus(), entry.enhance) * (awakened ? 1 + BALANCE.AWAKEN.hp : 1)),
+      awakened, traitMult: awakened ? BALANCE.AWAKEN.trait : 1, awakenCost,
+      canAwaken: !isMain && entry.owned && !awakened && star >= BALANCE.AWAKEN.star && this.state.cards >= awakenCost,
       interval: base.interval, range: base.range,
       cost: upgradeCost(entry.level),
       inParty: this.state.party.includes(id),
@@ -198,6 +203,17 @@ export class GameManager extends Emitter {
     this.entities.refreshHeroStats(); this.entities.levelUpFx(id);
     this.log(`${v.def.name} ${'★'.repeat(v.entry.star)} 승급`, 'info');
     this.emit('roster');
+    return true;
+  }
+
+  /** 각성: a ★5 card becomes permanently stronger (gold frame). */
+  awaken(id) {
+    const v = this.heroView(id);
+    if (!v.canAwaken) return false;
+    this.state.cards -= v.awakenCost; v.entry.awakened = true; this.state.stats.awakens = (this.state.stats.awakens ?? 0) + 1;
+    this.entities.refreshHeroStats(); this.entities.levelUpFx(id);
+    this.log(`${v.def.name} 각성! ATK/HP +25%, 특성 ×1.5, 스킬 ×1.25`, 'stage');
+    this.emit('cards'); this.emit('roster'); this.emit('sfx', 'prestige');
     return true;
   }
 
@@ -363,7 +379,7 @@ export class GameManager extends Emitter {
       this.emit('cards'); this.emit('gems');
       return;
     }
-    const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1));
+    const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1) * (stageModifier(s.stage)?.gold ?? 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
     Quests.addProgress(s, 'kills', 1);
     this.entities.coinBurst(m.x, m.y, gold);

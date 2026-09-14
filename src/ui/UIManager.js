@@ -3,6 +3,7 @@ import { BALANCE, teamUpgradeCost, isBossStage, stageLabel } from '../config/bal
 import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, MAIN_ID, MAIN_TIER_TITLES } from '../data/heroes.js';
 import { stagePool, eliteChance, bossForStage } from '../data/monsters.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
+import { phaseName, stageModifier } from '../data/stages.js';
 import * as Achievements from '../core/AchievementManager.js';
 import { DAILY_QUESTS, ALL_CLEAR_BONUS } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
@@ -253,7 +254,7 @@ export class UIManager {
   #refreshStage() {
     const s = this.game.state; const g = this.game;
     const challenging = g.isChallenging(); const boss = g.bossActive();
-    $('#stage-label').textContent = g.stageLabel();
+    $('#stage-label').textContent = `${g.stageLabel()} · ${phaseName(s.stage)}`;
     const mode = $('#stage-mode');
     mode.textContent = challenging ? (boss ? '보스 도전 중' : '도전 중') : '자동 사냥';
     mode.className = `stage-mode ${challenging ? 'challenge' : 'farm'}`;
@@ -264,7 +265,8 @@ export class UIManager {
     $('#kill-bar').style.width = challenging ? `${Math.min(100, (s.kills / req) * 100)}%` : '100%';
     $('#kill-text').textContent = boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : challenging ? `${s.kills} / ${req}행 처리` : `사냥 중 · 처치 ${s.kills}`;
     const ec = eliteChance(s.stage);
-    $('#stage-hint').textContent = boss ? `${bossDef.desc} · ${BALANCE.BOSS_TIME_LIMIT}초 제한` : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
+    const mod = stageModifier(s.stage);
+    $('#stage-hint').textContent = boss ? `${bossDef.desc} · ${BALANCE.BOSS_TIME_LIMIT}초 제한` : mod ? `${mod.name}: ${mod.desc}` : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
     const next = g.nextStage();
     $('#qa-challenge-label').textContent = challenging ? '도전 중단' : `${stageLabel(next)} 도전${isBossStage(next) ? ' (보스)' : ''}`;
     this.#refreshBestiary(boss ? [bossDef] : pool);
@@ -334,7 +336,7 @@ export class UIManager {
       const c = cardCanvas(v.def, {
         star: v.star, owned: e.owned,
         title: v.isMain ? `${v.def.title} · Lv ${e.level}` : (e.owned ? `${stars(e.star)} · Lv ${e.level}` : ''),
-        sub: e.enhance ? `+${e.enhance}` : '',
+        sub: e.enhance ? `+${e.enhance}` : '', awakened: !!e.awakened,
       });
       const wrap = el('div', { class: `card ${v.inParty ? 'in-party' : ''} ${e.owned ? '' : 'locked'}`, title: `${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id) }, c);
       if (v.inParty) wrap.append(el('span', { class: 'card-badge' }, '배치'));
@@ -361,7 +363,7 @@ export class UIManager {
       el('div', { class: 'detail-stats' },
         el('div', { class: 'detail-line', html: `<b style="color:${v.grade.color}">${v.def.grade}</b> · ${ROLES[v.def.role].name}${v.isMain ? ` · ${MAIN_TIER_TITLES[v.def.tier]}` : ` · ${stars(v.star)}`}` }),
         el('div', { class: 'detail-line' }, e.owned ? `Lv ${e.level}  ·  강화 +${e.enhance}` : '미보유 (데이터 가져오기에서 획득)'),
-        el('div', { class: 'detail-line' }, `ATK ${fmt(v.atk)}  ·  HP ${fmt(v.hp)}  ·  공격 ${v.interval}s`),
+        el('div', { class: 'detail-line' }, `ATK ${fmt(v.atk)}  ·  HP ${fmt(v.hp)}  ·  공격 ${v.interval}s${v.awakened ? '  ·  ✦ 각성' : ''}`),
         el('div', { class: 'detail-line trait' }, `특성 · ${v.traitName}: ${v.traitDesc}`),
         el('div', { class: 'detail-line skill' }, `스킬 · ${v.skillName}: ${v.skillDesc}`, v.skillUnlocked ? '' : el('span', { class: 'muted' }, ` (${v.skillUnlockHint})`)),
         e.owned && !v.isMain ? el('div', { class: 'detail-line muted' }, `조각 ${e.shards}${v.promoteCost !== null ? ` / 다음 ★ ${v.promoteCost}` : ' (최대 ★)'}`) : null,
@@ -369,7 +371,8 @@ export class UIManager {
     const actions = el('div', { class: 'detail-actions' });
     if (e.owned) {
       actions.append(btn(v.inParty ? '파티 해제' : '파티 배치', () => g.toggleParty(id), v.inParty ? '' : 'primary', v.isMain && v.inParty && s.party.length === 1));
-      if (!v.isMain) actions.append(btn(`★ 승급 (조각 ${v.promoteCost ?? '-'})`, () => { if (!g.promote(id)) this.toast('조각이 부족합니다'); }, '', !v.canPromote));
+      if (!v.isMain) actions.append(btn(`★ 승급 (조각 ${v.promoteCost ?? '-'})`, () => this.#promoteWithDialog(id), '', !v.canPromote));
+      if (!v.isMain && v.star >= BALANCE.AWAKEN.star) actions.append(btn(v.awakened ? '각성 완료 ✦' : `✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, v.awakened ? '' : 'primary', !v.canAwaken));
       actions.append(btn(v.enhanceMaxed ? '강화 MAX' : `강화 +1 (카드 ${v.enhanceCost})`, () => { if (!g.enhance(id)) this.toast('강화 카드가 부족합니다'); }, '', !v.canEnhance));
       if (!v.isMain) {
         actions.append(btn(`조각 → 카드 (${e.shards}개 → ${e.shards * v.shardCardValue}장)`, () => g.convertShards(id), '', e.shards <= 0));
@@ -380,6 +383,37 @@ export class UIManager {
     if (v.isMain) body.append(this.#mainPromoPanel(v.mainPromo));
     body.append(el('p', { class: 'muted small' }, `보유 강화 카드: ${fmt(s.cards)}장`));
     $('#modal-actions').innerHTML = ''; $('#modal-actions').append(btn('닫기', () => this.closeModal(), 'primary'));
+  }
+  /** ★ promotion with a before/after result dialog (card, stars, ATK/HP). */
+  #promoteWithDialog(id) {
+    const g = this.game; const before = g.heroView(id);
+    const b = { star: before.star, atk: before.atk, hp: before.hp };
+    if (!g.promote(id)) { this.toast('조각이 부족합니다'); return; }
+    const v = g.heroView(id);
+    const body = el('div', { class: 'promo-result' },
+      el('div', { class: 'promo-card' }, cardCanvas(v.def, { star: v.star, title: `${stars(v.star)} · Lv ${v.entry.level}`, awakened: !!v.entry.awakened })),
+      el('div', { class: 'promo-lines' },
+        el('h4', {}, `${v.def.name} ${stars(b.star)} → ${stars(v.star)}`),
+        el('div', { class: 'detail-line' }, `ATK ${fmt(b.atk)} → `, el('b', {}, fmt(v.atk)), `  (+${Math.round((v.atk / b.atk - 1) * 100)}%)`),
+        el('div', { class: 'detail-line' }, `HP ${fmt(b.hp)} → `, el('b', {}, fmt(v.hp))),
+        v.star === BALANCE.SKILL_UNLOCK_STAR ? el('div', { class: 'detail-line skill' }, `스킬 해금: ${v.skillName}`) : null,
+        v.star === BALANCE.SKILL_BOOST_STAR ? el('div', { class: 'detail-line skill' }, `스킬 강화: 위력 ×${BALANCE.SKILL_BOOST_MULT}`) : null,
+        v.star >= BALANCE.AWAKEN.star ? el('div', { class: 'detail-line', style: 'color:#b8860b' }, `✦ 각성 가능 (강화 카드 ${v.awakenCost}장)`) : null,
+      ));
+    this.openModal('★ 승급 완료', body);
+    $('#modal-actions').innerHTML = ''; $('#modal-actions').append(btn('상세로', () => this.openDetail(id)), btn('확인', () => this.closeModal(), 'primary'));
+    this.game.emit('sfx', 'levelup');
+  }
+  #showAwaken(id) {
+    const v = this.game.heroView(id);
+    const body = el('div', { class: 'promo-result awaken' },
+      el('div', { class: 'promo-card' }, cardCanvas(v.def, { star: v.star, title: `${stars(v.star)} · Lv ${v.entry.level}`, awakened: true })),
+      el('div', { class: 'promo-lines' }, el('h4', {}, `✦ ${v.def.name} 각성!`),
+        el('div', { class: 'detail-line' }, `ATK/HP +${Math.round(BALANCE.AWAKEN.atk * 100)}% · 특성 효과 ×${BALANCE.AWAKEN.trait} · 스킬 위력 ×${BALANCE.AWAKEN.skill}`),
+        el('div', { class: 'detail-line' }, `ATK `, el('b', {}, fmt(v.atk)), ` · HP `, el('b', {}, fmt(v.hp))),
+        el('div', { class: 'detail-line muted' }, '카드에 금색 테두리가 붙고 전투 중 금빛 오라가 나옵니다.')));
+    this.openModal('각성', body);
+    $('#modal-actions').innerHTML = ''; $('#modal-actions').append(btn('상세로', () => this.openDetail(id)), btn('확인', () => this.closeModal(), 'primary'));
   }
   #mainPromoPanel(info) {
     const box = el('div', { class: 'promo-box' }, el('h4', {}, '직급 승진'));
