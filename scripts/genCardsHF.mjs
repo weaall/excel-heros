@@ -67,8 +67,22 @@ async function callGenerate(text, seed) {
   return Buffer.from(await ir.arrayBuffer());
 }
 
+/** Rebuild assets/cards/manifest.json from the files on disk: png (generated art) > svg (vector placeholder). */
+export function rebuildManifest() {
+  const outDir = new URL('../assets/cards/', import.meta.url); const cards = {};
+  for (const id of [...HEROES.map((h) => h.id), ...Object.values(MAIN_JOBS).map((j) => j.id)]) {
+    if (fs.existsSync(new URL(`${id}.png`, outDir))) cards[id] = `${id}.png`;
+    else if (fs.existsSync(new URL(`${id}.svg`, outDir))) cards[id] = `${id}.svg`;
+  }
+  fs.writeFileSync(new URL('manifest.json', outDir), JSON.stringify({ cards }, null, 2) + '\n');
+  return cards;
+}
+
 const isMain = import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`;
-if (isMain) {
+if (isMain && process.argv.includes('--manifest')) {
+  const cards = rebuildManifest();
+  console.log(`manifest: ${Object.keys(cards).length} cards (${Object.values(cards).filter((f) => f.endsWith('.png')).length} png)`);
+} else if (isMain) {
   const args = process.argv.slice(2); const force = args.includes('--force'); const ids = args.filter((a) => !a.startsWith('--'));
   const seed = Number(process.env.SEED ?? 1);
   const defs = [...HEROES.map((h) => [h.id, h, h.id]), ...Object.values(MAIN_JOBS).map((j) => [j.id, j, 'main'])].filter(([id]) => !ids.length || ids.includes(id));
