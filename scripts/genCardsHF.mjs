@@ -50,14 +50,18 @@ function colorName(hex) {
   if ((name === 'orange' || name === 'red' || name === 'blonde') && l < 0.35) return 'brown'; // dark warm tones read as brown hair, not orange
   return (l > 0.72 ? 'light ' : l < 0.3 ? 'dark ' : '') + name;
 }
-export function prompt(def, profileId) {
+/** Character description only (who / hair / accessories / outfit / role) — shared by the card and pixel-sprite prompts. */
+export function describe(def, profileId) {
   const p = PROFILES[profileId] ?? {}; const look = def.look ?? {}; const pal = def.palette ?? {};
   const who = p.gender === 'F' ? '1girl, solo' : '1boy, solo, male focus';
   const hair = look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair, ${HAIR[look.hair] ?? 'short hair'}`;
   const outfit = OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${GRADE[def.grade]}` : `${GRADE[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
   const bits = OUTFIT_BY_ID[def.id] ? '' : [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
+  return `${who}, ${hair}, ${bits ? bits + ', ' : ''}${outfit}, ${ROLE[def.role]}`;
+}
+export function prompt(def, profileId) {
   const bg = BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
-  return `${who}, ${hair}, ${bits ? bits + ', ' : ''}${outfit}, ${ROLE[def.role]}, looking at viewer, face visible, head in frame, cowboy shot, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
+  return `${describe(def, profileId)}, looking at viewer, face visible, head in frame, cowboy shot, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
 }
 
 // Optional Hugging Face token (HF_TOKEN env or a .hf_token file next to package.json, git-ignored): a logged-in
@@ -66,8 +70,8 @@ const tokenFile = new URL('../.hf_token', import.meta.url);
 const HF_TOKEN = process.env.HF_TOKEN ?? (fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : '');
 const AUTH = HF_TOKEN ? { authorization: `Bearer ${HF_TOKEN}` } : {};
 
-async function callGenerate(text, seed) {
-  const data = [text, NEG, seed, 832, 1216, 5, 28, 'Euler a', '832 x 1216', 'Anim4gine', false, 0.55, 1.5, true];
+export async function callGenerate(text, seed, { width = 832, height = 1216, style = 'Anim4gine', neg = NEG, steps = 28 } = {}) {
+  const data = [text, neg, seed, width, height, 5, steps, 'Euler a', `${width} x ${height}`, style, false, 0.55, 1.5, true];
   const r = await fetch(`${BASE}/call/generate`, { method: 'POST', headers: { 'content-type': 'application/json', ...AUTH }, body: JSON.stringify({ data }) });
   if (!r.ok) throw new Error(`call ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const { event_id } = await r.json();
