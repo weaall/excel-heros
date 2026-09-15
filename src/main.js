@@ -8,9 +8,11 @@ import { UIManager } from './ui/UIManager.js';
 import { SoundManager } from './ui/Sound.js';
 import { loadSpriteSheets } from './data/spriteSheets.js';
 import { loadPack } from './data/packSprites.js';
+import { loadCardArt } from './data/cardArt.js';
 
 // Hand-made sprite sheets (assets/sprites/manifest.json) override the procedural art when present.
-const [sheetCount, packOk] = await Promise.all([loadSpriteSheets(), loadPack()]);
+const [sheetCount, packOk, artCount] = await Promise.all([loadSpriteSheets(), loadPack(), loadCardArt()]);
+if (artCount) console.info(`[cardArt] ${artCount} illustration(s) loaded`);
 if (!packOk) console.warn('[pack] CC0 sprite pack unavailable; using procedural art');
 if (sheetCount) console.info(`[sprites] ${sheetCount} sheet(s) loaded`);
 

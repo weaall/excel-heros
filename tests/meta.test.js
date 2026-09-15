@@ -15,6 +15,7 @@ test('a treasure chest never attacks and drops cards + gems when opened', () => 
   run(g, 1.5); // let the first wave spawn
   const chest = g.entities.spawnChest(false, 0);
   assert.equal(chest.atk, 0); assert.ok(chest.def.chest && !chest.def.mimic);
+  g.checkMilestones(); // grant the lv15 milestone up front so it does not skew the chest reward check
   const cards = g.state.cards, gems = g.state.gems, hp0 = g.entities.heroes[0].hp;
   chest.hp = 1; chest.x = 470; chest.arrived = true;
   run(g, 6);

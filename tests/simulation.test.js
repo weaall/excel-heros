@@ -6,6 +6,8 @@ import { createInitialState } from '../src/core/state.js';
 import { BALANCE } from '../src/config/balance.js';
 import { MAIN_ID } from '../src/data/heroes.js';
 
+import { MILESTONES } from '../src/data/milestones.js';
+const MILESTONE_GEMS = (stage) => MILESTONES.filter((m) => m.kind === 'stage' && m.target === stage).reduce((a, m) => a + m.reward.gems, 0);
 const memSave = () => ({ saved: 0, save() { this.saved++; }, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
 const own = (s, id, level = 1) => { s.heroes[id] = { owned: true, star: 1, shards: 0, level, enhance: 0 }; };
 
@@ -51,10 +53,11 @@ test('boss timeout falls back to farming 1-9 with auto-advance off; boss kill ad
 
   const s2 = createInitialState(); s2.stage = 10; s2.maxStage = 10; s2.maxCleared = 9; s2.heroes[MAIN_ID].level = 60;
   const g2 = new GameManager({ state: s2, save: memSave() });
+  g2.checkMilestones(); const gemsBefore = g2.state.gems; // level/stage milestones are granted up front
   run(g2, 30);
   assert.equal(g2.state.stage, 11, 'boss killed -> Phase 2-1');
   assert.equal(g2.state.stats.bossKills, 1);
-  assert.equal(g2.state.gems, BALANCE.STARTING_GEMS + BALANCE.GEMS_BOSS_FIRST);
+  assert.equal(g2.state.gems, gemsBefore + BALANCE.GEMS_BOSS_FIRST + MILESTONE_GEMS(10));
 });
 
 test('farming mode: no auto-advance keeps hunting the same stage forever', () => {

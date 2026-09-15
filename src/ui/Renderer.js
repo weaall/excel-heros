@@ -7,6 +7,7 @@ import { GRADES } from '../data/heroes.js';
 import { stageLabel, BALANCE } from '../config/balance.js';
 import { bossForStage } from '../data/monsters.js';
 import { phaseTheme, phaseName, stageModifier } from '../data/stages.js';
+import { profileOf } from '../data/profiles.js';
 import { fmt } from '../utils/format.js';
 
 const TILE = 32;                       // 16px tiles drawn at 2x
@@ -31,7 +32,8 @@ export class Renderer {
       this.banner = { kind: 'clear', text: boss ? '보스 처리 완료!' : `${stageLabel(stage)} 마감!`, sub: first ? '첫 클리어 보상 지급' : '반복 클리어', t: 0, life: 1.5 };
     });
     game.on('enrage', ({ boss }) => { this.banner = { kind: 'boss', text: `${boss.def.name} 격노!`, sub: '공격력 상승 · 속도 상승 — 서둘러 마감하세요', t: 0, life: 1.6 }; });
-    game.on('ult', ({ hero }) => { this.banner = { kind: 'skill', text: hero.skillName ?? 'ULT', sub: hero.def.name, hero, t: 0, life: 1.3 }; });
+    game.on('ult', ({ hero }) => { const p = profileOf(hero.heroId); this.banner = { kind: 'skill', text: hero.skillName ?? 'ULT', sub: p?.ult ? `"${p.ult}" — ${hero.def.name}` : hero.def.name, hero, t: 0, life: 1.5 }; });
+    game.on('milestone', ({ milestone, reward }) => { this.banner = { kind: 'milestone', text: `마일스톤: ${milestone.name}`, sub: `보석 +${reward.gems}${reward.cards ? ` · 강화 카드 +${reward.cards}` : ''}`, t: 0, life: 2.2 }; });
     game.on('challenge', () => { if (!game.isChallenging() && this.banner?.kind !== 'clear') this.banner = { kind: 'farm', text: `${game.stageLabel()} 자동 사냥`, sub: '', t: 0, life: 1.2 }; });
   }
 
@@ -192,7 +194,7 @@ export class Renderer {
       const img = heroSprite(b.hero.def, 'attack', 1); ctx.imageSmoothingEnabled = false;
       ctx.drawImage(img, 60 + slide * 0.5, 80, img.width * 3, img.height * 3);
     } else {
-      const col = b.kind === 'clear' ? '#217346' : b.kind === 'challenge' ? '#1f5fa8' : '#5d6d7e';
+      const col = b.kind === 'clear' ? '#217346' : b.kind === 'challenge' ? '#1f5fa8' : b.kind === 'milestone' ? '#b7950b' : '#5d6d7e';
       ctx.fillStyle = col; ctx.globalAlpha = fade * 0.9; ctx.fillRect(slide, 150, CANVAS_W, 64);
       ctx.globalAlpha = fade; ctx.fillStyle = '#fff'; ctx.font = 'bold 28px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(b.text, CANVAS_W / 2 + slide, 174);

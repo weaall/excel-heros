@@ -12,6 +12,7 @@ import { monsterHP, monsterATK, bossHP, bossATK } from '../config/balance.js';
 import { EntityManager } from './EntityManager.js';
 import * as Quests from './QuestManager.js';
 import * as Achievements from './AchievementManager.js';
+import * as Milestones from './MilestoneManager.js';
 import { HEROES } from '../data/heroes.js';
 import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
@@ -311,6 +312,17 @@ export class GameManager extends Emitter {
   }
   achievementsClaimable() { return Achievements.claimableCount(this.state); }
 
+  /** Milestones are granted the moment they are reached (stage / main level / party level sum). */
+  checkMilestones() {
+    const granted = Milestones.grantPending(this.state);
+    for (const { milestone: m, reward } of granted) {
+      this.log(`마일스톤 달성: ${m.name} — 보석 +${reward.gems}${reward.cards ? `, 강화 카드 +${reward.cards}` : ''}`, 'stage');
+      this.emit('milestone', { milestone: m, reward });
+    }
+    if (granted.length) { this.emit('gems'); this.emit('cards'); this.emit('quests'); this.emit('sfx', 'clear'); }
+    return granted;
+  }
+
   /** True while the party is fighting to clear the current stage (vs. farming it). */
   isChallenging() { return !!this.state.challenging; }
   /** The boss only appears while challenging a boss stage; farming a boss stage spawns normal monsters. */
@@ -439,6 +451,7 @@ export class GameManager extends Emitter {
     const lucky = this.partyTraitCount('lucky') * TRAITS.lucky.value;
     const cards = first ? (Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1) * BALANCE.CARDS_FIRST_CLEAR_PER_PHASE : 0;
     s.gems += gems + lucky; s.cards += cards; s.maxCleared = Math.max(s.maxCleared, s.stage);
+    this.checkMilestones();
     Quests.addProgress(s, 'clears', 1);
     this.log(`${this.stageLabel()} 마감 +${gems + lucky} 보석${cards ? ` +${cards} 강화 카드` : ''}`, 'stage');
     s.kills = 0; s.challenging = false;
@@ -474,7 +487,7 @@ export class GameManager extends Emitter {
   tick(dt, now = Date.now()) {
     this.state.stats.playSeconds += dt;
     this.entities.update(dt);
-    this.resumeTimer += dt; if (this.resumeTimer >= 2) { this.resumeTimer = 0; this.#maybeResumeAdvance(); }
+    this.resumeTimer += dt; if (this.resumeTimer >= 2) { this.resumeTimer = 0; this.#maybeResumeAdvance(); this.checkMilestones(); }
     this.historyTimer += dt;
     if (this.historyTimer >= GameManager.HISTORY_STEP) {
       const gained = this.state.stats.totalGold - this.historyGold; this.historyGold = this.state.stats.totalGold;

@@ -38,6 +38,7 @@ export function createInitialState(now = Date.now()) {
     stats: { totalKills: 0, totalGold: 0, totalPulls: 0, bossKills: 0, bossFails: 0, playSeconds: 0, enhances: 0 },
     achievements: {},     // achievement id -> claimed tier count
     prestige: { shares: 0, count: 0 }, // 회사 이전: permanent 지분 and how many times
+    milestones: {},       // milestone id -> granted
   };
 }
 
@@ -57,6 +58,7 @@ export function migrate(raw) {
   s.stats = { ...fresh.stats, ...(raw.stats ?? {}) };
   s.achievements = { ...(raw.achievements ?? {}) };
   s.prestige = { ...fresh.prestige, ...(raw.prestige ?? {}) };
+  s.milestones = { ...(raw.milestones ?? {}) };
   s.party = (Array.isArray(raw.party) ? raw.party : fresh.party).filter((id) => s.heroes[id]?.owned).slice(0, BALANCE.PARTY_SIZE);
   if (s.party.length === 0) s.party = [MAIN_ID];
   s.heroes[MAIN_ID].owned = true;

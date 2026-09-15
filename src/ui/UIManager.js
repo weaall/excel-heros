@@ -5,6 +5,9 @@ import { stagePool, eliteChance, bossForStage } from '../data/monsters.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { phaseName, stageModifier } from '../data/stages.js';
 import * as Achievements from '../core/AchievementManager.js';
+import * as Milestones from '../core/MilestoneManager.js';
+import { MILESTONES, milestoneValue } from '../data/milestones.js';
+import { profileOf } from '../data/profiles.js';
 import { ALL_CLEAR_BONUS } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
 import { GRID } from '../core/EntityManager.js';
@@ -115,6 +118,7 @@ export class UIManager {
     canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); this.#selectCellAt(e); this.#openContextMenu(e.clientX, e.clientY, this.#entityAt(e)); });
     document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#ctx-menu')) this.closeContextMenu(); });
     document.addEventListener('contextmenu', (e) => { if (!e.target.closest('#battle') && !e.target.closest('#ctx-menu')) this.closeContextMenu(); });
+    this.game.on('milestone', ({ milestone, reward }) => this.toast(`🏁 ${milestone.name} 달성! 보석 +${reward.gems}${reward.cards ? ` · 카드 +${reward.cards}` : ''}`));
     this.game.on('history', () => { if (document.querySelector('#sheet-chart.active')) this.#drawCharts(); });
 
     $('#qa-upgrade-all').addEventListener('click', () => { const n = this.game.upgradeCheapestLoop(); this.toast(n ? `자동 합계: 업그레이드 ${n}회 적용` : '골드가 부족합니다'); });
@@ -501,6 +505,7 @@ export class UIManager {
         el('div', { class: 'detail-line', html: `<b style="color:${v.grade.color}">${v.def.grade}</b> · ${ROLES[v.def.role].name}${v.isMain ? ` · ${MAIN_TIER_TITLES[v.def.tier]}` : ` · ${stars(v.star)}`}` }),
         el('div', { class: 'detail-line' }, e.owned ? `Lv ${e.level}  ·  강화 +${e.enhance}` : '미보유 (데이터 가져오기에서 획득)'),
         el('div', { class: 'detail-line' }, `ATK ${fmt(v.atk)}  ·  HP ${fmt(v.hp)}  ·  공격 ${v.interval}s${v.awakened ? '  ·  ✦ 각성' : ''}`),
+        (() => { const p = profileOf(v.isMain ? 'main' : id); return p ? el('div', { class: 'detail-line profile' }, el('b', {}, p.nick), ` · ${p.dept}`, el('div', { class: 'bio' }, p.bio), el('div', { class: 'quote' }, `"${p.line}"`)) : null; })(),
         el('div', { class: 'detail-line trait' }, `특성 · ${v.traitName}: ${v.traitDesc}`),
         el('div', { class: 'detail-line skill' }, `스킬 · ${v.skillName}: ${v.skillDesc}`, v.skillUnlocked ? '' : el('span', { class: 'muted' }, ` (${v.skillUnlockHint})`)),
         e.owned && !v.isMain ? el('div', { class: 'detail-line muted' }, `조각 ${e.shards}${v.promoteCost !== null ? ` / 다음 ★ ${v.promoteCost}` : ' (최대 ★)'}`) : null,
@@ -596,7 +601,8 @@ export class UIManager {
     for (const r of results) {
       grid.append(el('div', { class: `card ${r.isNew ? 'new' : ''}`, onclick: () => this.openDetail(r.heroId) },
         cardCanvas(r.def, { star: this.game.state.heroes[r.heroId].star, title: r.isNew ? '신규 입사!' : `조각 +${r.shards}`, sub: r.guaranteed ? '보장' : '' }),
-        r.isNew ? el('span', { class: 'card-badge new' }, 'NEW') : null));
+        r.isNew ? el('span', { class: 'card-badge new' }, 'NEW') : null,
+        r.isNew && profileOf(r.heroId) ? el('div', { class: 'card-quote' }, `"${profileOf(r.heroId).line}"`) : null));
     }
     body.append(grid);
     this.openModal('데이터 가져오기 — 완료', body);
@@ -620,12 +626,25 @@ export class UIManager {
     const all = Quests.allQuestsClaimed(s);
     $('#btn-allclear').disabled = !all || s.daily.allClearClaimed;
     $('#allclear-text').textContent = s.daily.allClearClaimed ? '오늘의 전체 완료 보너스를 받았습니다.' : `모든 업무 완료 시 보석 ${ALL_CLEAR_BONUS.gems} + 강화 카드 ${ALL_CLEAR_BONUS.cards}`;
-    this.#refreshAchievements();
+    this.#refreshAchievements(); this.#refreshMilestones();
     const left = g.adsLeft();
     $('#ad-left').textContent = `오늘 남은 광고 ${left} / ${BALANCE.AD.perDay}회`;
     $('#btn-ad-instant').disabled = left <= 0;
   }
 
+  #refreshMilestones() {
+    const s = this.game.state; const tbody = $('#ms-table tbody'); if (!tbody) return; tbody.innerHTML = '';
+    $('#ms-count').textContent = `${Milestones.claimedCount(s)} / ${MILESTONES.length}`;
+    for (const m of Milestones.upcoming(s)) {
+      const v = milestoneValue(s, m);
+      tbody.append(el('tr', {}, el('td', { class: 'name' }, m.name, el('div', { class: 'sub' }, m.desc)),
+        el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${Math.min(96, Math.round((v / m.target) * 96))}%` }), el('span', {}, `${fmt(v)} / ${fmt(m.target)}`)),
+        el('td', { class: 'small' }, `보석 ${m.reward.gems}${m.reward.cards ? ` · 카드 ${m.reward.cards}` : ''}`),
+        el('td', { class: 'small muted' }, '도달 시 자동 지급')));
+    }
+    const recent = MILESTONES.filter((m) => Milestones.isClaimed(s, m.id)).slice(-3).reverse();
+    for (const m of recent) tbody.append(el('tr', { class: 'claimed' }, el('td', { class: 'name' }, m.name, el('div', { class: 'sub' }, m.desc)), el('td', { class: 'num' }, '완료'), el('td', { class: 'small' }, `보석 ${m.reward.gems}${m.reward.cards ? ` · 카드 ${m.reward.cards}` : ''}`), el('td', { class: 'small muted' }, '지급됨')));
+  }
   #refreshAchievements() {
     const s = this.game.state; const g = this.game;
     const tbody = $('#ach-table tbody'); tbody.innerHTML = '';

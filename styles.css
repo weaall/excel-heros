@@ -263,6 +263,10 @@ body.stealth #roster-table { display: table; }
 .detail-stats { flex: 1; min-width: 0; }
 .detail-line { margin: 3px 0; font-size: 12.5px; }
 .detail-line.skill { color: #6c3483; }
+.detail-line.profile { margin: 6px 0 8px; padding: 6px 8px; background: #fafafa; border-left: 3px solid var(--xl-green); }
+.detail-line.profile .bio { color: #444; margin-top: 2px; }
+.detail-line.profile .quote { color: #6b6b6b; font-style: italic; margin-top: 3px; }
+.card-quote { font-size: 10.5px; color: #555; font-style: italic; text-align: center; margin-top: 3px; line-height: 1.3; }
 .detail-line.trait { color: #1f5fa8; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
 .promo-result { display: flex; gap: 16px; align-items: center; padding: 6px 2px; }
