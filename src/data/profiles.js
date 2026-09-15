@@ -29,6 +29,12 @@ export const PROFILES = {
   pm_lead:     { nick: '기획의 요정',      dept: '기획팀',       gender: 'F', bio: '한 장의 기획서로 팀 전체의 방향을 잡는다. 종이 서류가 그녀의 무기.', line: '킥오프는 내일 10시입니다.', ult: '전 부서 기획 배포!' },
   design_lead: { nick: '픽셀의 마법사',    dept: '디자인팀',     gender: 'F', bio: '1px의 오차도 허락하지 않는다. 손이 빠른 힐러.', line: '여백이 더 필요해요. 2px만.', ult: '전사 UI 리디자인!' },
   cmo:         { nick: '트렌드의 감각',    dept: '마케팅본부',   gender: 'F', bio: '캠페인 하나로 시장을 뒤집는다. 광역으로 시선을 끄는 천재.', line: '지금 이거, 다음 주에 유행할 거예요.', ult: '바이럴 캠페인 전개!' },
+  intern_seo:  { nick: '행운의 인턴',      dept: '경영지원본부', gender: 'F', bio: '입사 첫날 복사기를 고쳤다. 뽑기 운이 좋아 팀 마스코트가 되었다.', line: '오늘도 잘 부탁드립니다!', ult: '인턴의 기적, 전부 회신!' },
+  pr_yoo:      { nick: '보도자료 스프린터', dept: '홍보팀',       gender: 'F', bio: '보도자료를 10분에 한 장 쓴다. 발이 빠르고 손이 더 빠르다.', line: '기사 나갔어요, 확인해 보세요!', ult: '전 매체 동시 배포!' },
+  nurse_han:   { nick: '의무실의 천사',    dept: '사내 의무실',  gender: 'F', bio: '야근하는 사람의 혈압을 재고 비타민을 쥐여준다. 회복 담당.', line: '무리하지 마세요. 앉으세요, 잠깐.', ult: '전원 건강검진!' },
+  lab_park:    { nick: '데이터의 마법사',  dept: '연구소',       gender: 'F', bio: '수식 하나로 매출을 예측한다. 은빛 머리는 밤샘의 증거.', line: '가설은 세 개, 결론은 하나.', ult: '전 변수 회귀 분석!' },
+  chro:        { nick: '사람을 살리는 임원', dept: '인사본부',   gender: 'F', bio: '조직의 상처를 먼저 본다. 그녀의 한마디에 팀이 다시 뛴다.', line: '사람이 먼저입니다.', ult: '전사 웰니스 선포!' },
+  chairwoman:  { nick: '이사장',           dept: '이사회',       gender: 'F', bio: '은발의 이사장. 회장 옆에서 40년, 이제 회사를 지키는 방패.', line: '결정은 이사회가 합니다.', ult: '이사회 결의, 전원 정지!' },
   founder:     { nick: '창업자',           dept: '이사회',       gender: 'M', bio: '차고에서 시작해 회사를 만든 사람. 코드와 치명타로 말한다.', line: '처음엔 컴퓨터 한 대였죠.', ult: '피벗! 다시 시작이다!' },
 };
 export const profileOf = (id) => PROFILES[id] ?? null;

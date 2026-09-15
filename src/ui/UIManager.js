@@ -473,15 +473,22 @@ export class UIManager {
   // -------------------------------------------------------------- cards --
   #rosterOrder() {
     const s = this.game.state;
-    const rank = (id) => { const e = s.heroes[id]; const g = GRADE_ORDER.indexOf(this.game.heroDef(id).grade); return (this.game.isFavorite(id) ? 200 : 0) + (e.owned ? 100 : 0) + g; };
+    // grade first (S → D), then favourites, then owned — so the grid reads as grade sections
+    const rank = (id) => { const e = s.heroes[id]; const g = GRADE_ORDER.indexOf(this.game.heroDef(id).grade); return g * 1000 + (this.game.isFavorite(id) ? 200 : 0) + (e.owned ? 100 : 0); };
     return [MAIN_ID, ...HEROES.map((h) => h.id).sort((a, b) => rank(b) - rank(a))];
   }
   #buildCards() {
     const grid = $('#card-grid'); grid.innerHTML = '';
     const tbody = $('#roster-table tbody'); tbody.innerHTML = '';
     const maxAtk = Math.max(1, ...this.#rosterOrder().filter((id) => this.game.state.heroes[id].owned).map((id) => this.game.heroView(id).atk));
+    let currentGrade = null;
     for (const id of this.#rosterOrder()) {
       const v = this.game.heroView(id); const e = v.entry;
+      if (!v.isMain && v.def.grade !== currentGrade) { // grade section header (S → D), like grouped rows in a sheet
+        currentGrade = v.def.grade;
+        const all = HEROES.filter((h) => h.grade === currentGrade), owned = all.filter((h) => this.game.state.heroes[h.id].owned).length;
+        grid.append(el('div', { class: 'grade-section', style: `--gc:${v.grade.color}; --gb:${v.grade.bg}` }, el('b', {}, `${currentGrade} · ${v.grade.label}`), el('span', { class: 'muted small' }, ` 보유 ${owned} / ${all.length} · 확률 ${Math.round(v.grade.rate * 100)}%`)));
+      }
       const c = cardCanvas(v.def, {
         star: v.star, owned: e.owned,
         title: v.isMain ? `${v.def.title} · Lv ${e.level}` : (e.owned ? `${stars(e.star)} · Lv ${e.level}` : ''),
