@@ -271,6 +271,47 @@ export class Renderer {
           for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, rr = i % 2 ? r : R; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
           ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); break;
         }
+        case 'stamp': { // 결재 도장: slams down (scale 1.6 → 1), then fades — red office stamp with the text
+          const slam = Math.min(1, k / 0.25), sc = 1.6 - 0.6 * slam, a = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4;
+          ctx.save(); ctx.translate(Math.round(f.x), Math.round(f.y)); ctx.rotate(-0.18); ctx.scale(sc, sc); ctx.globalAlpha = a * 0.95;
+          const col = f.color ?? '#c0392b'; ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.strokeRect(-24, -13, 48, 26); ctx.strokeRect(-20, -9, 40, 18);
+          ctx.fillStyle = col; ctx.font = 'bold 13px "Malgun Gothic", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(f.text ?? '결재', 0, 1);
+          ctx.restore(); break;
+        }
+        case 'papers': { // 서류 폭풍: sheets fan out from the caster over the enemy line, tumbling
+          const n = f.n ?? 10; ctx.save();
+          for (let i = 0; i < n; i++) {
+            const seed = (i * 7919) % 97 / 97, ang = -0.5 + seed * 1.0, spd = 0.6 + ((i * 31) % 13) / 13 * 0.8;
+            const x = f.x + k * (f.spread ?? 300) * spd, y = f.y + Math.sin(k * 6 + i) * 10 + ang * 60 * k + k * k * 40;
+            ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(k * 5 * (i % 2 ? 1 : -1) + seed); ctx.globalAlpha = Math.max(0, 1 - k * 1.1);
+            ctx.fillStyle = '#fdfdfd'; ctx.fillRect(-5, -6, 10, 12); ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 1; ctx.strokeRect(-5, -6, 10, 12);
+            ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-3, -3, 6, 1); ctx.fillRect(-3, 0, 6, 1); ctx.fillRect(-3, 3, 4, 1); ctx.restore();
+          }
+          ctx.restore(); break;
+        }
+        case 'grid': { // 셀 격자 낙하: a spreadsheet grid drops over the enemy area, cells lighting up in a wave
+          const cw = 24, ch = 16, cols = Math.ceil(f.w / cw), rows = Math.ceil(f.h / ch), drop = Math.min(1, k / 0.3), y0 = f.y - (1 - drop) * 60;
+          ctx.save(); ctx.globalAlpha = (k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3) * 0.9; ctx.strokeStyle = f.color ?? '#8e44ad'; ctx.lineWidth = 1;
+          for (let c = 0; c <= cols; c++) { ctx.beginPath(); ctx.moveTo(Math.round(f.x + c * cw) + 0.5, Math.round(y0)); ctx.lineTo(Math.round(f.x + c * cw) + 0.5, Math.round(y0 + rows * ch)); ctx.stroke(); }
+          for (let r = 0; r <= rows; r++) { ctx.beginPath(); ctx.moveTo(Math.round(f.x), Math.round(y0 + r * ch) + 0.5); ctx.lineTo(Math.round(f.x + cols * cw), Math.round(y0 + r * ch) + 0.5); ctx.stroke(); }
+          const wave = k * (cols + rows); ctx.fillStyle = f.color ?? '#8e44ad';
+          for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const d = wave - (c + r); if (d > 0 && d < 3) { ctx.globalAlpha = (1 - d / 3) * 0.55; ctx.fillRect(Math.round(f.x + c * cw) + 1, Math.round(y0 + r * ch) + 1, cw - 1, ch - 1); } }
+          ctx.restore(); break;
+        }
+        case 'chart': { // 실적 차트: four bars shoot up above the hero (buff)
+          const hs = [14, 22, 18, 30], cols = ['#27ae60', '#2ecc71', '#1e8449', '#f1c40f'];
+          ctx.save(); ctx.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3; ctx.translate(Math.round(f.x) - 14, Math.round(f.y) - k * 12);
+          ctx.fillStyle = '#2c3e50'; ctx.fillRect(-2, 0, 32, 1);
+          for (let i = 0; i < 4; i++) { const hgt = Math.round(hs[i] * Math.min(1, k * 1.6 - i * 0.12)); if (hgt > 0) { ctx.fillStyle = cols[i]; ctx.fillRect(i * 8, -hgt, 6, hgt); } }
+          ctx.restore(); break;
+        }
+        case 'coffee': { // 커피 수혈: a cup with rising steam above a healed hero
+          ctx.save(); ctx.globalAlpha = k < 0.6 ? 1 : 1 - (k - 0.6) / 0.4; ctx.translate(Math.round(f.x), Math.round(f.y) - k * 10);
+          ctx.fillStyle = '#6d4c41'; ctx.fillRect(-7, 0, 14, 11); ctx.fillStyle = '#fff'; ctx.fillRect(-7, 0, 14, 2); ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2; ctx.strokeRect(7, 3, 4, 5);
+          ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5;
+          for (let i = -1; i <= 1; i++) { ctx.beginPath(); for (let j = 0; j <= 4; j++) { const yy = -2 - j * 3 - k * 10, xx = i * 4 + Math.sin(k * 8 + j + i) * 2; if (j) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); } ctx.stroke(); }
+          ctx.restore(); break;
+        }
         case 'muzzle': { ctx.globalAlpha = 1 - k; ctx.fillStyle = f.color; ctx.fillRect(f.x, f.y - 3, 10 + k * 8, 6); ctx.fillStyle = '#fff'; ctx.fillRect(f.x + 2, f.y - 1, 6, 2); ctx.globalAlpha = 1; break; }
         case 'stars': {
           ctx.fillStyle = f.color; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

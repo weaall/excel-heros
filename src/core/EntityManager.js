@@ -396,26 +396,29 @@ export class EntityManager {
   #castSkill(h, target, monsters, heroes) {
     const { type, power } = h.skill; const boost = h.skillPower;
     switch (type) {
-      case 'strike': this.fx('slash', { x: target.x, y: target.y - 6, color: '#f1c40f', angle: -0.3, life: 0.25, big: true }); this.shake = Math.max(this.shake, 4); this.#heroHit(h, target, power * boost, true); break;
+      case 'strike': this.fx('slash', { x: target.x, y: target.y - 6, color: '#f1c40f', angle: -0.3, life: 0.25, big: true }); this.fx('stamp', { x: target.x, y: target.y - 30, life: 0.7, text: '결재' }); this.shake = Math.max(this.shake, 4); this.#heroHit(h, target, power * boost, true); break;
       case 'sweep':
         this.fx('ring', { x: h.x, y: h.y, color: '#f1c40f', radius: 420, life: 0.45 }); this.shake = Math.max(this.shake, 6);
+        this.fx('papers', { x: h.x + 40, y: h.y - 30, n: 14, spread: 420, life: 0.9 });
         for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#f1c40f', angle: 0.4, life: 0.25 }); this.#heroHit(h, m, power * boost, true); }
         break;
       case 'ult':
         this.game.emit('ult', { hero: h }); this.flashT = 0.18;
         this.fx('ring', { x: h.x, y: h.y, color: '#8e44ad', radius: 460, life: 0.6 }); this.shake = Math.max(this.shake, 10);
+        { const xs = monsters.map((m) => m.x); const x0 = xs.length ? Math.min(...xs) - 40 : h.x + 60, x1 = xs.length ? Math.max(...xs) + 40 : h.x + 400; this.fx('grid', { x: x0, y: h.y - 70, w: Math.max(120, x1 - x0), h: 96, life: 0.9, color: '#8e44ad' }); }
+        for (const m of monsters) this.fx('stamp', { x: m.x, y: m.y - 34, life: 0.8, text: '반려', color: '#8e44ad' });
         for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: -0.6, life: 0.3, big: true }); this.#heroHit(h, m, power * boost, true); if (m.alive) { m.stun = Math.max(m.stun, 2); this.fx('stars', { x: m.x, y: m.y - 44, color: '#f1c40f', life: 2 }); } }
         break;
       case 'buff':
         this.atkBuff = { mult: Math.max(this.atkBuff.mult, 1 + (power * boost) / 100), until: this.time + 5 };
-        for (const a of heroes) this.fx('ring', { x: a.x, y: a.y + 20, color: '#f39c12', radius: 40, life: 0.5 });
+        for (const a of heroes) { this.fx('ring', { x: a.x, y: a.y + 20, color: '#f39c12', radius: 40, life: 0.5 }); this.fx('chart', { x: a.x, y: a.y - 46, life: 0.9 }); }
         break;
       case 'heal':
         for (const a of heroes) {
           const amt = Math.round(a.maxHp * (power * boost) / 100);
           a.hp = Math.min(a.maxHp, a.hp + amt);
           this.floaters.push({ x: a.x, y: a.y - 40, text: `+${amt}`, color: '#27ae60', t: 0 });
-          this.fx('sparkle', { x: a.x, y: a.y, color: '#2ecc71', n: 8 });
+          this.fx('sparkle', { x: a.x, y: a.y, color: '#2ecc71', n: 8 }); this.fx('coffee', { x: a.x, y: a.y - 54, life: 1.0 });
         }
         break;
     }
