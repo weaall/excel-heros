@@ -4,6 +4,7 @@
 // built once per hero into a 9-frame strip (idle 4 · run 4 · hit 1) at native 16×28 and cached.
 
 import { ART_PALETTES } from './artPalettes.js';
+import { ART_HEADS, HEAD_W, HEAD_H } from './artHeads.js';
 
 /** Base rows on the sheet: colour clusters + anchors (x, y in the 16×28 frame, frame 0). */
 export const BASES = {
@@ -88,11 +89,30 @@ export function buildHeroStrip(sheet, def, entry) {
     const key = '#' + [px[i], px[i + 1], px[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
     const t = map.get(key); if (t) { px[i] = t[0]; px[i + 1] = t[1]; px[i + 2] = t[2]; }
   }
-  // accessories per frame, shifted with the frame's bob
+  // head swap: the illustration's pixelised head (hair + face) replaces the base head so the silhouette matches the art
+  // Disabled: pixelising the illustration head by face-detection produced broken heads (unreliable face box).
+  // Kept behind a flag until a better source (AI-generated pixel sprites) exists.
+  const USE_ART_HEADS = false;
+  const head = USE_ART_HEADS ? ART_HEADS[def.id] : null;
   const base0 = topRow(px, 0);
+  if (head) {
+    const hx0 = b.eye[0] - 5, hy1 = b.chin + 1;                       // head box on the base: 12 wide, bottom at the chin
+    for (let f = 0; f < FRAMES; f++) {
+      const dy = topRow(px, f) - base0;
+      // clear the base head area (hair, face, helmet) above the shoulders
+      for (let y = 0; y < hy1 + dy; y++) for (let x = hx0 - 1; x < hx0 + HEAD_W + 1; x++) { if (x < 0 || x >= FW || y < 0) continue; const i = ((y * FW * FRAMES) + f * FW + x) * 4; if (y < b.top + dy - 3) continue; px[i + 3] = 0; }
+      for (let y = 0; y < HEAD_H; y++) for (let x = 0; x < HEAD_W; x++) {
+        const s = (y * HEAD_W + x) * 4; if (head.px[s + 3] === 0) continue;
+        const tx = hx0 + x, ty = hy1 - HEAD_H + y + dy; if (tx < 0 || tx >= FW || ty < 0 || ty >= FH) continue;
+        const i = ((ty * FW * FRAMES) + f * FW + tx) * 4; px[i] = head.px[s]; px[i + 1] = head.px[s + 1]; px[i + 2] = head.px[s + 2]; px[i + 3] = 255;
+      }
+    }
+  }
+  // accessories per frame, shifted with the frame's bob (skipped when the illustration head is used — it already has them)
   const rgbPal = { H: hexToRgb(pal.H ?? '#3b2a1a'), W: hexToRgb(pal.W ?? '#ffffff'), P: pal.P ? hexToRgb(pal.P) : null };
   // helmeted bases (no visible skin) skip facial hair — a beard on a visor reads wrong
-  const kinds = [look.acc, look.acc2, PROPS[look.prop] ?? null].filter((k) => k && ACCESSORIES[k] && !(!b.skin && (k === 'beard' || k === 'mustache')));
+  const HEAD_ACC = new Set(['glasses', 'sunglasses', 'headset', 'crown', 'hardhat', 'cap', 'beard', 'mustache', 'flower', 'earring']);
+  const kinds = [look.acc, look.acc2, PROPS[look.prop] ?? null].filter((k) => k && ACCESSORIES[k] && !(!b.skin && (k === 'beard' || k === 'mustache')) && !(head && HEAD_ACC.has(k)));
   for (let f = 0; f < FRAMES; f++) {
     const dy = topRow(px, f) - base0;
     const put = (x, y, rgb) => { if (x < 0 || x >= FW || y < 0 || y >= FH) return; const i = ((y * FW * FRAMES) + f * FW + x) * 4; px[i] = rgb[0]; px[i + 1] = rgb[1]; px[i + 2] = rgb[2]; px[i + 3] = 255; };
