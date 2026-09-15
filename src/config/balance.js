@@ -88,11 +88,15 @@ export const BALANCE = Object.freeze({
   MAIN_SKILL_TIER: 1,       // job tier at which the main hero's skill unlocks (사원)
   MAIN_SKILL_BOOST_TIER: 3, // 과장
 
+  // 회사 업그레이드 buff the whole party at once, so they cost far more than a single hero level (base ×8, steeper growth):
+  // 커피 Lv30 ≈ 660k gold ≈ one hero at Lv 100; 의자 Lv 100 ≈ 3e12 (late game sink).
   TEAM_UPGRADES: {
-    coffee:  { name: '커피 머신',   desc: '공격 속도 +2% / Lv', per: 0.02, base: 50, growth: 1.25, max: 50 },
-    payroll: { name: '성과급 제도', desc: '골드 획득 +5% / Lv', per: 0.05, base: 50, growth: 1.25, max: 100 },
-    chairs:  { name: '인체공학 의자', desc: '파티 HP +5% / Lv', per: 0.05, base: 40, growth: 1.22, max: 100 },
+    coffee:  { name: '커피 머신',     desc: '파티 공격 속도 +2% / Lv',        per: 0.02,  base: 400, growth: 1.28, max: 50 },
+    payroll: { name: '성과급 제도',   desc: '처치 시 보석 드롭 확률 +0.1% / Lv', per: 0.001, base: 300, growth: 1.28, max: 50, unit: 'pct' },
+    chairs:  { name: '인체공학 의자', desc: '파티 HP +5% / Lv',               per: 0.05,  base: 300, growth: 1.26, max: 100 },
   },
+  // 보석 드롭: every non-boss kill may drop a gem (elites drop more). Base chance + 성과급 제도 levels.
+  GEM_DROP: { base: 0.005, amount: 1, eliteMult: 3 },
 
   SAVE_INTERVAL_MS: 10_000,
 });

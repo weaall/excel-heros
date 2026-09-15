@@ -90,7 +90,7 @@ test('challenge button: start, clear, cancel, and failure returns to farming', (
 });
 
 test('player actions: upgrade, team upgrade, pull, promote, party toggle', () => {
-  const s = createInitialState(); s.gold = 10_000; s.gems = 5_000;
+  const s = createInitialState(); s.gold = 100_000; s.gems = 5_000;
   const g = new GameManager({ state: s, save: memSave() });
   assert.ok(g.upgradeHero(MAIN_ID));
   assert.equal(g.state.heroes[MAIN_ID].level, 2);

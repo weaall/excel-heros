@@ -43,7 +43,7 @@ export class GameManager extends Emitter {
 
   // ------------------------------------------------------------- derived --
   stageLabel() { return stageLabel(this.state.stage); }
-  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus() + this.synergy().perks.gold; }
+  goldMult() { return 1 + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus() + this.synergy().perks.gold; }
   /** Permanent bonus from 지분 (prestige shares): +3% ATK and gold each. */
   prestigeBonus() { return (this.state.prestige?.shares ?? 0) * BALANCE.PRESTIGE.bonusPerShare; }
   prestigeInfo() {
@@ -108,6 +108,8 @@ export class GameManager extends Emitter {
   }
   partyTraitCount(trait) { return this.state.party.filter((id) => this.heroDef(id).trait === trait).length; }
   speedMult() { return 1 + teamUpgradeBonus('coffee', this.state.team.coffee); }
+  /** Chance that a normal kill drops a gem: base + 성과급 제도. */
+  gemDropChance() { return BALANCE.GEM_DROP.base + teamUpgradeBonus('payroll', this.state.team.payroll); }
   hpBonus() { return teamUpgradeBonus('chairs', this.state.team.chairs); }
   isMain(id) { return id === MAIN_ID; }
   mainJob() { return MAIN_JOBS[this.state.main.job] ?? MAIN_JOBS.intern; }
@@ -534,6 +536,12 @@ export class GameManager extends Emitter {
     this.#recordKill(m);
     Quests.addProgress(s, 'kills', 1); if (m.elite) Quests.addProgress(s, 'elite', 1);
     this.entities.coinBurst(m.x, m.y, gold);
+    if (!m.isBoss && this.rng.next() < this.gemDropChance()) { // 보석 드롭 (성과급 제도)
+      const drop = BALANCE.GEM_DROP.amount * (m.elite ? BALANCE.GEM_DROP.eliteMult : 1);
+      s.gems += drop; s.stats.gemDrops = (s.stats.gemDrops ?? 0) + drop;
+      this.entities.floaters.push({ x: m.x, y: m.y - 64, text: `보석 +${drop}`, color: '#5dade2', t: 0, big: m.elite });
+      this.emit('gems');
+    }
     if (this.overtime) { this.overtime.kills++; if (m.elite) this.overtime.elites++; this.emit('overtime'); this.emit('gold'); return; }
     if (m.isBoss) {
       s.stats.bossKills++; Quests.addProgress(s, 'boss', 1);

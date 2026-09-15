@@ -51,3 +51,25 @@ test('estimateGoldPerSec caps kill rate at MAX_MONSTERS/sec', () => {
   const gps = estimateGoldPerSec(1, 1e12, 1);
   assert.ok(gps <= baseGold(1) * BALANCE.MAX_MONSTERS + 1e-9);
 });
+
+test('회사 업그레이드: payroll raises gem drop chance (not gold), team costs dwarf a single hero level', async () => {
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { createInitialState } = await import('../src/core/state.js');
+  const { teamUpgradeCost, upgradeCost, BALANCE } = await import('../src/config/balance.js');
+  const g = new GameManager({ state: createInitialState(), save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+  const gold0 = g.goldMult(), chance0 = g.gemDropChance();
+  assert.equal(chance0, BALANCE.GEM_DROP.base);
+  g.state.team.payroll = 20;
+  assert.equal(g.goldMult(), gold0, 'payroll no longer touches gold');
+  assert.ok(Math.abs(g.gemDropChance() - (BALANCE.GEM_DROP.base + 20 * BALANCE.TEAM_UPGRADES.payroll.per)) < 1e-9);
+  // drops actually happen and are counted; elites drop ×3
+  g.state.team.payroll = BALANCE.TEAM_UPGRADES.payroll.max; g.state.stage = 3; g.state.challenging = false;
+  const gems0 = g.state.gems; let n = 0;
+  for (let i = 0; i < 2000; i++) g.onMonsterKilled({ def: { id: 'circ:0', name: 'x' }, x: 0, y: 0, isBoss: false, elite: i % 2 === 0 });
+  n = g.state.gems - gems0; const p = g.gemDropChance(), expected = 2000 * p * (1 + BALANCE.GEM_DROP.eliteMult) / 2 * BALANCE.GEM_DROP.amount;
+  assert.ok(n > expected * 0.6 && n < expected * 1.4, `drops ${n} vs expected ≈ ${expected}`);
+  assert.equal(g.state.stats.gemDrops, n);
+  // cost scale: coffee Lv 30 ≈ a hero at Lv 100; every team upgrade at Lv 0 costs more than a Lv 30 hero level
+  assert.ok(teamUpgradeCost('coffee', 30) > upgradeCost(95) && teamUpgradeCost('coffee', 30) < upgradeCost(110));
+  for (const k of Object.keys(BALANCE.TEAM_UPGRADES)) assert.ok(teamUpgradeCost(k, 0) > upgradeCost(30), k);
+});

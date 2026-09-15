@@ -489,7 +489,7 @@ export class UIManager {
     const s = this.game.state;
     for (const [key, row] of this.teamRows) {
       const lvl = s.team[key], t = BALANCE.TEAM_UPGRADES[key], maxed = lvl >= t.max, cost = teamUpgradeCost(key, lvl);
-      if (!light) { $('.lvl', row).textContent = `${lvl}/${t.max}`; $('.cost', row).textContent = maxed ? 'MAX' : fmt(cost); }
+      if (!light) { $('.lvl', row).textContent = `${lvl}/${t.max}`; $('.cost', row).textContent = maxed ? 'MAX' : fmt(cost); const sub = $('.sub', row); if (sub) sub.textContent = key === 'payroll' ? `${t.desc} · 현재 ${(this.game.gemDropChance() * 100).toFixed(1)}% (엘리트 ×${BALANCE.GEM_DROP.eliteMult})` : key === 'coffee' ? `${t.desc} · 현재 +${Math.round((this.game.speedMult() - 1) * 100)}%` : `${t.desc} · 현재 +${Math.round(this.game.hpBonus() * 100)}%`; }
       $('.up', row).disabled = maxed || s.gold < cost;
     }
   }
@@ -924,7 +924,8 @@ export class UIManager {
       ['몬스터 HP', '=FLOOR(50 * 1.18 ^ (Stage - 1))'],
       ['몬스터 ATK', '=FLOOR(1 * 1.13 ^ (Stage - 1))'],
       ['엘리트', `HP ×${BALANCE.ELITE.hp} · ATK ×${BALANCE.ELITE.atk} · 골드 ×${BALANCE.ELITE.gold} (5스테이지부터 확률 증가, 최대 30%)`],
-      ['처치 골드', '=FLOOR(5 * 1.15 ^ (Stage - 1)) * (1 + 성과급 + 영업 마인드)'],
+      ['처치 골드', '=FLOOR(5 * 1.15 ^ (Stage - 1)) * (1 + 영업 마인드 + 도감 + 지분 + 부문)'],
+      ['보석 드롭', '=IF(RAND() < 0.5% + 성과급 Lv × 0.1%, 1, 0) · 엘리트 ×3'],
       ['영웅 ATK', '=FLOOR(Base * 1.10 ^ (Level - 1) * StarMult * (1 + 0.04 * 강화))'],
       ['영웅 HP', '=FLOOR(Base * 1.08 ^ (Level - 1) * StarMult * (1 + 0.04 * 강화) * (1 + 의자))'],
       ['보스', '=MonsterHP * 8   /   30초 제한, 실패 시 후퇴'],
