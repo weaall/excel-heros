@@ -68,7 +68,8 @@ export function stagePool(stage) {
   const start = (phase * 2) % MONSTER_TYPES.length;
   return [0, 1, 2].map((k) => {
     const t = MONSTER_TYPES[(start + k) % MONSTER_TYPES.length];
-    return { ...t, id: `${t.id}:${phase % PALETTES.length}`, name: `${pal.name} ${t.name}`, palette: { M: pal.M, D: pal.D, E: pal.E }, hue: (phase % PALETTES.length) * 36 };
+    // hue: the three types of a wave sit 120° apart so they read as different creatures at a glance; the phase adds a smaller shift
+    return { ...t, id: `${t.id}:${phase % PALETTES.length}`, name: `${pal.name} ${t.name}`, palette: { M: pal.M, D: pal.D, E: pal.E }, hue: ((phase % PALETTES.length) * 36 + k * 120) % 360 };
   });
 }
 

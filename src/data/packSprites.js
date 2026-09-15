@@ -66,8 +66,8 @@ const BIG = { big_zombie: [334, 34], ogre: [384, 32], big_demon: [428, 36] };
 export const MONSTER_MAP = {
   circ: 'slug', merged: 'necromancer', ref: 'imp', virus: 'chort', ghost: 'skelet', sheet: 'wogol', chart: 'muddy', hourglass: 'zombie',
   lock: 'hooded', bug: 'goblin', cloud: 'ice_zombie', cursor: 'pumpkin',
-  monkey: { tiny: 21 }, bull: { tiny: 122 }, mushroom: { tiny: 14 }, eyeball: { tiny: 5 }, hand: { tiny: 6 }, golem: { tiny: 47 }, flame: { tiny: 45 },
-  orb: { tiny: 89 }, rabbit: { tiny: 133 }, chicken: { tiny: 149 }, cat: { tiny: 116 }, rat: { tiny: 92 }, snake: { tiny: 41 }, robot: { tiny: 80 },
+  monkey: { tiny: 21 }, bull: { tiny: 122, big: true }, mushroom: { tiny: 14 }, eyeball: { tiny: 5 }, hand: { tiny: 6 }, golem: { tiny: 47, big: true }, flame: { tiny: 45 },
+  orb: { tiny: 89 }, rabbit: { tiny: 133 }, chicken: { tiny: 149 }, cat: { tiny: 116 }, rat: { tiny: 92 }, snake: { tiny: 41 }, robot: { tiny: 80, big: true },
   boss: 'big_demon', boss_zombie: 'big_zombie', boss_ogre: 'ogre',
   // props: [x, y] of frame 0 on the sheet, 16x16 frames laid out to the right
   chest: { rect: [304, 416], frames: 3 }, mimic: { rect: [304, 432], frames: 3 },
@@ -172,9 +172,13 @@ export function packMonsterFrame(mon, frame = 0, hueShift = 0) {
     [c, ctx] = canvas(64, 64);
     const sx = (spec.tiny % 10) * 16, sy = Math.floor(spec.tiny / 10) * 16;
     const bob = [0, -1, 0, 1][fi] * 2;
+    // mirrored like the 0x72 creatures so every monster faces the party on the left; "big" types draw at 3× (48px)
+    // so silhouettes differ in size as well as shape — always whole-number scales to keep pixels even
+    const sc = spec.big ? 3 : 2, size = 16 * sc;
+    ctx.save(); ctx.translate(64, 0); ctx.scale(-1, 1);
     ctx.filter = hueShift ? `hue-rotate(${hueShift}deg)` : 'none';
-    ctx.drawImage(thinTinyTile(spec.tiny, sx, sy), 0, 0, 16, 16, 16, 60 - 32 + bob - 2, 32, 32);
-    ctx.filter = 'none';
+    ctx.drawImage(thinTinyTile(spec.tiny, sx, sy), 0, 0, 16, 16, (64 - size) / 2, 58 - size + bob, size, size);
+    ctx.filter = 'none'; ctx.restore();
   } else {
     const small = SMALL[spec], big = BIG[spec];
     if (!small && !big) return null;
