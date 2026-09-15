@@ -77,6 +77,7 @@ DevTools 콘솔에서 `EH.game.state` 로 상태를 보고, `EH.game.state.gold 
 ## 배포 · 광고 · 백엔드
 
 - **배포**: 정적 파일이므로 GitHub Pages(무료)에 그대로 올라갑니다. 저장소 Settings › Pages › Branch `main` / root. 애드센스 심사와 ads.txt를 위해 커스텀 도메인을 권장합니다.
+- **호스팅 대안**: GitHub Pages 대신 **Cloudflare Pages**(무료, 상업적 이용 허용, Worker와 같은 계정)를 권장 — 대시보드에서 저장소 연결, 빌드 명령 없음, 출력 디렉터리 `/`. Vercel Hobby도 정적 배포는 되지만 약관상 비상업적 용도만 허용되어 광고를 붙이면 위반이 된다. Supabase 무료 DB는 7일 비활성 시 프로젝트가 일시 중지되어 상시 서비스에는 D1이 낫다.
 - **광고**: AdSense **H5 Games Ads**(Ad Placement API)의 보상형 광고를 `src/ui/Ads.js`가 감쌉니다. 애드센스 승인 후 `index.html`의 `window.EXCEL_HEROES_ADS.publisherId`에 `ca-pub-…`를 넣으면 "광고 보고 보상 받기" 버튼이 실제 광고를 띄우고, 비어 있으면 5초 임시 화면이 나옵니다. 광고를 다 보지 않으면 보상이 없고, 하루 횟수는 `BALANCE.AD.perDay`로 제한됩니다.
 - **백엔드(선택, 무료)**: `backend/`의 Cloudflare Worker + D1이 클라우드 저장·순위표·광고 시청 기록을 맡습니다. 배포 순서는 [backend/README.md](backend/README.md). 플레이어는 `파일 › 옵션 › 클라우드 저장`에 서버 주소와 이름을 넣으면 2분마다 자동 업로드되고, 통계_차트 시트 아래에 순위표가 뜹니다. 서버는 `src/core/plausibility.js`로 조작된 세이브를 걸러냅니다.
 
