@@ -55,6 +55,7 @@ export const BALANCE = Object.freeze({
   // 각성 (awakening): a ★5 card can be awakened with 강화 카드 — permanent +25% ATK/HP, trait ×1.5, skill ×1.25, gold frame
   AWAKEN: { star: 5, cards: { D: 60, C: 100, B: 160, A: 260, S: 400 }, atk: 0.25, hp: 0.25, trait: 1.5, skill: 1.25 },
   COMBO: { perHit: 0.005, max: 0.25, decay: 3 },
+  STAR_TRAIT_BOOST: { star: 3, mult: 1.25 }, // ★ perks: ★2 skill unlock · ★3 trait ×1.25 · ★4 skill ×1.5 · ★5 awakening (trait ×1.5, skill ×1.25) + enhance cap ★×10`,
   // 승산 forecast (calibrated with headless sims, scripts/calib): power ratio = (partyDPS/enemyHP) / (enemyDPS/partyHP)
   FORECAST: { normal: [2, 10], boss: [3, 15], bossTimeFrac: 0.9 }, // ratio at which win chance is 0% / 100%
   SAFE_ADVANCE_MIN: 0.35,   // auto-advance waits (keeps farming) while the forecast is below this

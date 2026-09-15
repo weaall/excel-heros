@@ -337,6 +337,9 @@ body.stealth #roster-table { display: table; }
 .detail-line.trait { color: #1f5fa8; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
 .level-row { display: flex; align-items: center; gap: 4px; margin: 4px 0 6px; flex-wrap: wrap; }
+.star-perks { display: flex; flex-wrap: wrap; gap: 4px; }
+.star-perks .perk { font-size: 10.5px; padding: 1px 6px; border: 1px solid #d9d9d9; color: #9a9a9a; background: #fafafa; }
+.star-perks .perk.on { color: #7d5a00; border-color: #e6c97a; background: #fff7dd; }
 .level-row .muted { margin-right: auto; }
 .xl-btn.small { padding: 2px 7px; font-size: 11px; }
 .promo-result { display: flex; gap: 16px; align-items: center; padding: 6px 2px; }

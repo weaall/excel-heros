@@ -107,7 +107,7 @@ export class GameManager extends Emitter {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
       atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus()) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1)),
       hp: Math.floor(heroHP(base.hp, entry.level, star, this.hpBonus(), entry.enhance) * (awakened ? 1 + BALANCE.AWAKEN.hp : 1)),
-      awakened, traitMult: awakened ? BALANCE.AWAKEN.trait : 1, awakenCost,
+      awakened, traitMult: awakened ? BALANCE.AWAKEN.trait : (!isMain && star >= BALANCE.STAR_TRAIT_BOOST.star ? BALANCE.STAR_TRAIT_BOOST.mult : 1), awakenCost,
       canAwaken: !isMain && entry.owned && !awakened && star >= BALANCE.AWAKEN.star && this.state.cards >= awakenCost,
       interval: base.interval, range: base.range,
       cost: upgradeCost(entry.level),

@@ -533,6 +533,9 @@ export class UIManager {
         (() => { const p = profileOf(v.isMain ? 'main' : id); return p ? el('div', { class: 'detail-line profile' }, el('b', {}, p.nick), ` · ${p.dept}`, el('div', { class: 'bio' }, p.bio), el('div', { class: 'quote' }, `"${p.line}"`)) : null; })(),
         el('div', { class: 'detail-line trait' }, `특성 · ${v.traitName}: ${v.traitDesc}`),
         el('div', { class: 'detail-line skill' }, `스킬 · ${v.skillName}: ${v.skillDesc}`, v.skillUnlocked ? '' : el('span', { class: 'muted' }, ` (${v.skillUnlockHint})`)),
+        v.isMain ? null : el('div', { class: 'detail-line star-perks' }, ...[
+          [2, `스킬 해금`], [3, `특성 ×${BALANCE.STAR_TRAIT_BOOST.mult}`], [4, `스킬 ×${BALANCE.SKILL_BOOST_MULT}`], [5, `각성 가능 (특성 ×${BALANCE.AWAKEN.trait} · 스킬 ×${BALANCE.AWAKEN.skill})`],
+        ].map(([st, label]) => el('span', { class: `perk ${v.star >= st ? 'on' : ''}`, title: `★${st}에서 ${label}` }, `★${st} ${label}`)), el('span', { class: 'perk on' }, `강화 한계 ★×10`)),
         e.owned && !v.isMain ? el('div', { class: 'detail-line muted' }, `조각 ${e.shards}${v.promoteCost !== null ? ` / 다음 ★ ${v.promoteCost}` : ' (최대 ★)'}`) : null,
       )));
     const actions = el('div', { class: 'detail-actions' });
