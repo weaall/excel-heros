@@ -11,6 +11,7 @@ export async function loadCardArt(url = 'assets/cards/manifest.json') {
     const manifest = await res.json(); const entries = Object.entries(manifest.cards ?? {});
     await Promise.all(entries.map(async ([id, spec]) => {
       const file = typeof spec === 'string' ? spec : spec.file; if (typeof spec === 'object' && spec.crop) crops.set(id, spec.crop);
+      urls.set(id, `assets/cards/${file}`);
       try {
         if (/.svg$/i.test(file)) { // SVG must go through an <img> (createImageBitmap rejects SVG blobs)
           const img = new Image(); img.decoding = 'async'; img.src = `assets/cards/${file}`; await img.decode(); art.set(id, img); return;
@@ -24,6 +25,9 @@ export async function loadCardArt(url = 'assets/cards/manifest.json') {
 }
 export const cardArt = (id) => art.get(id) ?? null;
 export const cardCrop = (id) => crops.get(id) ?? null;
+const urls = new Map();
+/** URL of the original illustration file (for full-quality <img> display / lightbox). */
+export const cardArtUrl = (id) => urls.get(id) ?? null;
 export const hasCardArt = (id) => art.has(id);
 /** Draw an illustration covering a box (object-fit: cover, anchored to the top so faces stay visible). */
 export function drawArtCover(ctx, img, x, y, w, h, crop = null) {

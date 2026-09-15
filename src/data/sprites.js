@@ -299,8 +299,9 @@ export function heroIconDataURL(def) {
 export const CARD_W = 112, CARD_H = 150;
 export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', awakened = false } = {}) {
   const g = GRADES[def.grade];
-  const c = document.createElement('canvas'); c.width = CARD_W; c.height = CARD_H;
-  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+  // rendered at 2× and displayed at CARD_W×CARD_H (CSS .card-canvas) so illustrations stay crisp on HiDPI screens
+  const c = document.createElement('canvas'); c.width = CARD_W * 2; c.height = CARD_H * 2; c.className = 'card-canvas';
+  const ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.imageSmoothingEnabled = false;
   const grad = ctx.createLinearGradient(0, 0, 0, CARD_H); grad.addColorStop(0, '#ffffff'); grad.addColorStop(1, g.bg);
   ctx.fillStyle = grad; ctx.fillRect(0, 0, CARD_W, CARD_H);
   ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1; ctx.beginPath();

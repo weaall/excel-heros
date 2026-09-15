@@ -10,6 +10,7 @@ import { MILESTONES, milestoneValue } from '../data/milestones.js';
 import { profileOf } from '../data/profiles.js';
 import { ALL_CLEAR_BONUS } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
+import { cardArtUrl } from '../data/cardArt.js';
 import { GRID } from '../core/EntityManager.js';
 import * as Quests from '../core/QuestManager.js';
 import { fmt, fmtTime, pct, stars } from '../utils/format.js';
@@ -88,6 +89,7 @@ export class UIManager {
       if (e.key !== 'Escape') return;
       e.preventDefault();
       if (!$('#ctx-menu').hidden) this.closeContextMenu();
+      else if (!$('#lightbox').hidden) this.closeLightbox();
       else if (!$('#modal').hidden) this.closeModal();
       else if (!$('#backstage').hidden) this.closeBackstage();
       else this.game.toggleExcel();
@@ -263,6 +265,13 @@ export class UIManager {
     menu.style.left = `${Math.min(x, window.innerWidth - r.width - 8)}px`; menu.style.top = `${Math.min(y, window.innerHeight - r.height - 8)}px`;
   }
   closeContextMenu() { const m = $('#ctx-menu'); if (m && !m.hidden) m.hidden = true; }
+
+  /** Full-size illustration viewer (original file, no downscaling). */
+  openLightbox(src, caption = '') {
+    const lb = $('#lightbox'); $('img', lb).src = src; $('.lb-caption', lb).textContent = caption; lb.hidden = false;
+    if (!lb.dataset.bound) { lb.dataset.bound = '1'; lb.addEventListener('click', () => this.closeLightbox()); }
+  }
+  closeLightbox() { const lb = $('#lightbox'); if (lb && !lb.hidden) { lb.hidden = true; return true; } return false; }
 
   // ---------------------------------------------------------- charts --
   /** Excel-style line chart: title, plot area with gridlines, axis labels, one or two series. */
@@ -503,7 +512,11 @@ export class UIManager {
     const id = this.detailId; const g = this.game; const v = g.heroView(id); const e = v.entry; const s = g.state;
     $('#modal-title').textContent = v.isMain ? `${v.def.name} · ${v.def.title} (메인 영웅)` : `${v.def.name} · ${v.grade.name}급 ${v.grade.label}`;
     const body = $('#modal-body'); body.innerHTML = '';
-    body.append(el('div', { class: 'detail-head' }, portraitCanvas(v.def, 3),
+    const artUrl = cardArtUrl(v.isMain ? v.def.id : id);
+    const portrait = artUrl && !/\.svg$/i.test(artUrl)
+      ? el('img', { class: 'detail-art', src: artUrl, alt: v.def.name, title: '클릭하면 원본 크기로 봅니다', onclick: () => this.openLightbox(artUrl, `${v.def.name} · ${profileOf(v.isMain ? 'main' : id)?.nick ?? ''}`) })
+      : portraitCanvas(v.def, 3);
+    body.append(el('div', { class: 'detail-head' }, portrait,
       el('div', { class: 'detail-stats' },
         el('div', { class: 'detail-line', html: `<b style="color:${v.grade.color}">${v.def.grade}</b> · ${ROLES[v.def.role].name}${v.isMain ? ` · ${MAIN_TIER_TITLES[v.def.tier]}` : ` · ${stars(v.star)}`}` }),
         el('div', { class: 'detail-line' }, e.owned ? `Lv ${e.level}  ·  강화 +${e.enhance}` : '미보유 (데이터 가져오기에서 획득)'),

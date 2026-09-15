@@ -255,7 +255,14 @@ body.stealth #roster-table { display: table; }
 .card-badge.main { top: 23px; background: #e67e22; }
 .card-badge.new { background: #e74c3c; }
 .card-grid.result { padding: 4px 0; grid-template-columns: repeat(auto-fill, 96px); }
-.card-grid.result canvas { width: 96px; height: auto; }
+.card-canvas { width: 112px; height: 150px; }
+.card-grid.result .card-canvas { width: 96px; height: 129px; }
+.promo-card .card-canvas { width: 140px; height: 188px; }
+.detail-art { width: 232px; height: auto; max-height: 340px; object-fit: contain; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.22); cursor: zoom-in; flex: none; background: #f4f4f4; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.82); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 30; cursor: zoom-out; }
+.lightbox[hidden] { display: none; }
+.lightbox img { max-width: 92vw; max-height: 88vh; box-shadow: 0 10px 40px rgba(0,0,0,.6); border-radius: 8px; image-rendering: auto; }
+.lightbox .lb-caption { color: #fff; margin-top: 10px; font-size: 13px; }
 #roster-table { display: none; }
 
 .detail-head { display: flex; gap: 14px; align-items: flex-start; }
