@@ -1,18 +1,30 @@
 -- Excel Heroes cloud backend (Cloudflare D1). Apply with:
---   npx wrangler d1 execute excel-heroes --remote --file=backend/schema.sql
-CREATE TABLE IF NOT EXISTS devices (
-  id          TEXT PRIMARY KEY,   -- client-generated device id (8-64 url-safe chars)
-  secret_hash TEXT NOT NULL,      -- sha256 of the client's secret; the secret itself is never stored
-  created_at  INTEGER NOT NULL
+--   npx wrangler d1 execute excel-heroes --remote --file=backend/schema.sql --config backend/wrangler.toml
+CREATE TABLE IF NOT EXISTS users (
+  id          TEXT PRIMARY KEY,      -- 'g_' + random; stable app-side id (never the Google sub itself)
+  google_sub  TEXT NOT NULL UNIQUE,  -- Google account subject claim
+  email       TEXT,
+  name        TEXT NOT NULL,
+  picture     TEXT,
+  created_at  INTEGER NOT NULL,
+  last_login  INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS sessions (
+  token      TEXT PRIMARY KEY,       -- 64 hex chars, sent as `authorization: Bearer`
+  user_id    TEXT NOT NULL REFERENCES users(id),
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id);
 CREATE TABLE IF NOT EXISTS saves (
-  id         TEXT PRIMARY KEY REFERENCES devices(id),
-  save       TEXT NOT NULL,       -- the full save JSON (≤ 256 KB, plausibility-checked)
+  id         TEXT PRIMARY KEY REFERENCES users(id),
+  save       TEXT NOT NULL,          -- the full save JSON (≤ 256 KB, plausibility-checked)
   updated_at INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS board (
-  id           TEXT PRIMARY KEY REFERENCES devices(id),
+  id           TEXT PRIMARY KEY REFERENCES users(id),
   name         TEXT NOT NULL,
+  picture      TEXT,
   max_cleared  INTEGER NOT NULL DEFAULT 0,
   shares       INTEGER NOT NULL DEFAULT 0,
   prestige     INTEGER NOT NULL DEFAULT 0,

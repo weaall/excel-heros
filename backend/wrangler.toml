@@ -1,15 +1,19 @@
 # Cloudflare Worker config for the Excel Heroes backend (free tier: 100k requests/day, D1 5 GB / 5M reads/day).
 # 1) npx wrangler login
 # 2) npx wrangler d1 create excel-heroes            → paste the database_id below
-# 3) npx wrangler d1 execute excel-heroes --remote --file=backend/schema.sql
-# 4) npx wrangler deploy --config backend/wrangler.toml
+# 3) npx wrangler d1 execute excel-heroes --remote --file=backend/schema.sql --config backend/wrangler.toml
+# 4) fill GOOGLE_CLIENT_ID below (the same Web client ID the game uses in index.html)
+# 5) npx wrangler deploy --config backend/wrangler.toml
 name = "excel-heroes-api"
 main = "worker.js"
 compatibility_date = "2025-01-01"
 
 [vars]
-# Lock CORS to your game's origin once deployed (e.g. "https://weaall.github.io"); "*" while testing.
+# Lock CORS to the game's origin once deployed (e.g. "https://weaall.github.io"); "*" while testing.
 ALLOW_ORIGIN = "*"
+# Google OAuth 2.0 *Web application* client ID from console.cloud.google.com › APIs & Services › Credentials.
+# Authorized JavaScript origins must include the game origin (https://weaall.github.io) and http://localhost:8080.
+GOOGLE_CLIENT_ID = ""
 
 [[d1_databases]]
 binding = "DB"

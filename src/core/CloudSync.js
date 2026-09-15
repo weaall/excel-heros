@@ -1,40 +1,35 @@
-// Optional cloud save + leaderboard client for backend/worker.js. Everything is opt-in: with no server URL
-// configured the game is exactly as before (localStorage only). The device identity (id + secret) lives in its
-// own localStorage key, never inside the save, so exporting a save does not leak it.
+// Cloud save + leaderboard client for backend/worker.js, keyed by the Google account (src/core/Auth.js).
+// Without a configured server or without a login the game is exactly as before: localStorage only.
 import { checkSave } from './plausibility.js';
+import { Auth, cloudConfig } from './Auth.js';
 
-const ID_KEY = 'excel-heroes:cloud-id';
-export const CLOUD_PUSH_INTERVAL = 120; // seconds between automatic uploads while a server is configured
-
-const randomToken = (n) => { const a = new Uint8Array(n); (globalThis.crypto ?? { getRandomValues: (x) => x.map(() => Math.random() * 256) }).getRandomValues(a); return [...a].map((b) => 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_'[b & 63]).join(''); };
+export const CLOUD_PUSH_INTERVAL = 120; // seconds between automatic uploads while logged in
 
 export class CloudSync {
-  constructor(game, { storage = globalThis.localStorage, fetchFn = globalThis.fetch?.bind(globalThis) } = {}) {
+  constructor(game, { storage = globalThis.localStorage, fetchFn = globalThis.fetch?.bind(globalThis), auth = null } = {}) {
     this.game = game; this.storage = storage; this.fetchFn = fetchFn;
-    this.timer = 0; this.status = 'off'; this.lastError = null; this.lastPush = 0; this.board = null; this.busy = false;
+    this.auth = auth ?? new Auth({ storage, fetchFn });
+    this.timer = 0; this.status = 'off'; this.lastError = null; this.lastPush = 0; this.board = null; this.busy = false; this.dirty = false;
+    this.auth.on(() => { this.timer = 0; this.status = this.auth.loggedIn() ? 'idle' : 'off'; this.lastError = this.auth.error; this.game.emit('cloud', this); this.game.emit('auth', this.auth.user); });
   }
   cfg() { return this.game.state.settings.cloud ?? { url: '', name: '' }; }
-  enabled() { return !!(this.cfg().url && this.fetchFn); }
-  base() { return String(this.cfg().url).replace(/\/+$/, ''); }
-  /** Per-device credentials, created on first use. */
-  identity() {
-    try { const raw = this.storage?.getItem(ID_KEY); if (raw) return JSON.parse(raw); } catch { /* fallthrough */ }
-    const id = { id: randomToken(24), secret: randomToken(48) };
-    try { this.storage?.setItem(ID_KEY, JSON.stringify(id)); } catch { /* ignore */ }
-    return id;
-  }
-  headers(auth = true) { const h = { 'content-type': 'application/json' }; if (auth) { const me = this.identity(); h['x-eh-id'] = me.id; h['x-eh-secret'] = me.secret; } return h; }
+  /** Server URL: the deployment config wins; the options-page field is a manual override for testing. */
+  base() { return String(this.cfg().url || cloudConfig().url || '').replace(/\/+$/, ''); }
+  configured() { return !!(this.base() && this.fetchFn); }
+  enabled() { return this.configured() && this.auth.loggedIn(); }
+  headers() { return { 'content-type': 'application/json', ...this.auth.headers() }; }
 
   async #call(path, init = {}) {
     const r = await this.fetchFn(`${this.base()}${path}`, { ...init, headers: { ...this.headers(), ...(init.headers ?? {}) }, signal: AbortSignal.timeout?.(15000) });
     const body = await r.json().catch(() => ({}));
+    if (r.status === 401) { this.auth.invalidate(); }
     if (!r.ok) { const e = new Error(body.error ?? `HTTP ${r.status}`); e.status = r.status; e.body = body; throw e; }
     return body;
   }
 
   /** Automatic upload cadence; called from GameManager.tick. */
   tick(dt) {
-    if (!this.enabled()) { this.status = 'off'; return; }
+    if (!this.enabled()) { this.status = this.auth.loggedIn() ? 'idle' : 'off'; return; }
     this.timer += dt;
     if (this.timer >= CLOUD_PUSH_INTERVAL) { this.timer = 0; this.push().catch(() => {}); }
   }
@@ -43,6 +38,8 @@ export class CloudSync {
     const r = await this.fetchFn(`${this.base()}/v1/ping`, { signal: AbortSignal.timeout?.(8000) }); const b = await r.json();
     if (!b.ok) throw new Error('bad ping'); return b;
   }
+  /** Account + server-save summary for the login flow ({ user, save: { updatedAt, maxStage, playSeconds } | null }). */
+  async me() { if (!this.enabled()) return null; return this.#call('/v1/me'); }
 
   /** Upload the current save (after a local plausibility check so a rejected save is explained client-side). */
   async push() {
@@ -51,7 +48,7 @@ export class CloudSync {
     if (!check.ok) { this.status = 'rejected'; this.lastError = `업로드 보류: ${check.reasons.join(', ')}`; this.game.emit('cloud', this); return null; }
     this.busy = true;
     try {
-      const r = await this.#call('/v1/save', { method: 'PUT', body: JSON.stringify({ save: this.game.state, name: this.cfg().name, dps: this.game.partyDPS() }) });
+      const r = await this.#call('/v1/save', { method: 'PUT', body: JSON.stringify({ save: this.game.state, name: this.cfg().name || this.auth.user?.name, dps: this.game.partyDPS() }) });
       this.status = 'ok'; this.lastError = null; this.lastPush = r.updatedAt ?? Date.now(); this.game.emit('cloud', this); return r;
     } catch (e) { this.status = 'error'; this.lastError = e.status === 422 ? `서버가 저장을 거부: ${(e.body?.check?.reasons ?? []).join(', ')}` : e.message; this.game.emit('cloud', this); throw e; }
     finally { this.busy = false; }
@@ -65,7 +62,7 @@ export class CloudSync {
   }
 
   async fetchBoard(limit = 50) {
-    if (!this.enabled()) return null;
+    if (!this.configured()) return null;
     const b = await this.#call(`/v1/board?limit=${limit}`, { method: 'GET' });
     this.board = b; this.game.emit('board', b); return b;
   }

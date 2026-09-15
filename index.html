@@ -19,7 +19,7 @@
     <span class="spacer"></span>
     <div class="tb-search" title="검색 (Alt+Q)"><span class="tb-search-icon">🔍</span> 검색 (Alt+Q)</div>
     <span class="spacer"></span>
-    <span class="account" title="kim.intern@excel-heroes.local">김인턴</span><span class="avatar" title="김인턴 · kim.intern@excel-heroes.local">김</span>
+    <button class="account-btn" id="account-btn" title="계정 (파일 › 옵션)"><span class="account" id="account-name">김인턴</span><span class="avatar" id="account-avatar">김</span></button>
     <span class="win-btn ribbon-opts" title="리본 표시 옵션">▭</span>
     <span class="win-btn">—</span><span class="win-btn">☐</span><span class="win-btn close">✕</span>
   </header>
@@ -381,17 +381,21 @@
               <table class="xl-table compact"><tbody id="trait-list"></tbody></table>
             </div>
           </div>
-          <h3 class="section-title">클라우드 저장 · 순위표 <span class="muted">(선택 · 무료 Cloudflare Worker, backend/README.md)</span></h3>
+          <h3 class="section-title">계정 · 클라우드 저장 <span class="muted">(Google 로그인 · 순위표)</span></h3>
           <div class="cloud-box">
-            <label>서버 주소 <input type="url" id="cloud-url" placeholder="https://excel-heroes-api.<계정>.workers.dev" spellcheck="false"></label>
-            <label>순위표 이름 <input type="text" id="cloud-name" maxlength="16" placeholder="익명 사원"></label>
-            <div class="cloud-actions">
-              <button id="cloud-test" class="xl-btn">연결 확인</button>
-              <button id="cloud-push" class="xl-btn primary">지금 업로드</button>
-              <button id="cloud-pull" class="xl-btn">서버에서 불러오기</button>
+            <div class="account-row">
+              <div id="gsi-button" class="gsi-button"></div>
+              <div id="account-card" class="account-card" hidden><img id="account-pic" alt="" class="account-pic"><div><b id="account-title"></b><div class="small muted" id="account-sub"></div></div><button id="btn-logout" class="xl-btn small">로그아웃</button></div>
             </div>
-            <div id="cloud-status" class="small muted">서버 주소가 비어 있으면 이 기기(localStorage)에만 저장됩니다.</div>
-            <p class="muted small">저장본은 2분마다 자동 업로드되며, 서버는 골드·보석·처치 수의 타당성을 검사해 조작된 저장본을 순위표에서 걸러냅니다. 기기 식별자는 브라우저에 따로 저장되고 내보내기 파일에는 포함되지 않습니다.</p>
+            <div id="cloud-status" class="small muted">로그인하면 진행 상황이 계정에 저장되어 어느 기기에서든 이어서 할 수 있습니다.</div>
+            <label>순위표 이름 <input type="text" id="cloud-name" maxlength="16" placeholder="(비우면 Google 이름)"></label>
+            <div class="cloud-actions">
+              <button id="cloud-push" class="xl-btn primary">지금 저장</button>
+              <button id="cloud-pull" class="xl-btn">계정 저장본 불러오기</button>
+              <button id="cloud-test" class="xl-btn">서버 연결 확인</button>
+            </div>
+            <details class="small muted"><summary>고급: 서버 주소 직접 지정</summary><label>서버 주소 <input type="url" id="cloud-url" placeholder="(비우면 배포 설정값)" spellcheck="false"></label></details>
+            <p class="muted small">로그인 상태에서 2분마다 자동 저장되며, 서버는 골드·보석·처치 수의 타당성을 검사해 조작된 저장본을 순위표에서 걸러냅니다. 로그인하지 않으면 이 브라우저에만 저장됩니다.</p>
           </div>
         </section>
         <section class="bs-section" data-bs="save">
@@ -452,6 +456,9 @@
 <!-- Rewarded ads (AdSense H5 Games Ads). Leave publisherId empty until the AdSense account is approved; the game then
        shows its 5-second placeholder instead. See README.md › 광고. -->
   <script>window.EXCEL_HEROES_ADS = { publisherId: '' };</script>
+  <!-- Cloud account (Google sign-in + Cloudflare Worker). Fill after deploying backend/ — see backend/README.md.
+       url: the Worker address · googleClientId: the OAuth Web client ID (public; the Worker checks the same id). -->
+  <script>window.EXCEL_HEROES_CLOUD = { url: '', googleClientId: '' };</script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

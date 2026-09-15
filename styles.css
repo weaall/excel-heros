@@ -464,3 +464,18 @@ body.stealth #roster-table { display: table; }
 .pickup-cards .spark-bar { height: 4px; background: #e6e6e6; position: relative; }
 .pickup-cards .spark-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: #d4a017; }
 .pickup-cards .spark-txt { font-size: 10.5px; color: #666; text-align: center; }
+
+/* ---------------------------------------------------------- account -- */
+.account-btn { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 0; color: #fff; height: 32px; padding: 0 6px; font: inherit; }
+.account-btn:hover { background: rgba(255,255,255,.15); }
+.avatar img { width: 24px; height: 24px; border-radius: 50%; display: block; object-fit: cover; }
+.account-row { display: flex; align-items: center; gap: 12px; min-height: 40px; }
+.account-card { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border: 1px solid var(--line-dark); background: #fff; }
+.account-pic { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #ddd; }
+.gsi-button:empty::after { content: 'Google 로그인 버튼을 불러오는 중…'; color: #888; font-size: 12px; }
+.gsi-button.unconfigured::after { content: '서버/Google 클라이언트 ID가 설정되지 않았습니다 (index.html · EXCEL_HEROES_CLOUD)'; color: #b03a2e; font-size: 12px; }
+.save-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+.save-choice .opt { border: 1px solid var(--line-dark); padding: 10px; background: #fff; }
+.save-choice .opt b { display: block; margin-bottom: 4px; }
+
+.xl-table .icon.round { border-radius: 50%; width: 18px; height: 18px; vertical-align: middle; margin-right: 6px; }
