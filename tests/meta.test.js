@@ -124,3 +124,21 @@ test('bulk level-up: +N per hero and round-robin for the whole party, bounded by
   g.state.gold = 0; assert.equal(g.upgradeHeroMany('guard', 10), 0); assert.equal(g.upgradeAllMany(5), 0);
   assert.equal(g.upgradeHeroMany('cfo', 3), 0, 'unowned heroes cannot be levelled');
 });
+
+test('levels can be undone with a refund; enhancement cap follows stars, awakening and job tier', async () => {
+  const { enhanceCap, upgradeCost } = await import('../src/config/balance.js');
+  assert.equal(enhanceCap(1), 10); assert.equal(enhanceCap(5), 50); assert.equal(enhanceCap(5, true), 60); assert.equal(enhanceCap(3, true), 40); assert.equal(enhanceCap(1, false, 0), 10); assert.equal(enhanceCap(1, false, 4), 50);
+  const s = createInitialState(); s.gold = 5000; s.cards = 5000; s.heroes.guard = { owned: true, star: 1, shards: 0, level: 1, enhance: 0 }; s.party = [MAIN_ID, 'guard'];
+  const g = new GameManager({ state: s, save: memSave() });
+  assert.equal(g.upgradeHeroMany('guard', 5), 5);
+  const spent = 5000 - g.state.gold; const expected = [1, 2, 3, 4, 5].reduce((a, l) => a + upgradeCost(l), 0); assert.equal(spent, expected);
+  assert.equal(g.downgradeHero('guard', 2), 2); assert.equal(g.state.heroes.guard.level, 4);
+  assert.equal(g.state.gold, 5000 - expected + upgradeCost(5) + upgradeCost(4), 'refund mirrors the cost of the undone levels');
+  const back = g.resetHeroLevel('guard'); assert.equal(g.state.heroes.guard.level, 1); assert.equal(g.state.gold, 5000); assert.ok(back > 0);
+  assert.equal(g.downgradeHero('guard', 1), 0, 'cannot go below level 1');
+  for (let i = 0; i < 20; i++) g.enhance('guard');
+  assert.equal(g.state.heroes.guard.enhance, 10, '★1 caps at +10'); assert.ok(g.heroView('guard').enhanceMaxed);
+  g.state.heroes.guard.star = 3; assert.equal(g.heroView('guard').enhanceCap, 30); assert.ok(g.enhance('guard'));
+  g.state.heroes.guard.star = 5; g.state.heroes.guard.awakened = true; assert.equal(g.heroView('guard').enhanceCap, 60);
+  assert.equal(g.heroView(MAIN_ID).enhanceCap, 10, 'intern tier caps at +10');
+});

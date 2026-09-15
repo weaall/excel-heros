@@ -32,7 +32,7 @@ test('hero ATK scales with level, star and enhance', () => {
   assert.ok(heroATK(10, 2, 1) > heroATK(10, 1, 1));
   assert.equal(heroATK(10, 1, 5), Math.floor(10 * starMult(5)));
   assert.equal(heroATK(100, 1, 1, 10), Math.floor(100 * enhanceMult(10)));
-  assert.equal(enhanceMult(BALANCE.ENHANCE_MAX + 5), enhanceMult(BALANCE.ENHANCE_MAX), 'enhance is capped');
+  assert.equal(enhanceMult(BALANCE.ENHANCE_MAX + 5), enhanceMult(BALANCE.ENHANCE_MAX), 'enhance is capped'); assert.equal(BALANCE.ENHANCE_MAX, 60);
   assert.ok(enhanceCost(5) > enhanceCost(0));
 });
 

@@ -1,7 +1,7 @@
 // Global game state, economy, stage flow and player actions. Emits events for the UI.
 import {
   BALANCE, upgradeCost, baseGold, bossGold, isBossStage, stageLabel, heroATK, heroHP,
-  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, offlineGold, prestigeShares,
+  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, enhanceCap, offlineGold, prestigeShares,
 } from '../config/balance.js';
 import { HERO_BY_ID, GRADES, SKILLS, TRAITS, heroBaseStats, MAIN_ID, MAIN_JOBS } from '../data/heroes.js';
 import { pullOnce, promoteCost } from './GachaManager.js';
@@ -119,8 +119,10 @@ export class GameManager extends Emitter {
       skillUnlockHint: isMain ? `${['인턴', '사원'][BALANCE.MAIN_SKILL_TIER]} 승급 시 해금` : `★${BALANCE.SKILL_UNLOCK_STAR} 해금`,
       promoteCost: nextCost,
       canPromote: !isMain && entry.owned && nextCost !== null && entry.shards >= nextCost,
-      enhanceCost: eCost, enhanceMaxed: entry.enhance >= BALANCE.ENHANCE_MAX,
-      canEnhance: entry.owned && entry.enhance < BALANCE.ENHANCE_MAX && this.state.cards >= eCost,
+      enhanceCap: enhanceCap(star, awakened, isMain ? def.tier : null),
+      enhanceCost: eCost, enhanceMaxed: entry.enhance >= enhanceCap(star, awakened, isMain ? def.tier : null),
+      canEnhance: entry.owned && entry.enhance < enhanceCap(star, awakened, isMain ? def.tier : null) && this.state.cards >= eCost,
+      refundPerLevel: entry.level > 1 ? Math.floor(upgradeCost(entry.level - 1) * BALANCE.LEVEL_REFUND) : 0,
       shardCardValue: BALANCE.SHARD_CARD_VALUE[def.grade],
       canDismiss: !isMain && entry.owned && !this.state.party.includes(id),
       dismissCards: !isMain ? (BALANCE.DISMISS_CARD_BONUS + entry.shards) * BALANCE.SHARD_CARD_VALUE[def.grade] : 0,
@@ -160,6 +162,17 @@ export class GameManager extends Emitter {
     this.emit('gold'); this.emit('roster'); this.emit('quests');
     return true;
   }
+
+  /** Undo up to `n` levels (never below 1) and refund their cost, so gold can be moved to another card. Returns levels removed. */
+  downgradeHero(id, n = 1) {
+    const entry = this.state.heroes[id]; if (!entry?.owned) return 0;
+    let removed = 0, refund = 0;
+    for (let i = 0; i < n && entry.level > 1; i++) { entry.level -= 1; refund += Math.floor(upgradeCost(entry.level) * BALANCE.LEVEL_REFUND); removed++; }
+    if (removed) { this.state.gold += refund; this.entities.refreshHeroStats(); this.log(`${this.heroDef(id).name} 레벨 -${removed} (골드 +${refund} 환급)`, 'info'); this.emit('gold'); this.emit('roster'); }
+    return removed;
+  }
+  /** Reset a hero to level 1, refunding everything. Returns gold refunded. */
+  resetHeroLevel(id) { const before = this.state.gold; this.downgradeHero(id, 10000); return this.state.gold - before; }
 
   /** Level a hero up to `n` times in one click (stops when gold runs out). Returns levels bought. */
   upgradeHeroMany(id, n = 10) {

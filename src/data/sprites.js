@@ -296,41 +296,61 @@ export function heroIconDataURL(def) {
 }
 
 // --- Card illustrations ------------------------------------------------------
-export const CARD_W = 112, CARD_H = 150;
+export const CARD_W = 128, CARD_H = 204;   // art cell 128×150 + two 27px record rows
+const ART_H = 150;
+/**
+ * Excel-style card: a data record. The illustration sits whole (contain-fit) in the top cell; below it two rows of
+ * cells hold name + grade tag and stars + level. Thin cell borders, square tags, no shadows.
+ */
 export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', awakened = false } = {}) {
   const g = GRADES[def.grade];
   // rendered at 2× and displayed at CARD_W×CARD_H (CSS .card-canvas) so illustrations stay crisp on HiDPI screens
   const c = document.createElement('canvas'); c.width = CARD_W * 2; c.height = CARD_H * 2; c.className = 'card-canvas';
-  const ctx = c.getContext('2d'); ctx.scale(2, 2); ctx.imageSmoothingEnabled = false;
-  const grad = ctx.createLinearGradient(0, 0, 0, CARD_H); grad.addColorStop(0, '#ffffff'); grad.addColorStop(1, g.bg);
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, CARD_W, CARD_H);
-  ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1; ctx.beginPath();
-  for (let x = 8; x < CARD_W; x += 16) { ctx.moveTo(x + 0.5, 4); ctx.lineTo(x + 0.5, 104); }
-  for (let y = 12; y < 104; y += 12) { ctx.moveTo(4, y + 0.5); ctx.lineTo(CARD_W - 4, y + 0.5); }
-  ctx.stroke();
-  ctx.fillStyle = g.color; ctx.beginPath(); ctx.roundRect(6, 6, 20, 15, 3); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 11px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(def.grade, 16, 14);
-  ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(CARD_W / 2, 104, 30, 6, 0, 0, Math.PI * 2); ctx.fill();
+  const ctx = c.getContext('2d'); ctx.scale(2, 2);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, CARD_W, CARD_H);
+  // --- art cell
   const artImg = cardArt(def.id);
-  if (!owned) ctx.globalAlpha = 0.35;
-  if (artImg) drawArtCover(ctx, artImg, 2, 2, CARD_W - 4, 110, cardCrop(def.id));
-  else { const img = heroSprite(def, 'idle', 0, 1); ctx.drawImage(img, 0, 0, img.width, img.height, (CARD_W - 96) / 2, 12, 96, 96); }
-  ctx.globalAlpha = 1;
-  if (artImg) { ctx.fillStyle = g.color; ctx.beginPath(); ctx.roundRect(6, 6, 20, 15, 3); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 11px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(def.grade, 16, 14); }
-  ctx.fillStyle = g.color; ctx.fillRect(0, 112, CARD_W, 38);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.fillText(fit(ctx, def.name, CARD_W - 10), CARD_W / 2, 124);
-  ctx.font = '10px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  ctx.fillText(fit(ctx, title || (owned ? '★'.repeat(star) + '☆'.repeat(5 - star) : '미보유'), CARD_W - 10), CARD_W / 2, 139);
-  if (sub) { ctx.font = 'bold 10px "Segoe UI", sans-serif'; ctx.fillStyle = '#333'; ctx.textAlign = 'right'; ctx.fillText(sub, CARD_W - 7, 14); }
-  ctx.strokeStyle = g.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, CARD_W - 2, CARD_H - 2);
-  if (def.grade === 'S') { ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1; ctx.strokeRect(4.5, 4.5, CARD_W - 9, CARD_H - 9); }
-  if (awakened) { // 각성: gold double frame + corner gem
-    ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, CARD_W - 3, CARD_H - 3);
-    ctx.strokeStyle = '#b8860b'; ctx.lineWidth = 1; ctx.strokeRect(5.5, 5.5, CARD_W - 11, CARD_H - 11);
-    ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.moveTo(CARD_W - 16, 4); ctx.lineTo(CARD_W - 4, 16); ctx.lineTo(CARD_W - 16, 28); ctx.lineTo(CARD_W - 28, 16); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#7d5a00'; ctx.font = 'bold 9px "Malgun Gothic", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('각', CARD_W - 16, 16);
+  ctx.fillStyle = owned ? g.bg : '#efefef'; ctx.fillRect(1, 1, CARD_W - 2, ART_H - 1);
+  ctx.save(); ctx.beginPath(); ctx.rect(1, 1, CARD_W - 2, ART_H - 1); ctx.clip();
+  if (!owned) { ctx.filter = 'grayscale(1)'; ctx.globalAlpha = 0.55; }
+  if (artImg) drawArtContain(ctx, artImg, 1, 1, CARD_W - 2, ART_H - 1, cardCrop(def.id));
+  else {
+    // pixel fallback on a faint cell grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = 16; x < CARD_W; x += 16) { ctx.moveTo(x + 0.5, 1); ctx.lineTo(x + 0.5, ART_H); }
+    for (let y = 14; y < ART_H; y += 14) { ctx.moveTo(1, y + 0.5); ctx.lineTo(CARD_W - 1, y + 0.5); }
+    ctx.stroke();
+    ctx.imageSmoothingEnabled = false; const img = heroSprite(def, 'idle', 0, 1);
+    ctx.drawImage(img, 0, 0, img.width, img.height, (CARD_W - 112) / 2, ART_H - 112 - 12, 112, 112);
   }
-  if (!owned) { ctx.fillStyle = 'rgba(120,120,120,0.35)'; ctx.fillRect(0, 0, CARD_W, 112); }
+  ctx.restore();
+  // --- record rows
+  const rowY = ART_H, rowH = (CARD_H - ART_H) / 2;
+  ctx.fillStyle = '#fafafa'; ctx.fillRect(1, rowY, CARD_W - 2, CARD_H - rowY - 1);
+  ctx.strokeStyle = '#d9d9d9'; ctx.lineWidth = 1; ctx.beginPath();
+  ctx.moveTo(1, rowY + 0.5); ctx.lineTo(CARD_W - 1, rowY + 0.5); ctx.moveTo(1, rowY + rowH + 0.5); ctx.lineTo(CARD_W - 1, rowY + rowH + 0.5);
+  ctx.moveTo(CARD_W - 30 + 0.5, rowY); ctx.lineTo(CARD_W - 30 + 0.5, CARD_H - 1); ctx.stroke();
+  ctx.fillStyle = g.color; ctx.fillRect(1, rowY, 3, CARD_H - rowY - 1);                 // grade accent (left cell fill)
+  // name (row 1, left cell)
+  ctx.fillStyle = owned ? '#222' : '#888'; ctx.font = 'bold 12px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(fit(ctx, def.name, CARD_W - 42), 8, rowY + rowH / 2 + 0.5);
+  // grade tag (row 1, right cell)
+  ctx.fillStyle = owned ? g.color : '#bdbdbd'; ctx.fillRect(CARD_W - 29, rowY + 1, 28, rowH - 1);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.fillText(def.grade, CARD_W - 15, rowY + rowH / 2 + 0.5);
+  // stars / title (row 2, left cell) and level (right cell)
+  const r2 = rowY + rowH + rowH / 2 + 0.5;
+  if (!owned) { ctx.fillStyle = '#9a9a9a'; ctx.font = '11px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.fillText('미보유', 8, r2); }
+  else {
+    const lv = /Lv (\d+)/.exec(title)?.[1]; const jobTitle = title && !title.startsWith('★') ? title.split(' · ')[0] : null;
+    ctx.textAlign = 'left'; ctx.font = '11px "Segoe UI", Arial';
+    if (jobTitle) { ctx.fillStyle = '#444'; ctx.font = '11px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillText(fit(ctx, jobTitle, CARD_W - 42), 8, r2); }
+    else { let x = 8; for (let i = 0; i < 5; i++) { ctx.fillStyle = i < star ? '#f1a500' : '#cfcfcf'; ctx.fillText('★', x, r2); x += 11; } }
+    ctx.fillStyle = '#333'; ctx.font = 'bold 10px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.fillText(lv ? `Lv${lv}` : (sub || ''), CARD_W - 15, r2);
+    if (sub && lv) { ctx.fillStyle = '#217346'; ctx.font = 'bold 9px "Segoe UI", Arial'; ctx.textAlign = 'right'; ctx.fillText(sub, CARD_W - 34, r2); }
+  }
+  // --- frame
+  ctx.strokeStyle = '#bfbfbf'; ctx.lineWidth = 1; ctx.strokeRect(0.5, 0.5, CARD_W - 1, CARD_H - 1);
+  if (awakened) { ctx.strokeStyle = '#d4a017'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, CARD_W - 2, CARD_H - 2); ctx.fillStyle = '#d4a017'; ctx.fillRect(CARD_W - 29, 1, 28, 16); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px "Malgun Gothic", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('각성', CARD_W - 15, 9.5); }
   return c;
 }
 

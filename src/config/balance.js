@@ -20,7 +20,11 @@ export const BALANCE = Object.freeze({
   HERO_HP_GROWTH: 1.08,
   STAR_MULT: [1, 1.25, 1.6, 2.1, 2.8], // index = star-1
   ENHANCE_PER_LEVEL: 0.04,  // +4% ATK & HP per enhance level
-  ENHANCE_MAX: 50,
+  ENHANCE_MAX: 60,          // absolute cap (★5 + 각성)
+  ENHANCE_CAP_BY_STAR: [10, 20, 30, 40, 50], // cap per ★ (index star-1); 각성 adds ENHANCE_CAP_AWAKEN
+  ENHANCE_CAP_AWAKEN: 10,
+  ENHANCE_CAP_BY_TIER: [10, 20, 30, 40, 50],  // main hero: cap per job tier
+  LEVEL_REFUND: 1.0,        // levels can be undone; gold is refunded at this rate so it can move between cards
   ENHANCE_COST_BASE: 10, ENHANCE_COST_GROWTH: 1.2, // enhance cards
   SHARD_CARD_VALUE: { D: 1, C: 2, B: 4, A: 8, S: 16 }, // enhance cards per shard when converting
   DISMISS_CARD_BONUS: 10,   // extra shards' worth of cards when a whole card is dismissed
@@ -118,6 +122,11 @@ export function stageLabel(stage) {
 
 export const starMult = (star) => B.STAR_MULT[Math.min(B.MAX_STAR, Math.max(1, star)) - 1];
 export const enhanceMult = (enhance) => 1 + B.ENHANCE_PER_LEVEL * Math.min(B.ENHANCE_MAX, Math.max(0, enhance | 0));
+/** Max enhance level a card can take right now: by star (or job tier for the main hero), +10 when awakened. */
+export const enhanceCap = (star, awakened = false, mainTier = null) => {
+  const base = mainTier !== null ? B.ENHANCE_CAP_BY_TIER[Math.min(B.ENHANCE_CAP_BY_TIER.length - 1, Math.max(0, mainTier))] : B.ENHANCE_CAP_BY_STAR[Math.min(B.ENHANCE_CAP_BY_STAR.length - 1, Math.max(1, star) - 1)];
+  return Math.min(B.ENHANCE_MAX, base + (awakened ? B.ENHANCE_CAP_AWAKEN : 0));
+};
 export const enhanceCost = (enhance) => Math.floor(B.ENHANCE_COST_BASE * B.ENHANCE_COST_GROWTH ** Math.max(0, enhance | 0));
 
 export function heroATK(base, level, star, enhance = 0) {

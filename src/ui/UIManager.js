@@ -528,7 +528,7 @@ export class UIManager {
     body.append(el('div', { class: 'detail-head' }, portrait,
       el('div', { class: 'detail-stats' },
         el('div', { class: 'detail-line', html: `<b style="color:${v.grade.color}">${v.def.grade}</b> · ${ROLES[v.def.role].name}${v.isMain ? ` · ${MAIN_TIER_TITLES[v.def.tier]}` : ` · ${stars(v.star)}`}` }),
-        el('div', { class: 'detail-line' }, e.owned ? `Lv ${e.level}  ·  강화 +${e.enhance}` : '미보유 (데이터 가져오기에서 획득)'),
+        el('div', { class: 'detail-line' }, e.owned ? `Lv ${e.level}  ·  강화 +${e.enhance} / 한계 ${v.enhanceCap}${v.isMain ? ' (직급)' : ` (★${v.star}${v.awakened ? '·각성' : ''})`}` : '미보유 (데이터 가져오기에서 획득)'),
         el('div', { class: 'detail-line' }, `ATK ${fmt(v.atk)}  ·  HP ${fmt(v.hp)}  ·  공격 ${v.interval}s${v.awakened ? '  ·  ✦ 각성' : ''}`),
         (() => { const p = profileOf(v.isMain ? 'main' : id); return p ? el('div', { class: 'detail-line profile' }, el('b', {}, p.nick), ` · ${p.dept}`, el('div', { class: 'bio' }, p.bio), el('div', { class: 'quote' }, `"${p.line}"`)) : null; })(),
         el('div', { class: 'detail-line trait' }, `특성 · ${v.traitName}: ${v.traitDesc}`),
@@ -541,7 +541,14 @@ export class UIManager {
       actions.append(btn(g.isFavorite(id) ? '♥ 즐겨찾기 해제' : '♡ 즐겨찾기', () => g.toggleFavorite(id), g.isFavorite(id) ? 'fav on' : 'fav'));
       if (!v.isMain) actions.append(btn(`★ 승급 (조각 ${v.promoteCost ?? '-'})`, () => this.#promoteWithDialog(id), '', !v.canPromote));
       if (!v.isMain && v.star >= BALANCE.AWAKEN.star) actions.append(btn(v.awakened ? '각성 완료 ✦' : `✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, v.awakened ? '' : 'primary', !v.canAwaken));
-      actions.append(btn(v.enhanceMaxed ? '강화 MAX' : `강화 +1 (카드 ${v.enhanceCost})`, () => { if (!g.enhance(id)) this.toast('강화 카드가 부족합니다'); }, '', !v.canEnhance));
+      actions.append(btn(v.enhanceMaxed ? `강화 MAX (${v.entry.enhance}/${v.enhanceCap})` : `강화 +1 (카드 ${v.enhanceCost}) · ${v.entry.enhance}/${v.enhanceCap}`, () => { if (!g.enhance(id)) this.toast(v.enhanceMaxed ? `★${v.star} 카드의 강화 한계는 +${v.enhanceCap}입니다. ★승급이나 각성으로 한계를 올리세요` : '강화 카드가 부족합니다'); }, '', !v.canEnhance && !v.enhanceMaxed));
+      body.append(el('div', { class: 'level-row' },
+        el('span', { class: 'muted small' }, `레벨 ${e.level} · 되돌리면 골드 ${fmt(v.refundPerLevel)}/레벨 환급`),
+        btn('-1', () => { if (!g.downgradeHero(id, 1)) this.toast('레벨 1입니다'); }, 'small', e.level <= 1),
+        btn('-10', () => { if (!g.downgradeHero(id, 10)) this.toast('레벨 1입니다'); }, 'small', e.level <= 1),
+        btn('초기화', () => { const r = g.resetHeroLevel(id); this.toast(r ? `레벨 초기화: 골드 ${fmt(r)} 환급` : '레벨 1입니다'); }, 'small danger', e.level <= 1),
+        btn('+1', () => { if (!g.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'small', s.gold < v.cost),
+        btn('+10', () => { if (!g.upgradeHeroMany(id, 10)) this.toast('골드가 부족합니다'); }, 'small', s.gold < v.cost)));
       if (!v.isMain) {
         actions.append(btn(`조각 → 카드 (${e.shards}개 → ${e.shards * v.shardCardValue}장)`, () => g.convertShards(id), '', e.shards <= 0));
         actions.append(btn(`카드 방출 (+${v.dismissCards}장)`, () => { if (confirm(`${v.def.name} 카드를 방출하고 강화 카드 ${v.dismissCards}장을 받을까요? 되돌릴 수 없습니다.`)) g.dismiss(id); }, 'danger', !v.canDismiss));
