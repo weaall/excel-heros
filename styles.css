@@ -443,3 +443,12 @@ body.stealth #roster-table { display: table; }
 #cloud-status.ok { color: var(--xl-green); } #cloud-status.error { color: #c0392b; }
 #rank-table tr.me td { background: #eef6ee; font-weight: 600; }
 .xl-btn.small { padding: 1px 8px; font-size: 11.5px; }
+
+/* -------------------------------------------------------- 오늘의 픽업 -- */
+.pickup-box { margin: 0 0 8px; border: 1px solid var(--line-dark); background: linear-gradient(135deg, #fdf6e3, #fff 60%); }
+.pickup-head { padding: 5px 10px; font-weight: 600; font-size: 12.5px; border-bottom: 1px solid var(--line); color: #7d5a00; display: flex; gap: 10px; align-items: baseline; }
+.pickup-cards { display: flex; gap: 12px; padding: 8px 10px; }
+.pickup-cards .card { position: relative; cursor: pointer; }
+.pickup-cards .pickup-tag { position: absolute; top: 4px; left: 4px; padding: 0 6px; font-size: 10.5px; font-weight: 700; color: #fff; background: #d4a017; }
+.pickup-cards .pickup-owned { position: absolute; bottom: 42px; right: 4px; font-size: 10.5px; color: #fff; background: rgba(0,0,0,.55); padding: 0 5px; }
+.gacha-log .pickup { color: #b7950b; font-weight: 600; }

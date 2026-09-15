@@ -18,6 +18,7 @@ import { DIVISIONS, SYNERGY, PERKS, divisionOf } from '../data/divisions.js';
 import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
 import { CloudSync } from './CloudSync.js';
+import { pickupFor } from '../data/pickup.js';
 import { migrate } from './state.js';
 
 export class GameManager extends Emitter {
@@ -237,6 +238,8 @@ export class GameManager extends Emitter {
     return true;
   }
 
+  /** 오늘의 픽업 { S: heroId, A: heroId } — rotates with the daily reset. */
+  pickup() { return pickupFor(this.state.daily.date); }
   pull(count) {
     const cost = count === 10 ? BALANCE.GACHA_TEN_COST : BALANCE.GACHA_SINGLE_COST * count;
     if (this.state.gems < cost) { this.toast('보석이 부족합니다'); return null; }
@@ -244,7 +247,7 @@ export class GameManager extends Emitter {
     const results = []; let gotMin = false; const minIdx = GRADES[BALANCE.TEN_PULL_MIN_GRADE] ? ['D', 'C', 'B', 'A', 'S'].indexOf(BALANCE.TEN_PULL_MIN_GRADE) : 99;
     for (let i = 0; i < count; i++) {
       const force = count === 10 && i === count - 1 && !gotMin ? BALANCE.TEN_PULL_MIN_GRADE : null;
-      const r = pullOnce(this.state.pity, this.state.heroes, this.rng, force);
+      const r = pullOnce(this.state.pity, this.state.heroes, this.rng, force, this.pickup());
       if (['D', 'C', 'B', 'A', 'S'].indexOf(r.grade) >= minIdx) gotMin = true;
       if (force) r.guaranteed = true;
       this.state.pity = r.pity; this.state.stats.totalPulls++;

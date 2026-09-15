@@ -58,7 +58,8 @@ src/core/plausibility.js       세이브 타당성 검사 (클라이언트·Work
 src/core/CloudSync.js          선택형 클라우드 저장/순위표 클라이언트 (기기 id+secret)
 src/ui/Ads.js                  AdSense H5 Games Ads 보상형 광고 래퍼 (미설정 시 임시 화면)
 backend/                       Cloudflare Worker + D1 백엔드 (worker.js, schema.sql, wrangler.toml)
-src/data/divisions.js          부서 → 7개 부문 매핑, 부문 시너지 수치
+src/data/divisions.js          부서 → 7개 부문 매핑, 부문 시너지 수치 · 부문 고유 특성
+src/data/pickup.js             오늘의 픽업 (날짜별 S/A 픽업 카드, 50% 픽업 확률)
 src/data/sprites.js            문자열 템플릿 → 치비 픽셀 스프라이트, 카드/초상 일러스트 생성
 src/core/GameManager.js        재화, 스테이지 흐름, 플레이어 액션(강화/승진/변환/방출/퀘스트/광고), 이벤트
 src/core/EntityManager.js      한 줄 대열 라인 전투, 웨이브/이동 스크롤, 대시·투사체 타이밍, 스킬

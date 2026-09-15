@@ -78,3 +78,19 @@ test('promoteCost follows grade table and is null at max star', () => {
   assert.equal(promoteCost('S', 4), 240);
   assert.equal(promoteCost('S', 5), null);
 });
+
+test('오늘의 픽업: deterministic per date, rotates daily, featured card lands ~50% of its grade', async () => {
+  const { pickupFor, PICKUP_RATE } = await import('../src/data/pickup.js');
+  const { heroesOfGrade, HERO_BY_ID } = await import('../src/data/heroes.js');
+  const { createRng } = await import('../src/utils/rng.js');
+  const a = pickupFor('2026-09-15'), b = pickupFor('2026-09-15'), c = pickupFor('2026-09-16');
+  assert.deepEqual(a, b); assert.equal(HERO_BY_ID[a.S].grade, 'S'); assert.equal(HERO_BY_ID[a.A].grade, 'A');
+  assert.notEqual(a.S, c.S, 'S pickup changes day to day');
+  const days = new Set(); for (let d = 1; d <= 28; d++) days.add(pickupFor(`2026-10-${String(d).padStart(2, '0')}`).A);
+  assert.equal(days.size, heroesOfGrade('A').length, 'every A card gets a day within a rotation');
+  const rng = createRng(3); let featured = 0, sRolls = 0;
+  for (let i = 0; i < 4000; i++) { const r = pullOnce(initialPity(), {}, rng, 'S', a); sRolls++; if (r.heroId === a.S) featured++; if (r.pickup) assert.equal(r.heroId, a.S); }
+  const share = featured / sRolls, uniform = 1 / heroesOfGrade('S').length;
+  assert.ok(Math.abs(share - (PICKUP_RATE + (1 - PICKUP_RATE) * uniform)) < 0.04, `featured share ${share}`);
+  assert.equal(pullOnce(initialPity(), {}, rng, 'S').pickup, false, 'no banner → never flagged');
+});

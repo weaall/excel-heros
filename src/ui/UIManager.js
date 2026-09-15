@@ -16,6 +16,7 @@ import { GRID } from '../core/EntityManager.js';
 import * as Quests from '../core/QuestManager.js';
 import { fmt, fmtTime, pct, stars } from '../utils/format.js';
 import * as Ads from './Ads.js';
+import { starMult } from '../config/balance.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, attrs = {}, ...children) => {
@@ -635,6 +636,7 @@ export class UIManager {
         `다음 레벨 골드 ${fmt(v.cost)} · 되돌리면 ${fmt(v.refundPerLevel)} 환급`));
       table.append(row('공격력 ATK', fmt(v.atk)));
       table.append(row('체력 HP', fmt(v.hp)));
+      if (!v.isMain && v.star < BALANCE.MAX_STAR) { const k = starMult(v.star + 1) / starMult(v.star); table.append(row(`★${v.star + 1} 미리보기`, `ATK ${fmt(Math.floor(v.atk * k))} · HP ${fmt(Math.floor(v.hp * k))}`, null, `승급 시 ×${k.toFixed(2)} · 강화 한계 ${BALANCE.ENHANCE_CAP_BY_STAR[v.star] ?? v.enhanceCap}`)); }
       table.append(row('공격 속도', `${v.interval}s`));
       table.append(row('강화', `+${e.enhance} / 한계 ${v.enhanceCap}`,
         sb(v.enhanceMaxed ? 'MAX' : `+1 (카드 ${v.enhanceCost})`, () => { if (!g.enhance(id)) this.toast(v.enhanceMaxed ? `★${v.star} 카드의 강화 한계는 +${v.enhanceCap}입니다. ★승급이나 각성으로 한계를 올리세요` : '강화 카드가 부족합니다'); }, v.canEnhance ? 'primary' : '', !v.canEnhance, '강화 카드로 +4% ATK/HP'),
@@ -730,11 +732,25 @@ export class UIManager {
     $('#pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA;
     $('#pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
     $('#total-pulls').textContent = s.stats.totalPulls;
+    this.#refreshPickup();
     $('#qa-pull1').disabled = s.gems < BALANCE.GACHA_SINGLE_COST; $('#qa-pull10').disabled = s.gems < BALANCE.GACHA_TEN_COST;
     $('#qa-pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA; $('#qa-pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
     const tbody = $('#gacha-log tbody'); tbody.innerHTML = '';
     this.gachaLog.forEach((r, i) => tbody.append(el('tr', { class: `g-${r.grade}` },
-      el('td', {}, String(this.gachaLog.length - i)), el('td', { style: `color:${GRADES[r.grade].color}` }, r.grade), el('td', {}, r.def.name), el('td', {}, r.isNew ? '신규 입사' : `조각 +${r.shards}`))));
+      el('td', {}, String(this.gachaLog.length - i)), el('td', { style: `color:${GRADES[r.grade].color}` }, r.grade), el('td', {}, r.def.name), el('td', { class: r.pickup ? 'pickup' : '' }, `${r.isNew ? '신규 입사' : `조각 +${r.shards}`}${r.pickup ? ' · 픽업' : ''}`))));
+  }
+  /** 오늘의 픽업 cards on the gacha sheet (rebuilt when the date changes). */
+  #refreshPickup() {
+    const box = $('#pickup-cards'); if (!box) return; const s = this.game.state; const ids = this.game.pickup();
+    const key = `${s.daily.date}|${Object.values(ids).map((id) => `${id}:${s.heroes[id]?.owned ? 1 : 0}:${s.heroes[id]?.star ?? 0}`).join(',')}`;
+    if (box.dataset.key === key) return; box.dataset.key = key; box.innerHTML = '';
+    for (const [grade, id] of Object.entries(ids)) {
+      const v = this.game.heroView(id); const e = v.entry;
+      const wrap = el('div', { class: `card ${e.owned ? '' : 'locked'} holo`, title: `${v.def.name} · ${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id) },
+        cardCanvas(v.def, { star: v.star, owned: e.owned, title: e.owned ? `${stars(e.star)} · Lv ${e.level}` : '미보유', awakened: !!e.awakened }),
+        el('span', { class: 'holo-sheen' }), el('span', { class: 'pickup-tag' }, `${grade} 픽업`), e.owned ? el('span', { class: 'pickup-owned' }, `조각 ${e.shards}`) : null);
+      box.append(wrap);
+    }
   }
   #showGachaResults(results) {
     const hasS = results.some((r) => r.grade === 'S'), hasA = results.some((r) => r.grade === 'A');
@@ -744,7 +760,7 @@ export class UIManager {
     for (const r of results) {
       const front = el('div', { class: 'flip-face front' },
         cardCanvas(r.def, { star: this.game.state.heroes[r.heroId].star, title: r.isNew ? '신규 입사!' : `조각 +${r.shards}`, sub: r.guaranteed ? '보장' : '', awakened: !!this.game.state.heroes[r.heroId].awakened }),
-        r.isNew ? el('span', { class: 'card-badge new' }, 'NEW') : null);
+        r.isNew ? el('span', { class: 'card-badge new' }, 'NEW') : null, r.pickup ? el('span', { class: 'pickup-tag' }, '픽업') : null);
       const back = el('div', { class: `flip-face back g-${r.grade}` }, el('span', { class: 'back-x' }, 'X'), el('span', { class: 'back-row' }, `ROW ${String(results.indexOf(r) + 1).padStart(2, '0')}`));
       const flip = el('div', { class: `flip grade-${r.grade}` }, el('div', { class: 'flip-inner' }, back, front));
       const wrap = el('div', { class: `card ${r.isNew ? 'new' : ''} ${r.grade === 'S' || r.grade === 'A' ? 'holo' : ''}`, onclick: () => { if (flip.classList.contains('revealed')) this.openDetail(r.heroId); } }, flip,

@@ -1,6 +1,7 @@
 // Pure gacha logic with two pity counters (soft 50 => A or better, hard 100 => S).
 import { BALANCE } from '../config/balance.js';
-import { GRADES, GRADE_ORDER, heroesOfGrade } from '../data/heroes.js';
+import { GRADES, GRADE_ORDER, heroesOfGrade, HERO_BY_ID } from '../data/heroes.js';
+import { PICKUP_RATE } from '../data/pickup.js';
 
 const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0 });
 
@@ -31,14 +32,17 @@ export function rollGrade(pity, rng) {
 /**
  * Perform one pull against a roster.
  * @param roster  { [heroId]: { owned, star, shards, level, enhance } }  (mutated)
- * @returns { heroId, grade, isNew, shards, pity }
+ * @param featured { S: heroId, A: heroId } — 오늘의 픽업: when the rolled grade has a featured card, PICKUP_RATE of the time it is that card
+ * @returns { heroId, grade, isNew, shards, pity, pickup }
  */
-export function pullOnce(pity, roster, rng, minGrade = null) {
+export function pullOnce(pity, roster, rng, minGrade = null, featured = null) {
   let { grade, pity: nextPity } = rollGrade(pity, rng);
   if (minGrade && GRADE_ORDER.indexOf(grade) < GRADE_ORDER.indexOf(minGrade)) { // 10연차 보장 등: 등급 하한
     grade = minGrade; nextPity = { ...nextPity, sinceA: GRADE_ORDER.indexOf(grade) >= GRADE_ORDER.indexOf('A') ? 0 : nextPity.sinceA, sinceS: grade === 'S' ? 0 : nextPity.sinceS };
   }
-  const hero = rng.pick(heroesOfGrade(grade));
+  let pickup = false; let hero;
+  if (featured?.[grade] && HERO_BY_ID[featured[grade]] && rng.next() < PICKUP_RATE) { hero = HERO_BY_ID[featured[grade]]; pickup = true; }
+  else hero = rng.pick(heroesOfGrade(grade));
   const entry = roster[hero.id] ?? (roster[hero.id] = emptyHero());
   let isNew = false, shards = 0;
   if (!entry.owned) {
@@ -48,7 +52,7 @@ export function pullOnce(pity, roster, rng, minGrade = null) {
     shards = rng.int(BALANCE.DUPLICATE_SHARDS_MIN, BALANCE.DUPLICATE_SHARDS_MAX);
     entry.shards += shards;
   }
-  return { heroId: hero.id, grade, isNew, shards, pity: nextPity };
+  return { heroId: hero.id, grade, isNew, shards, pity: nextPity, pickup };
 }
 
 /** Shards needed to go from `star` to `star+1`, or null at max. */
