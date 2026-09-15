@@ -33,6 +33,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true   # creates the Pages site (source = GitHub Actions) on first run, no dashboard click needed
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
