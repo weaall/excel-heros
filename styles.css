@@ -260,6 +260,8 @@ body.stealth #roster-table { display: table; }
 
 .detail-head { display: flex; gap: 14px; align-items: flex-start; }
 .detail-head canvas { flex: none; border-radius: 4px; image-rendering: pixelated; }
+.detail-head canvas[data-art] { image-rendering: auto; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.card canvas, .flip-face.front canvas { image-rendering: auto; }
 .detail-stats { flex: 1; min-width: 0; }
 .detail-line { margin: 3px 0; font-size: 12.5px; }
 .detail-line.skill { color: #6c3483; }

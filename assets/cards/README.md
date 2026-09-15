@@ -1,6 +1,6 @@
 # 카드 일러스트
 
-기본 일러스트 35장(영웅 28 + 김인턴 직급 7)은 `node scripts/portraits.mjs`가 SVG로 생성합니다(벡터 치비 반신, 영웅 팔레트·look 기반). 이 파일을 같은 이름의 PNG/WebP로 덮어쓰고 manifest를 바꾸면 그림을 교체할 수 있습니다. 리뷰 그리드: `scripts/cardReview.html`.
+채택된 일러스트 35장(영웅 28 + 김인턴 직급 7)은 `node scripts/genCardsHF.mjs`가 Animagine XL 4.0(Hugging Face 공개 Space)으로 생성한 PNG(832×1216, 블루 아카이브 톤)입니다. 특정 카드만 다시 뽑기: `node scripts/genCardsHF.mjs --force ceo`, 다른 시드: `SEED=5 node scripts/genCardsHF.mjs --force ceo`. 대체용으로 `scripts/portraits.mjs`(SVG 벡터)와 `scripts/genCards.mjs`(pollinations, 반사실 톤)도 남아 있습니다. 리뷰 그리드: `scripts/cardReview.html`.
 
 `manifest.json`에 영웅 id → 파일명을 적고 이 폴더에 이미지를 넣으면, 해당 영웅의 **카드 · 초상 · 뽑기 연출**이 픽셀 아트 대신 일러스트를 씁니다. 나머지 영웅은 그대로 픽셀 아트라서 한 명씩 교체할 수 있습니다.
 

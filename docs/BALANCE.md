@@ -166,7 +166,13 @@
 - **즐겨찾기(♥)**: 상세 창·우클릭 메뉴에서 토글, 명단 맨 앞 정렬, 카드에 ♥ 표시. 저장됨.
 - **스프라이트 정체성(`src/data/heroSkins.js`)**: 0x72 베이스 10종에 전역 hue-rotate 대신 **부위별 팔레트 교체** — 베이스마다 머리/의상/포인트 색 군집을 표로 두고 영웅 팔레트(H/B/W)로 바꾼다(명도 차 유지). 대머리는 머리 군집을 피부색으로. 여기에 look의 acc/acc2/prop을 **16×28 픽셀 소품**(안경·선글라스·헤드셋·왕관·안전모·모자·넥타이·사원증·배지·수염·콧수염·커피·꽃·귀걸이·스카프·클립보드)으로 눈/정수리/턱/가슴 앵커에 찍는다. 달리기 프레임의 상하 흔들림은 프레임별 최상단 행 차이로 보정. 투구 베이스(knight)는 수염류 생략. 리뷰용 대조표: DevTools에서 `(await import('/scripts/contactSheet.js')).contactSheet()`.
 
-## 6-14. 20차: AI 생성 카드 일러스트 (블루 아카이브 톤)
+## 6-15. 21차: Animagine XL 4.0로 생성한 블루 아카이브 톤 카드 (채택)
+
+- 사용자가 pollinations 결과("3D 같다")와 벡터 초상을 모두 거부 → 애니 특화 모델이 필요. Hugging Face 공개 Space **Asahina2K/animagine-xl-4.0**(Gradio API, 익명 ZeroGPU)를 `scripts/genCardsHF.mjs`로 호출해 35장을 `assets/cards/<id>.png`(832×1216)로 생성. 프롬프트는 Danbooru 태그식: `1girl/1boy, solo, <머리색> hair, <스타일>, <소품 태그>, <등급 의상>, <재킷 색> jacket, <역할 포즈>, looking at viewer, cowboy shot, blue archive style, halo, flat color, cel shading, clean lineart, anime coloring, simple background, masterpiece, best quality`. 네거티브에 3d/realistic/photo/watermark. 스타일 프리셋 `Anim4gine`, Euler a, 28 steps, guidance 5, 시드 `1 + id 길이`.
+- 호출 흐름: `POST /call/generate` → `GET /call/generate/{event_id}`(SSE) → `complete` 이벤트의 `image.url` 또는 `/file=` 경로에서 PNG 다운로드. 한 장 40~60초, 실패 시 20초×n 재시도.
+- 게임 반영: 세로(전신) 일러스트는 상세 창에서 **세로 초상(contain)**으로 전체가 보이고, 카드/뽑기는 얼굴 우선 cover. `drawArtContain` 추가, `portraitCanvas`가 세로 그림이면 세로 캔버스를 만든다.
+
+## 6-14. 20차: AI 생성 카드 일러스트 (반사실 톤, 미채택)
 
 - 사용자 요청("블루아카 같은 일러스트")에 따라 `scripts/genCards.mjs`가 로그인 없는 무료 텍스트→이미지 엔드포인트(pollinations.ai)로 영웅 28 + 김인턴 직급 7 = 35장을 `assets/cards/<id>.jpg`(768×896)로 생성. 프롬프트는 **스타일 우선**(Blue Archive style, 2D anime, flat cel shading, halo, pastel bg) → 성별 → 소품(look) → 머리색+스타일 → 팔레트 의상(hex 대신 색 이름) 순. 시드는 `7 + id 길이`로 고정해 재생성이 재현됨(`SEED=` 환경변수로 변경).
 - manifest 항목이 `{ file, crop: [0,0,1,0.94] }` 형태로 확장되어 하단 워터마크 띠를 잘라 그린다(`cardArt.js`의 crop 지원). SVG 벡터 초상(6-13)은 생성 실패 시 대체용으로 남겨둔다.

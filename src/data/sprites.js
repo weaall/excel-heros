@@ -7,7 +7,7 @@ import { sheetFrame } from './spriteSheets.js';
 import { MONSTER_MAPS, MONSTER_ACCENTS } from './monsterArt.js';
 import { BODY_IDLE, LEGS, ARM, HAIR } from './heroArt.js';
 import { packHeroFrame, packHeroIcon, packMonsterFrame } from './packSprites.js';
-import { cardArt, cardCrop, drawArtCover } from './cardArt.js';
+import { cardArt, cardCrop, drawArtCover, drawArtContain } from './cardArt.js';
 
 export const SCALE = 2;
 export const SRC = 32;
@@ -335,6 +335,16 @@ export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', 
 
 export function portraitCanvas(def, scale = 4) {
   const g = GRADES[def.grade]; const size = 64 * scale + 16;
+  const tallArt = cardArt(def.id);
+  if (tallArt && tallArt.height > tallArt.width * 1.1) { // full-figure illustration: tall portrait, whole image visible
+    const w = size, h = Math.round(size * Math.min(1.5, tallArt.height / tallArt.width));
+    const c = document.createElement('canvas'); c.width = w; c.height = h; c.dataset.art = '1';
+    const ctx = c.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, '#ffffff'); grad.addColorStop(1, g.bg); ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
+    drawArtContain(ctx, tallArt, 2, 2, w - 4, h - 4, cardCrop(def.id));
+    ctx.strokeStyle = g.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, w - 2, h - 2);
+    return c;
+  }
   const c = document.createElement('canvas'); c.width = size; c.height = size;
   const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = g.bg; ctx.fillRect(0, 0, size, size);

@@ -33,3 +33,11 @@ export function drawArtCover(ctx, img, x, y, w, h, crop = null) {
   ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.imageSmoothingEnabled = true;
   ctx.drawImage(img, sx, sy, sw, sh, x + (w - dw) / 2, y, dw, dh); ctx.restore();
 }
+
+/** Draw an illustration fitted inside a box (object-fit: contain, centred) — used for tall full-figure art. */
+export function drawArtContain(ctx, img, x, y, w, h, crop = null) {
+  const [cx0, cy0, cx1, cy1] = crop ?? [0, 0, 1, 1];
+  const sx = img.width * cx0, sy = img.height * cy0, sw = img.width * (cx1 - cx0), sh = img.height * (cy1 - cy0);
+  const s = Math.min(w / sw, h / sh); const dw = sw * s, dh = sh * s;
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(img, sx, sy, sw, sh, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); ctx.restore();
+}
