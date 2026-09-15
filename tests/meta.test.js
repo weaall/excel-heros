@@ -96,7 +96,7 @@ test('stage modifiers, phase names and 각성', async () => {
   run(g, 1.3); // wave has spawned, nothing has reached the line yet
   const wave = g.entities.monsters.filter((m) => m.alive && !m.def.chest);
   assert.ok(wave.length >= 5, `rush wave size ${wave.length}`);
-  assert.ok(wave.every((m) => m.speed > BALANCE.MONSTER_SPEED * 0.9 * 1.3 - 1e-6), 'rush speed');
+  assert.ok(wave.filter((m) => !m.elite).every((m) => m.speed > BALANCE.MONSTER_SPEED * 0.9 * 1.3 - 1e-6), 'rush speed (elites move 10% slower by design)');
   // 각성
   const s2 = createInitialState(); s2.heroes.guard = { owned: true, star: 5, shards: 0, level: 10, enhance: 0 }; s2.cards = 1000; s2.party = [MAIN_ID, 'guard'];
   const g2 = new GameManager({ state: s2, save: memSave() });

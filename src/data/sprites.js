@@ -7,7 +7,7 @@ import { sheetFrame } from './spriteSheets.js';
 import { MONSTER_MAPS, MONSTER_ACCENTS } from './monsterArt.js';
 import { BODY_IDLE, LEGS, ARM, HAIR } from './heroArt.js';
 import { packHeroFrame, packHeroIcon, packMonsterFrame } from './packSprites.js';
-import { cardArt, drawArtCover } from './cardArt.js';
+import { cardArt, cardCrop, drawArtCover } from './cardArt.js';
 
 export const SCALE = 2;
 export const SRC = 32;
@@ -312,7 +312,7 @@ export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', 
   ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(CARD_W / 2, 104, 30, 6, 0, 0, Math.PI * 2); ctx.fill();
   const artImg = cardArt(def.id);
   if (!owned) ctx.globalAlpha = 0.35;
-  if (artImg) drawArtCover(ctx, artImg, 2, 2, CARD_W - 4, 110);
+  if (artImg) drawArtCover(ctx, artImg, 2, 2, CARD_W - 4, 110, cardCrop(def.id));
   else { const img = heroSprite(def, 'idle', 0, 1); ctx.drawImage(img, 0, 0, img.width, img.height, (CARD_W - 96) / 2, 12, 96, 96); }
   ctx.globalAlpha = 1;
   if (artImg) { ctx.fillStyle = g.color; ctx.beginPath(); ctx.roundRect(6, 6, 20, 15, 3); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 11px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(def.grade, 16, 14); }
@@ -343,7 +343,7 @@ export function portraitCanvas(def, scale = 4) {
   ctx.stroke();
   ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(size / 2, size - 10, 6 * scale, 1.2 * scale, 0, 0, Math.PI * 2); ctx.fill();
   const artImg = cardArt(def.id);
-  if (artImg) drawArtCover(ctx, artImg, 2, 2, size - 4, size - 4);
+  if (artImg) drawArtCover(ctx, artImg, 2, 2, size - 4, size - 4, cardCrop(def.id));
   else { const img = heroSprite(def, 'idle', 0, 1); ctx.drawImage(img, 0, 0, img.width, img.height, 8, 8, 64 * scale, 64 * scale); }
   ctx.strokeStyle = g.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, size - 2, size - 2);
   return c;

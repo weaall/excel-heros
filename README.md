@@ -73,3 +73,4 @@ DevTools 콘솔에서 `EH.game.state` 로 상태를 보고, `EH.game.state.gold 
 - 영웅·몬스터·보스 스프라이트: **16x16 DungeonTileset II v1.7** by 0x72 — <https://0x72.itch.io/dungeontileset-ii> (CC0). 캐릭터별로 색조(hue)를 바꿔 28명을 10개 베이스로 만들고, 던전 벽·바닥·배너·분수 타일도 이 시트에서 가져옵니다. 파일: `assets/sprites/0x72/sheet.png`
 - 몬스터 12종: **Tiny Creatures** by Clint Bellanger — <https://opengameart.org/content/tiny-creatures> (CC0). 파일: `assets/sprites/tiny-creatures/tilemap_packed.png`
 - 팩이 없거나 매핑이 없는 캐릭터는 `src/data/heroArt.js` / `src/data/monsterArt.js`의 코드 생성 도트로 대체됩니다.
+- 카드 일러스트(`assets/cards/*.jpg`): `scripts/genCards.mjs`가 pollinations.ai(무료 텍스트→이미지)로 생성한 AI 이미지입니다. 재생성·교체 방법은 `assets/cards/README.md`. 벡터 초상(`*.svg`, `scripts/portraits.mjs`)은 대체용입니다.
