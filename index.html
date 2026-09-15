@@ -19,9 +19,8 @@
     <span class="spacer"></span>
     <div class="tb-search" title="검색 (Alt+Q)"><span class="tb-search-icon">🔍</span> 검색 (Alt+Q)</div>
     <span class="spacer"></span>
-    <span class="avatar" title="김인턴 · kim.intern@excel-heroes.local">김</span>
-    <button id="btn-sound" class="tb-btn" title="효과음 켜기/끄기 (보스 키가 켜져 있으면 항상 무음)">🔇 효과음</button>
-    <button id="btn-stealth" class="tb-btn" title="보스 키 — 전투 화면만 숨기기 (Esc)">🔒 보스 키</button>
+    <span class="account" title="kim.intern@excel-heroes.local">김인턴</span><span class="avatar" title="김인턴 · kim.intern@excel-heroes.local">김</span>
+    <span class="win-btn ribbon-opts" title="리본 표시 옵션">▭</span>
     <span class="win-btn">—</span><span class="win-btn">☐</span><span class="win-btn close">✕</span>
   </header>
 
@@ -107,11 +106,19 @@
         <div class="rb-row">
           <div class="rb-stack">
             <label class="rb-check" title="전투 화면 위에 셀 눈금선 표시"><input type="checkbox" id="qa-gridlines"> 눈금선</label>
-            <label class="rb-check" title="합성 효과음 (보스 키 중 무음)"><input type="checkbox" id="qa-sound"> 효과음</label>
+            <label class="rb-check" title="수식 입력줄 표시"><input type="checkbox" checked disabled> 수식 입력줄</label>
+            <label class="rb-check" title="알림 소리 (페이지 레이아웃 보기에서는 항상 무음)"><input type="checkbox" id="qa-sound"> 소리</label>
           </div>
-          <button id="qa-stealth" class="rb-btn" title="보스 키 (Esc): 전투 화면만 텍스트 표로"><span class="rb-icon">🔒</span>보스 키</button>
         </div>
         <div class="rb-group-label">표시</div>
+      </div>
+      <span class="rb-sep"></span>
+      <div class="rb-group">
+        <div class="rb-row">
+          <button id="qa-normal" class="rb-btn" title="기본 보기: 전투 화면 (Esc)"><span class="rb-icon">▦</span>기본</button>
+          <button id="qa-stealth" class="rb-btn" title="페이지 레이아웃 보기: 전투 화면을 표로 (Esc로 전환)"><span class="rb-icon">▤</span>페이지 레이아웃</button>
+        </div>
+        <div class="rb-group-label">통합 문서 보기</div>
       </div>
       <span class="rb-sep"></span>
       <div class="rb-group">
@@ -360,9 +367,9 @@
             <h3 class="section-title">일반</h3>
             <div class="settings">
               <label><input type="checkbox" id="set-auto"> 자동 진행: 클리어할 때마다 다음 단계에 자동 도전 (도전 실패 시 자동으로 꺼지고 직전 스테이지에서 사냥)</label>
-              <label><input type="checkbox" id="set-stealth"> 보스 키: 전투 화면을 텍스트 표로 (Esc)</label>
+              <label><input type="checkbox" id="set-stealth"> 페이지 레이아웃 보기: 전투 화면을 텍스트 표로 (Esc로 전환)</label>
               <label><input type="checkbox" id="set-auto-up"> 자동 합계 유지: 1초마다 골드를 가장 싼 파티 업그레이드에 자동 사용</label>
-              <label><input type="checkbox" id="set-sound"> 효과음 (합성음 · 보스 키가 켜져 있으면 무음)</label>
+              <label><input type="checkbox" id="set-sound"> 소리 (합성 효과음 · 페이지 레이아웃 보기에서는 무음)</label>
               <label><input type="checkbox" id="set-gridlines"> 눈금선: 전투 화면 위에 셀 눈금선 표시</label>
               <label><input type="checkbox" id="set-safe"> 안전 자동 진행: 승산이 35% 미만이면 자동 진행을 잠시 멈추고 사냥, 강화로 승산이 오르면 자동 재개</label>
             </div>

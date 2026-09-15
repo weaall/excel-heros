@@ -87,8 +87,8 @@ export class UIManager {
     document.querySelectorAll('[data-ribbon]').forEach((b) => b.addEventListener('click', () => this.showRibbon(b.dataset.ribbon)));
     document.querySelectorAll('.bs-item[data-bs]').forEach((b) => b.addEventListener('click', () => this.openBackstage(b.dataset.bs)));
     $('#bs-close').addEventListener('click', () => this.closeBackstage());
-    $('#btn-stealth').addEventListener('click', () => this.game.toggleExcel());
-    $('#qa-stealth').addEventListener('click', () => this.game.toggleExcel());
+    $('#qa-stealth').addEventListener('click', () => { if (!this.game.state.settings.excel) this.game.toggleExcel(); });
+    $('#qa-normal').addEventListener('click', () => { if (this.game.state.settings.excel) this.game.toggleExcel(); });
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); this.game.persist(); this.toast('저장됨'); return; }
       if (e.key !== 'Escape') return;
@@ -150,7 +150,6 @@ export class UIManager {
     $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
     $('#qa-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#qa-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
-    $('#btn-sound').addEventListener('click', () => { this.sound?.unlock(); this.game.setSound(!this.game.state.settings.sound); });
     $('#set-sound').addEventListener('change', (e) => { this.sound?.unlock(); this.game.setSound(e.target.checked); });
     $('#btn-prestige').addEventListener('click', () => {
       const info = this.game.prestigeInfo(); if (!info.eligible) return;
@@ -282,7 +281,7 @@ export class UIManager {
     item('Σ', '자동 합계 (가장 싼 업그레이드 반복)', () => { const n = g.upgradeCheapestLoop(); this.toast(n ? `업그레이드 ${n}회` : '골드가 부족합니다'); });
     sep();
     item('▦', `눈금선 ${g.state.settings.gridlines !== false ? '숨기기' : '표시'}`, () => g.setGridlines(!(g.state.settings.gridlines !== false)));
-    item('🔒', '보스 키 (Esc)', () => g.toggleExcel());
+    item('▤', '페이지 레이아웃 / 기본 보기 (Esc)', () => g.toggleExcel());
     item('▤', '셀 서식…', () => this.toast('셀 서식: 이 셀은 게임 개체(그림)입니다'), { sc: 'Ctrl+1' });
     menu.hidden = false;
     const r = menu.getBoundingClientRect();
@@ -888,7 +887,7 @@ export class UIManager {
     $('#set-safe').checked = st.safeAdvance !== false;
     $('#cloud-url').value = st.cloud?.url ?? ''; $('#cloud-name').value = st.cloud?.name ?? ''; this.#refreshCloud();
     $('#qa-auto-up').checked = !!st.autoUpgrade; $('#set-auto-up').checked = !!st.autoUpgrade;
-    $('#set-sound').checked = !!st.sound; $('#btn-sound').textContent = st.sound ? '🔊 효과음' : '🔇 효과음';
+    $('#set-sound').checked = !!st.sound;
     this.#refreshPrestige();
   }
 
@@ -953,11 +952,11 @@ export class UIManager {
     $('#canvas-wrap').hidden = on; $('#stealth-view').hidden = !on;
     $('#status-ready').textContent = on ? '계산 중 (4개 프로세서): 37%' : '준비';
     $('#set-stealth').checked = on;
-    $('#btn-stealth').textContent = on ? '🔓 보스 키 해제' : '🔒 보스 키';
+    $('#qa-stealth').classList.toggle('active', on); $('#qa-normal').classList.toggle('active', !on);
     if (on) this.closeBackstage();
     this.#refreshFormulaBar();
     if (on) { this.#refreshStealth(); this.closeModal(); }
-    if (!silent) this.toast(on ? '보스 키 ON — 전투 화면을 숨겼습니다 (Esc로 복귀)' : '보스 키 OFF');
+    if (!silent) this.toast(on ? '페이지 레이아웃 보기 (Esc: 기본 보기)' : '기본 보기');
   }
   #refreshStealth() {
     const em = this.game.entities; const tbody = $('#stealth-table tbody'); tbody.innerHTML = '';
@@ -1011,7 +1010,7 @@ export class UIManager {
       <ul>
         <li><b>홈</b> — 전투. 오른쪽 <b>파티 관리</b> 창에서 강화. <b>데이터</b> — 카드 명단·승급·직급 승진. <b>삽입</b> — 직원 데이터 가져오기(뽑기). <b>검토</b> — 일일 업무.</li>
         <li>시작 보석 <b>${BALANCE.STARTING_GEMS}</b>개: 바로 10행 가져오기를 해보세요.</li>
-        <li><b>Esc</b> 또는 🔒 보스 키: 전투 화면만 텍스트 표로 바뀌고 나머지 레이아웃은 그대로입니다.</li>
+        <li><b>Esc</b> 또는 보기 › 페이지 레이아웃: 전투 화면만 텍스트 표로 바뀌고 나머지 레이아웃은 그대로입니다.</li>
       </ul>`);
   }
   toast(text) {
