@@ -49,6 +49,8 @@ export const HERO_MAP = {
   macro: { base: 'lizard_m', hue: 0 }, hr_jung: { base: 'wizzard_f', hue: 0 }, audit_han: { base: 'elf_m', hue: 300, weapon: 'katana' }, acct_lead: { base: 'wizzard_f', hue: 40, weapon: 'red_staff' },
   dev_lead: { base: 'lizard_f', hue: 200 }, ga_lead: { base: 'knight_m', hue: 260, weapon: 'big_hammer' }, welfare: { base: 'elf_f', hue: 300 }, cfo: { base: 'wizzard_m', hue: 270, weapon: 'red_staff' },
   cto: { base: 'lizard_m', hue: 300, weapon: 'lavish_sword' }, coo: { base: 'knight_f', hue: 200 }, ceo: { base: 'wizzard_m', hue: 45, weapon: 'red_staff' }, chairman: { base: 'knight_m', hue: 45, weapon: 'golden_sword' },
+  helpdesk: { base: 'elf_m', hue: 240 }, cleaner: { base: 'dwarf_f', hue: 0 }, sales_kang: { base: 'dwarf_m', hue: 320 }, legal_yoon: { base: 'knight_f', hue: 250 },
+  pm_lead: { base: 'elf_f', hue: 120 }, design_lead: { base: 'wizzard_f', hue: 300 }, cmo: { base: 'lizard_f', hue: 340 }, founder: { base: 'lizard_m', hue: 130 },
 };
 
 // --- monsters ----------------------------------------------------------------------

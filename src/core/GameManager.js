@@ -17,6 +17,7 @@ import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
 
 export class GameManager extends Emitter {
+  static HISTORY_STEP = 5; static HISTORY_LEN = 120; // 10 minutes of samples
   constructor({ state, save, rng = createRng(), now = Date.now() } = {}) {
     super();
     this.state = state ?? createInitialState(now);
@@ -25,6 +26,8 @@ export class GameManager extends Emitter {
     this.logs = [];
     this.rowCounter = 1000 + Math.floor(Math.random() * 500);
     this.saveTimer = 0; this.dailyTimer = 0; this.autoTimer = 0; this.resumeTimer = 0; this.waitingAdvance = false;
+    // rolling history for the 통계_차트 sheet (in-memory): one sample per HISTORY_STEP seconds, last HISTORY_LEN samples
+    this.history = { t: [], goldPerMin: [], dps: [], stage: [] }; this.historyTimer = 0; this.historyGold = this.state.stats.totalGold;
     Quests.ensureDaily(this.state, now);
     this.entities = new EntityManager(this);
     this.entities.rebuildParty();
@@ -472,6 +475,13 @@ export class GameManager extends Emitter {
     this.state.stats.playSeconds += dt;
     this.entities.update(dt);
     this.resumeTimer += dt; if (this.resumeTimer >= 2) { this.resumeTimer = 0; this.#maybeResumeAdvance(); }
+    this.historyTimer += dt;
+    if (this.historyTimer >= GameManager.HISTORY_STEP) {
+      const gained = this.state.stats.totalGold - this.historyGold; this.historyGold = this.state.stats.totalGold;
+      const h = this.history; h.t.push(this.state.stats.playSeconds); h.goldPerMin.push(gained / this.historyTimer * 60); h.dps.push(this.entities.dps()); h.stage.push(this.state.stage);
+      for (const k of Object.keys(h)) if (h[k].length > GameManager.HISTORY_LEN) h[k].splice(0, h[k].length - GameManager.HISTORY_LEN);
+      this.historyTimer = 0; this.emit('history');
+    }
     if (this.state.settings.autoUpgrade) { this.autoTimer += dt; if (this.autoTimer >= BALANCE.AUTO_UPGRADE_INTERVAL) { this.autoTimer = 0; this.upgradeCheapestLoop(50); } }
     this.saveTimer += dt; this.dailyTimer += dt;
     if (this.dailyTimer >= 60) { this.dailyTimer = 0; if (Quests.ensureDaily(this.state, now)) { this.log('새로운 업무일이 시작되었습니다', 'info'); this.emit('quests'); } }

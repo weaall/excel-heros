@@ -30,6 +30,7 @@ export class Renderer {
     game.on('cleared', ({ stage, boss, first }) => {
       this.banner = { kind: 'clear', text: boss ? '보스 처리 완료!' : `${stageLabel(stage)} 마감!`, sub: first ? '첫 클리어 보상 지급' : '반복 클리어', t: 0, life: 1.5 };
     });
+    game.on('enrage', ({ boss }) => { this.banner = { kind: 'boss', text: `${boss.def.name} 격노!`, sub: '공격력 상승 · 속도 상승 — 서둘러 마감하세요', t: 0, life: 1.6 }; });
     game.on('ult', ({ hero }) => { this.banner = { kind: 'skill', text: hero.skillName ?? 'ULT', sub: hero.def.name, hero, t: 0, life: 1.3 }; });
     game.on('challenge', () => { if (!game.isChallenging() && this.banner?.kind !== 'clear') this.banner = { kind: 'farm', text: `${game.stageLabel()} 자동 사냥`, sub: '', t: 0, life: 1.2 }; });
   }
@@ -260,6 +261,7 @@ export class Renderer {
     if (!m.isBoss) this.#hpBar(m.x, bottom + 6, m.hp / m.maxHp, m.elite ? '#f1c40f' : '#e74c3c', m.elite ? 48 : 40);
     if (m.shield > 0) { const w = m.elite ? 48 : 40; ctx.fillStyle = 'rgba(116,185,255,0.9)'; ctx.fillRect(m.x - w / 2, bottom + 4, Math.max(2, w * Math.min(1, m.shield / m.maxHp)), 2); }
     if (m.elite && m.def.affix && m.alive) { ctx.font = 'bold 10px "Malgun Gothic", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.strokeText(m.def.affix.name, m.x, bottom - img.height - 6); ctx.fillStyle = '#f9e79f'; ctx.fillText(m.def.affix.name, m.x, bottom - img.height - 6); }
+    if (m.isBoss && m.enraged && m.alive) { ctx.save(); ctx.globalAlpha = 0.35 + Math.sin(this.t * 10) * 0.15; ctx.shadowColor = '#e74c3c'; ctx.shadowBlur = 24; ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3; ctx.strokeRect(m.x - img.width / 2 + 6, bottom - img.height + 4, img.width - 12, img.height - 8); ctx.restore(); }
     if (m.isBoss && m.warn && m.alive) {
       const p = 0.5 + Math.sin(this.t * 12) * 0.5;
       ctx.save(); ctx.translate(m.x, bottom - img.height - 18 - p * 4); ctx.font = 'bold 26px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';

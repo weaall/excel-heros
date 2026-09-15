@@ -18,6 +18,9 @@ const ROLE_PRIORITY = { tank: 0, melee: 1, healer: 2, ranged: 3 };
 const T = (k) => TRAITS[k].value;
 const tv = (h, k) => TRAITS[k].value * (h.traitMult ?? 1);   // a hero's own trait value (awakened heroes ×1.5)
 const RANGED_SHAPES = { sheet: 'paper', chart: 'bar', cursor: 'arrow', cloud: 'drop', hourglass: 'sand' };
+/** What each ranged/healer hero throws (office supplies). Unlisted heroes fire a plain shot. */
+const HERO_SHOT = { parttime: 'drop', contract: 'paper', vlookup: 'bar', acct_lead: 'bar', cfo: 'sand', ceo: 'arrow', helpdesk: 'bar', pm_lead: 'paper', cmo: 'paper', barista: 'drop', hr_jung: 'paper', welfare: 'drop', design_lead: 'arrow', cleaner: 'drop' };
+const ENRAGE = { at: 0.5, atk: 1.2, speed: 1.3, interval: 0.7 }; // bosses enrage under 50% HP
 const TRAVEL_TIME = 1.6;      // seconds of scrolling between waves
 const SCROLL_SPEED = 150;     // px/s background scroll while travelling
 const MELEE_REACH = 9;        // melee heroes dash to any monster that has reached the line, wherever they stand
@@ -161,7 +164,16 @@ export class EntityManager {
       for (const h of heroes) { h.anim = 'walk'; h.animT += dt; }
       if (this.travelT <= 0) { this.traveling = false; this.#spawnWave(); }
     } else if (this.traveling) { this.traveling = false; }
-    if (this.boss) { this.bossTimer -= dt; if (this.bossTimer <= 0 && this.boss.alive) { this.game.onBossTimeout(); return; } }
+    if (this.boss) {
+      this.bossTimer -= dt; if (this.bossTimer <= 0 && this.boss.alive) { this.game.onBossTimeout(); return; }
+      const b = this.boss;
+      if (b.alive && !b.enraged && b.hp <= b.maxHp * ENRAGE.at) { // 격노: faster, harder, the arena shakes
+        b.enraged = true; b.atk = Math.floor(b.atk * ENRAGE.atk); b.speed *= ENRAGE.speed; b.interval *= ENRAGE.interval; b.cd = Math.min(b.cd, 0.6);
+        this.shake = Math.max(this.shake, 10); this.fx('ring', { x: b.x, y: b.y, color: '#e74c3c', radius: 160, life: 0.6 });
+        this.floaters.push({ x: b.x, y: b.y - 96, text: '격노!', color: '#e74c3c', t: 0, big: true });
+        this.game.log(`${b.def.name} 격노! 공격력 ×${ENRAGE.atk}, 속도 상승`, 'boss'); this.game.emit('sfx', 'boss'); this.game.emit('enrage', { boss: b });
+      }
+    }
 
     // --- heroes ---------------------------------------------------------
     for (const h of this.heroes) {
@@ -210,7 +222,7 @@ export class EntityManager {
         if (h.role === 'ranged' || h.role === 'healer') {
           // projectile; damage lands on arrival
           const snapshot = monsters;
-          this.projectiles.push({ x: h.x + 18, y: h.y - 14, tx: target.x, ty: target.y - 6, t: 0, dur: 0.28, color: h.def.palette.W, kind: 'shot', onHit: () => { if (target.alive) this.#heroHit(h, target, 1, false, snapshot); } });
+          this.projectiles.push({ x: h.x + 18, y: h.y - 14, tx: target.x, ty: target.y - 6, t: 0, dur: 0.28, color: h.def.palette.W, kind: HERO_SHOT[h.def.id] ?? 'shot', onHit: () => { if (target.alive) this.#heroHit(h, target, 1, false, snapshot); } });
           this.fx('muzzle', { x: h.x + 26, y: h.y - 14, color: h.def.palette.W, life: 0.12 });
         } else {
           // melee dash: strike lands slightly after the wind-up

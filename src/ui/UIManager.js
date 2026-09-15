@@ -23,6 +23,7 @@ const el = (tag, attrs = {}, ...children) => {
 const btn = (label, onclick, cls = '', disabled = false) => { const b = el('button', { class: `xl-btn ${cls}`, onclick }, label); b.disabled = disabled; return b; };
 
 const RIBBON_SHEET = { home: 'home', insert: 'gacha', data: 'roster', review: 'quests' };
+const GameManager_HISTORY_STEP = () => 5;
 const SHEET_RIBBON = { home: 'home', gacha: 'insert', roster: 'data', quests: 'review' };
 const COLS = 'ABCDEFGHIJKLM';
 const STEALTH_FORMULAS = ['=SUMIFS(Sheet2!D:D,Sheet2!A:A,"Q3",Sheet2!B:B,">0")', '=IFERROR(VLOOKUP(A14,Sheet3!$A:$F,4,FALSE),"")', '=INDEX(Data!$C:$C,MATCH(B2,Data!$A:$A,0))'];
@@ -83,7 +84,8 @@ export class UIManager {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); this.game.persist(); this.toast('저장됨'); return; }
       if (e.key !== 'Escape') return;
       e.preventDefault();
-      if (!$('#modal').hidden) this.closeModal();
+      if (!$('#ctx-menu').hidden) this.closeContextMenu();
+      else if (!$('#modal').hidden) this.closeModal();
       else if (!$('#backstage').hidden) this.closeBackstage();
       else this.game.toggleExcel();
     });
@@ -110,6 +112,10 @@ export class UIManager {
     const canvas = $('#battle');
     canvas.addEventListener('click', (e) => this.#selectCellAt(e));
     canvas.addEventListener('dblclick', (e) => { const h = this.#entityAt(e); if (h?.kind === 'hero') this.openDetail(h.heroId); });
+    canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); this.#selectCellAt(e); this.#openContextMenu(e.clientX, e.clientY, this.#entityAt(e)); });
+    document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#ctx-menu')) this.closeContextMenu(); });
+    document.addEventListener('contextmenu', (e) => { if (!e.target.closest('#battle') && !e.target.closest('#ctx-menu')) this.closeContextMenu(); });
+    this.game.on('history', () => { if (document.querySelector('#sheet-chart.active')) this.#drawCharts(); });
 
     $('#qa-upgrade-all').addEventListener('click', () => { const n = this.game.upgradeCheapestLoop(); this.toast(n ? `자동 합계: 업그레이드 ${n}회 적용` : '골드가 부족합니다'); });
     $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
@@ -184,11 +190,13 @@ export class UIManager {
       this.#refreshTeamTable(true);
       if (this.game.state.settings.excel && this.stealthTimer >= 0.5) { this.stealthTimer = 0; this.#refreshStealth(); }
       this.#refreshFormulaSheetValues();
+      if (document.querySelector('#sheet-chart.active')) { this.chartTimer = (this.chartTimer ?? 0) + 0.25; if (this.chartTimer >= 1) { this.chartTimer = 0; this.#drawCharts(); } }
     }
   }
 
   switchSheet(name) {
-    this.closeBackstage();
+    this.closeBackstage(); this.closeContextMenu();
+    if (name === 'chart') this.#drawCharts();
     document.querySelectorAll('.sheet').forEach((s) => s.classList.toggle('active', s.id === `sheet-${name}`));
     document.querySelectorAll('.sheet-tab').forEach((b) => b.classList.toggle('active', b.dataset.sheet === name));
     if (SHEET_RIBBON[name]) this.#activateRibbon(SHEET_RIBBON[name]);
@@ -216,6 +224,98 @@ export class UIManager {
     $('#backstage').hidden = true;
     const active = document.querySelector('.sheet.active')?.id.replace('sheet-', '') ?? 'home';
     this.#activateRibbon(SHEET_RIBBON[active] ?? 'home');
+  }
+
+  // -------------------------------------------------------- context menu --
+  #openContextMenu(x, y, ent) {
+    const menu = $('#ctx-menu'); menu.innerHTML = '';
+    const item = (icon, label, fn, { disabled = false, sc = '' } = {}) => menu.append(el('div', { class: `ctx-item ${disabled ? 'disabled' : ''}`, onclick: () => { if (!disabled) { fn(); this.closeContextMenu(); } } }, el('span', { class: 'ci' }, icon), el('span', {}, label), sc ? el('span', { class: 'sc' }, sc) : null));
+    const sep = () => menu.append(el('div', { class: 'ctx-sep' }));
+    const g = this.game;
+    if (ent?.kind === 'hero') {
+      const v = g.heroView(ent.heroId);
+      item('👤', `${v.def.name} 상세 보기`, () => this.openDetail(ent.heroId));
+      item('▲', `강화 +1 (골드 ${fmt(v.cost)})`, () => { if (!g.upgradeHero(ent.heroId)) this.toast('골드가 부족합니다'); }, { disabled: g.state.gold < v.cost });
+      item(v.inParty ? '✕' : '✓', v.inParty ? '파티 해제' : '파티 배치', () => g.toggleParty(ent.heroId), { disabled: v.isMain && g.state.party.length === 1 });
+      sep();
+    } else if (ent?.kind === 'monster') {
+      item('☠', `${ent.def.name} — HP ${fmt(Math.round(ent.hp))} / ${fmt(ent.maxHp)}`, () => {}, { disabled: true });
+      if (ent.def.affix) item('★', `접사 ${ent.def.affix.name}: ${ent.def.affix.desc}`, () => {}, { disabled: true });
+      sep();
+    }
+    item('✂', '잘라내기', () => {}, { disabled: true, sc: 'Ctrl+X' });
+    item('⧉', '복사', () => this.toast(`복사됨: ${this.#cellFormula() ?? this.#cellRef() ?? ''}`), { sc: 'Ctrl+C' });
+    item('📋', '붙여넣기', () => {}, { disabled: true, sc: 'Ctrl+V' });
+    sep();
+    item('⚑', g.isChallenging() ? '도전 중단' : `${stageLabel(g.nextStage())} 도전`, () => (g.isChallenging() ? g.cancelChallenge() : g.startChallenge()));
+    item('Σ', '자동 합계 (가장 싼 업그레이드 반복)', () => { const n = g.upgradeCheapestLoop(); this.toast(n ? `업그레이드 ${n}회` : '골드가 부족합니다'); });
+    sep();
+    item('▦', `눈금선 ${g.state.settings.gridlines !== false ? '숨기기' : '표시'}`, () => g.setGridlines(!(g.state.settings.gridlines !== false)));
+    item('🔒', '보스 키 (Esc)', () => g.toggleExcel());
+    item('▤', '셀 서식…', () => this.toast('셀 서식: 이 셀은 게임 개체(그림)입니다'), { sc: 'Ctrl+1' });
+    menu.hidden = false;
+    const r = menu.getBoundingClientRect();
+    menu.style.left = `${Math.min(x, window.innerWidth - r.width - 8)}px`; menu.style.top = `${Math.min(y, window.innerHeight - r.height - 8)}px`;
+  }
+  closeContextMenu() { const m = $('#ctx-menu'); if (m && !m.hidden) m.hidden = true; }
+
+  // ---------------------------------------------------------- charts --
+  /** Excel-style line chart: title, plot area with gridlines, axis labels, one or two series. */
+  #lineChart(canvas, title, series, { unit = '', decimals = 0 } = {}) {
+    const ctx = canvas.getContext('2d'); const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#595959'; ctx.font = '14px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(title, W / 2, 16);
+    const L = 54, R = W - 14, T = 34, B = H - 40; const n = Math.max(...series.map((s) => s.data.length));
+    const all = series.flatMap((s) => s.data); const max = Math.max(1, ...all) * 1.1, min = 0;
+    ctx.strokeStyle = '#d9d9d9'; ctx.lineWidth = 1; ctx.beginPath();
+    for (let i = 0; i <= 5; i++) { const y = Math.round(B - (B - T) * (i / 5)) + 0.5; ctx.moveTo(L, y); ctx.lineTo(R, y); }
+    ctx.stroke();
+    ctx.fillStyle = '#595959'; ctx.font = '10.5px "Segoe UI", Arial'; ctx.textAlign = 'right';
+    for (let i = 0; i <= 5; i++) { const v = min + (max - min) * (i / 5); ctx.fillText(fmt(+v.toFixed(decimals)), L - 6, B - (B - T) * (i / 5)); }
+    ctx.strokeStyle = '#bfbfbf'; ctx.beginPath(); ctx.moveTo(L, B + 0.5); ctx.lineTo(R, B + 0.5); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.fillStyle = '#595959';
+    const labels = n >= 2 ? [0, Math.floor((n - 1) / 2), n - 1] : [0];
+    for (const i of labels) { const x = n > 1 ? L + (R - L) * (i / (n - 1)) : L; const ago = (n - 1 - i) * GameManager_HISTORY_STEP(); ctx.fillText(ago ? `-${Math.round(ago / 60)}분${ago % 60 ? ` ${ago % 60}초` : ''}` : '지금', x, B + 14); }
+    ctx.fillText(unit, (L + R) / 2, H - 8);
+    const colors = ['#4472c4', '#ed7d31', '#a5a5a5'];
+    series.forEach((s, si) => {
+      const d = s.data; if (!d.length) return;
+      ctx.strokeStyle = colors[si % colors.length]; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+      d.forEach((v, i) => { const x = d.length > 1 ? L + (R - L) * (i / (d.length - 1)) : L; const y = B - (B - T) * ((v - min) / (max - min)); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.stroke();
+      const lx = d.length > 1 ? R : L, ly = B - (B - T) * ((d[d.length - 1] - min) / (max - min));
+      ctx.fillStyle = colors[si % colors.length]; ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
+    });
+    // legend
+    ctx.font = '11px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'left';
+    let lx = L; for (const [i, s] of series.entries()) { ctx.fillStyle = colors[i % colors.length]; ctx.fillRect(lx, H - 30, 14, 3); ctx.fillStyle = '#595959'; ctx.fillText(s.name, lx + 18, H - 28); lx += 18 + ctx.measureText(s.name).width + 16; }
+    if (!all.length) { ctx.fillStyle = '#999'; ctx.textAlign = 'center'; ctx.font = '12px "Malgun Gothic", sans-serif'; ctx.fillText('데이터 수집 중… (5초 후 첫 샘플)', (L + R) / 2, (T + B) / 2); }
+  }
+  #drawCharts() {
+    const h = this.game.history; const g = this.game;
+    this.#lineChart($('#chart-gold'), '골드 획득 추이 (분당)', [{ name: '골드/분', data: h.goldPerMin.map((v) => Math.round(v)) }], { unit: '시간 (5초 간격)' });
+    this.#lineChart($('#chart-dps'), '파티 DPS', [{ name: '실측 DPS', data: h.dps.map((v) => Math.round(v)) }, { name: '이론 DPS', data: h.dps.map(() => Math.round(g.partyDPS())) }], { unit: '시간 (5초 간격)' });
+    this.#lineChart($('#chart-stage'), '스테이지 진행', [{ name: '현재 스테이지', data: h.stage }], { unit: '시간 (5초 간격)' });
+    const party = g.state.party.map((id) => g.heroView(id));
+    this.#barChart($('#chart-party'), '파티 ATK 구성', party.map((v) => ({ label: v.def.name, value: v.atk, color: v.grade.color })));
+  }
+  /** Excel-style clustered bar chart for the party. */
+  #barChart(canvas, title, bars) {
+    const ctx = canvas.getContext('2d'); const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#595959'; ctx.font = '14px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(title, W / 2, 16);
+    const L = 54, R = W - 14, T = 34, B = H - 40; const max = Math.max(1, ...bars.map((b) => b.value)) * 1.15;
+    ctx.strokeStyle = '#d9d9d9'; ctx.beginPath(); for (let i = 0; i <= 5; i++) { const y = Math.round(B - (B - T) * (i / 5)) + 0.5; ctx.moveTo(L, y); ctx.lineTo(R, y); } ctx.stroke();
+    ctx.fillStyle = '#595959'; ctx.font = '10.5px "Segoe UI", Arial'; ctx.textAlign = 'right';
+    for (let i = 0; i <= 5; i++) ctx.fillText(fmt(Math.round(max * (i / 5))), L - 6, B - (B - T) * (i / 5));
+    const slot = (R - L) / Math.max(1, bars.length), bw = Math.min(56, slot * 0.6);
+    bars.forEach((b, i) => {
+      const x = L + slot * i + (slot - bw) / 2, hgt = (B - T) * (b.value / max);
+      ctx.fillStyle = b.color; ctx.fillRect(x, B - hgt, bw, hgt);
+      ctx.fillStyle = '#333'; ctx.font = '10.5px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.fillText(fmt(b.value), x + bw / 2, B - hgt - 8);
+      ctx.fillStyle = '#595959'; ctx.font = '10.5px "Malgun Gothic", sans-serif'; ctx.fillText(b.label.length > 7 ? b.label.slice(0, 6) + '…' : b.label, x + bw / 2, B + 12);
+    });
+    ctx.strokeStyle = '#bfbfbf'; ctx.beginPath(); ctx.moveTo(L, B + 0.5); ctx.lineTo(R, B + 0.5); ctx.stroke();
   }
 
   // ----------------------------------------------------- cell selection --
@@ -365,6 +465,7 @@ export class UIManager {
   #buildCards() {
     const grid = $('#card-grid'); grid.innerHTML = '';
     const tbody = $('#roster-table tbody'); tbody.innerHTML = '';
+    const maxAtk = Math.max(1, ...this.#rosterOrder().filter((id) => this.game.state.heroes[id].owned).map((id) => this.game.heroView(id).atk));
     for (const id of this.#rosterOrder()) {
       const v = this.game.heroView(id); const e = v.entry;
       const c = cardCanvas(v.def, {
@@ -378,7 +479,9 @@ export class UIManager {
       grid.append(wrap);
       tbody.append(el('tr', { class: e.owned ? '' : 'locked' },
         el('td', {}, v.def.name), el('td', { style: `color:${v.grade.color}` }, v.def.grade), el('td', {}, ROLES[v.def.role].name), el('td', {}, v.traitName),
-        el('td', {}, v.isMain ? v.def.title : (e.owned ? stars(e.star) : '미보유')), el('td', { class: 'num' }, e.owned ? e.level : '-'), el('td', { class: 'num' }, e.owned ? e.shards : '-')));
+        el('td', {}, v.isMain ? v.def.title : (e.owned ? stars(e.star) : '미보유')), el('td', { class: 'num' }, e.owned ? e.level : '-'),
+        el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${e.owned ? Math.max(2, Math.round((v.atk / maxAtk) * 96)) : 0}%` }), el('span', {}, e.owned ? fmt(v.atk) : '-')),
+        el('td', { class: 'num' }, e.owned ? e.shards : '-')));
     }
     $('#party-count').textContent = `${this.game.state.party.length} / ${BALANCE.PARTY_SIZE}`;
     const col = this.game.collection();

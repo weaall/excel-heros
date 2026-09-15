@@ -177,7 +177,7 @@
         </div>
         <div class="card-grid" id="card-grid"></div>
         <table class="xl-table compact" id="roster-table">
-          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">조각</th></tr></thead>
+          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">ATK</th><th class="num">조각</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>
@@ -244,6 +244,19 @@
         <p class="muted small">방치 보상: 켜두면 100%, 꺼두면 60% (최대 10시간). 복귀 시 광고를 보면 2배.</p>
       </section>
 
+      <!-- Sheet6: 통계_차트 (Excel-style chart objects) --------------------------->
+      <section class="sheet" id="sheet-chart">
+        <div class="sheet-head">
+          <span>최근 10분 <span class="muted">(5초 간격 샘플 · 세션 메모리)</span></span>
+          <span class="muted small">삽입 › 차트 로 만든 것처럼 시트 위에 놓인 차트 개체입니다. 드래그는 흉내만 냅니다.</span>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-obj"><canvas id="chart-gold" width="420" height="230"></canvas></div>
+          <div class="chart-obj"><canvas id="chart-dps" width="420" height="230"></canvas></div>
+          <div class="chart-obj"><canvas id="chart-stage" width="420" height="230"></canvas></div>
+          <div class="chart-obj"><canvas id="chart-party" width="420" height="230"></canvas></div>
+        </div>
+      </section>
     </main>
 
     <!-- Right task pane (Excel "작업 창"): party management -------------------->
@@ -336,6 +349,7 @@
     <button class="sheet-tab" data-sheet="roster">인사_명단</button>
     <button class="sheet-tab" data-sheet="gacha">데이터_가져오기</button>
     <button class="sheet-tab" data-sheet="quests">일일_업무</button>
+    <button class="sheet-tab" data-sheet="chart">통계_차트</button>
     <span class="sheet-add" title="새 시트">⊕</span>
   </footer>
   <div class="statusbar">
@@ -349,6 +363,9 @@
     <span class="zoom">− ────●──── + 100%</span>
   </div>
 </div>
+
+<!-- Excel-style right-click menu on the worksheet -->
+<div id="ctx-menu" class="ctx-menu" hidden></div>
 
 <div id="modal" class="modal" hidden>
   <div class="dialog" role="dialog" aria-modal="true">

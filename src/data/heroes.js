@@ -67,6 +67,15 @@ export const HEROES = [
   // S (2) -------------------------------------------------------------------
   { id: 'ceo',        name: '대표이사',      grade: 'S', role: 'ranged', trait: 'focus',     skill: { type: 'ult', power: 4 },      look: { hair: 'side', acc: 'sunglasses', acc2: 'tie' , prop: 'briefcase' }, palette: { H: '#f5f6fa', B: '#d4a017', P: '#2f3640', W: '#fbc531' } },
   { id: 'chairman',   name: '회장님',        grade: 'S', role: 'tank',   trait: 'rally',     skill: { type: 'ult', power: 3 },      look: { hair: 'bald', acc: 'crown', acc2: 'beard' , prop: 'cane' }, palette: { H: '#dcdde1', B: '#e1b12c', P: '#353b48', W: '#f5f6fa' } },
+  // 16차 추가 (8) ---------------------------------------------------------------
+  { id: 'helpdesk',   name: 'IT 헬프데스크', grade: 'D', role: 'ranged', trait: 'swift',     skill: { type: 'strike', power: 3 },   look: { hair: 'short', acc: 'headset', prop: 'laptop' },          palette: { H: '#2d3436', B: '#74b9ff', P: '#2d3436', W: '#dfe6e9' } },
+  { id: 'cleaner',    name: '미화 여사님',   grade: 'D', role: 'healer', trait: 'lucky',     skill: { type: 'heal',   power: 22 },  look: { hair: 'bun', acc: 'badge', prop: 'mop' },                 palette: { H: '#636e72', B: '#fab1a0', P: '#2d3436', W: '#ffeaa7' } },
+  { id: 'sales_kang', name: '영업팀 강과장', grade: 'C', role: 'melee',  trait: 'greedy',    skill: { type: 'strike', power: 4 },   look: { hair: 'side', acc: 'tie', prop: 'briefcase' },            palette: { H: '#1e272e', B: '#e17055', P: '#2d3436', W: '#fdcb6e' } },
+  { id: 'legal_yoon', name: '법무팀 윤대리', grade: 'C', role: 'tank',   trait: 'focus',     skill: { type: 'buff',   power: 22 },  look: { hair: 'long', acc: 'glasses', prop: 'files' },            palette: { H: '#2c2c54', B: '#a29bfe', P: '#2d3436', W: '#dfe6e9' } },
+  { id: 'pm_lead',    name: '기획팀장',      grade: 'B', role: 'ranged', trait: 'rally',     skill: { type: 'sweep',  power: 1.8 }, look: { hair: 'bob', acc: 'lanyard', prop: 'pen' },               palette: { H: '#6c5ce7', B: '#55efc4', P: '#2d3436', W: '#00cec9' } },
+  { id: 'design_lead', name: '디자인팀장',   grade: 'B', role: 'healer', trait: 'swift',     skill: { type: 'heal',   power: 32 },  look: { hair: 'curly', acc: 'earring', prop: 'tablet' },          palette: { H: '#e84393', B: '#fd79a8', P: '#2d3436', W: '#ffeaa7' } },
+  { id: 'cmo',        name: 'CMO',           grade: 'A', role: 'ranged', trait: 'lucky',     skill: { type: 'sweep',  power: 2.2 }, look: { hair: 'long', acc: 'sunglasses', prop: 'phone' },         palette: { H: '#d63031', B: '#ff7675', P: '#2d3436', W: '#ffeaa7' } },
+  { id: 'founder',    name: '창업자',        grade: 'S', role: 'melee',  trait: 'crit',      skill: { type: 'ult', power: 3.5 },    look: { hair: 'spiky', acc: 'glasses', prop: 'hoodie' },          palette: { H: '#2d3436', B: '#00b894', P: '#2d3436', W: '#f5f6fa' } },
 ];
 
 export const HERO_BY_ID = Object.fromEntries(HEROES.map((h) => [h.id, h]));
