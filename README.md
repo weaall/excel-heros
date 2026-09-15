@@ -54,6 +54,10 @@ src/config/balance.js          모든 상수·공식 (GDD + 확정 수치)
 src/data/heroes.js             D~S 로스터 20장, 역할/스킬, 메인 영웅 직급 트리
 src/data/monsters.js           스테이지별 몬스터, 보스
 src/data/quests.js             일일 업무 정의, 출근/전체 완료 보너스, 연속 출근
+src/core/plausibility.js       세이브 타당성 검사 (클라이언트·Worker 공용), 순위표 점수
+src/core/CloudSync.js          선택형 클라우드 저장/순위표 클라이언트 (기기 id+secret)
+src/ui/Ads.js                  AdSense H5 Games Ads 보상형 광고 래퍼 (미설정 시 임시 화면)
+backend/                       Cloudflare Worker + D1 백엔드 (worker.js, schema.sql, wrangler.toml)
 src/data/divisions.js          부서 → 7개 부문 매핑, 부문 시너지 수치
 src/data/sprites.js            문자열 템플릿 → 치비 픽셀 스프라이트, 카드/초상 일러스트 생성
 src/core/GameManager.js        재화, 스테이지 흐름, 플레이어 액션(강화/승진/변환/방출/퀘스트/광고), 이벤트
@@ -68,6 +72,12 @@ tests/                         node:test 단위 + 시뮬레이션 테스트
 ```
 
 DevTools 콘솔에서 `EH.game.state` 로 상태를 보고, `EH.game.state.gold = 1e9` 식으로 밸런스 실험이 가능합니다.
+
+## 배포 · 광고 · 백엔드
+
+- **배포**: 정적 파일이므로 GitHub Pages(무료)에 그대로 올라갑니다. 저장소 Settings › Pages › Branch `main` / root. 애드센스 심사와 ads.txt를 위해 커스텀 도메인을 권장합니다.
+- **광고**: AdSense **H5 Games Ads**(Ad Placement API)의 보상형 광고를 `src/ui/Ads.js`가 감쌉니다. 애드센스 승인 후 `index.html`의 `window.EXCEL_HEROES_ADS.publisherId`에 `ca-pub-…`를 넣으면 "광고 보고 보상 받기" 버튼이 실제 광고를 띄우고, 비어 있으면 5초 임시 화면이 나옵니다. 광고를 다 보지 않으면 보상이 없고, 하루 횟수는 `BALANCE.AD.perDay`로 제한됩니다.
+- **백엔드(선택, 무료)**: `backend/`의 Cloudflare Worker + D1이 클라우드 저장·순위표·광고 시청 기록을 맡습니다. 배포 순서는 [backend/README.md](backend/README.md). 플레이어는 `파일 › 옵션 › 클라우드 저장`에 서버 주소와 이름을 넣으면 2분마다 자동 업로드되고, 통계_차트 시트 아래에 순위표가 뜹니다. 서버는 `src/core/plausibility.js`로 조작된 세이브를 걸러냅니다.
 
 ## 아트 크레딧 (CC0)
 

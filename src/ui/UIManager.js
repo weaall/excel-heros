@@ -15,6 +15,7 @@ import { cardArtUrl } from '../data/cardArt.js';
 import { GRID } from '../core/EntityManager.js';
 import * as Quests from '../core/QuestManager.js';
 import { fmt, fmtTime, pct, stars } from '../utils/format.js';
+import * as Ads from './Ads.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, attrs = {}, ...children) => {
@@ -132,6 +133,15 @@ export class UIManager {
     const divSel = $('#rf-div'); for (const d of Object.values(DIVISIONS)) divSel.append(el('option', { value: d.id }, d.name));
     for (const k of ['grade', 'role', 'div', 'owned', 'sort']) $(`#rf-${k}`).addEventListener('change', (e) => { this.filter[k] = e.target.value; this.#buildCards(); });
     $('#rf-clear').addEventListener('click', () => { this.filter = { grade: '', role: '', div: '', owned: '', sort: 'grade' }; for (const k of ['grade', 'role', 'div', 'owned']) $(`#rf-${k}`).value = ''; $('#rf-sort').value = 'grade'; this.#buildCards(); });
+    // cloud save / leaderboard (optional backend)
+    $('#cloud-url').addEventListener('change', (e) => { this.game.setCloud({ url: e.target.value }); this.#refreshCloud(); });
+    $('#cloud-name').addEventListener('change', (e) => { this.game.setCloud({ name: e.target.value }); this.#refreshCloud(); });
+    $('#cloud-test').addEventListener('click', async () => { this.game.setCloud({ url: $('#cloud-url').value, name: $('#cloud-name').value }); if (!this.game.cloud.enabled()) { this.toast('서버 주소를 먼저 입력하세요'); return; } try { await this.game.cloud.ping(); this.toast('서버 연결 성공'); this.game.cloud.status = 'ok'; this.game.cloud.lastError = null; } catch (e) { this.game.cloud.status = 'error'; this.game.cloud.lastError = e.message; this.toast(`연결 실패: ${e.message}`); } this.#refreshCloud(); });
+    $('#cloud-push').addEventListener('click', async () => { this.game.setCloud({ url: $('#cloud-url').value, name: $('#cloud-name').value }); if (!this.game.cloud.enabled()) { this.toast('서버 주소를 먼저 입력하세요'); return; } try { const r = await this.game.cloud.push(); this.toast(r ? '서버에 저장했습니다' : this.game.cloud.lastError ?? '업로드 보류'); } catch (e) { this.toast(`업로드 실패: ${this.game.cloud.lastError ?? e.message}`); } this.#refreshCloud(); });
+    $('#cloud-pull').addEventListener('click', async () => { this.game.setCloud({ url: $('#cloud-url').value }); if (!this.game.cloud.enabled()) { this.toast('서버 주소를 먼저 입력하세요'); return; } try { const r = await this.game.cloud.pull(); if (!r) { this.toast('서버에 저장본이 없습니다'); return; } const when = new Date(r.updatedAt).toLocaleString(); if (!confirm(`서버 저장본(${when}, 최고 스테이지 ${r.save.maxStage})으로 현재 진행을 덮어쓸까요?`)) return; this.game.loadCloudSave(r.save); this.toast('서버 저장본을 불러왔습니다'); } catch (e) { this.toast(`불러오기 실패: ${e.message}`); } this.#refreshCloud(); });
+    $('#rank-refresh').addEventListener('click', () => this.#refreshBoard(true));
+    this.game.on('cloud', () => this.#refreshCloud()); this.game.on('board', () => this.#refreshBoard());
+    Ads.setupAds();
     $('#pane-bulk5').addEventListener('click', () => { const n = this.game.upgradeAllMany(5); this.toast(n ? `일괄 레벨업: 파티 전원 총 ${n}레벨` : '골드가 부족합니다'); });
     $('#pane-bulk-max').addEventListener('click', () => { const n = this.game.upgradeAllMany(200); this.toast(n ? `일괄 레벨업(최대): 총 ${n}레벨` : '골드가 부족합니다'); });
     $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
@@ -212,7 +222,7 @@ export class UIManager {
 
   switchSheet(name) {
     this.closeBackstage(); this.closeContextMenu();
-    if (name === 'chart') this.#drawCharts();
+    if (name === 'chart') { this.#drawCharts(); this.#refreshBoard(true); }
     document.querySelectorAll('.sheet').forEach((s) => s.classList.toggle('active', s.id === `sheet-${name}`));
     document.querySelectorAll('.sheet-tab').forEach((b) => b.classList.toggle('active', b.dataset.sheet === name));
     if (SHEET_RIBBON[name]) this.#activateRibbon(SHEET_RIBBON[name]);
@@ -835,6 +845,17 @@ export class UIManager {
   /** Placeholder ad: full-screen countdown, then `onDone`. Replace with a rewarded-ad SDK later. */
   playAd(onDone) {
     if (this.game.adsLeft() <= 0) { this.toast('오늘 볼 수 있는 광고를 모두 시청했습니다'); return; }
+    if (Ads.available()) { // AdSense H5 Games Ads rewarded break; falls back to the placeholder when no ad is available
+      Ads.showRewarded('idle_bonus').then((r) => {
+        if (r.viewed) { onDone(); this.game.cloud?.recordAd('reward'); this.#refreshQuests(); }
+        else if (r.reason === 'dismissed') this.toast('광고를 끝까지 봐야 보상을 받을 수 있습니다');
+        else this.#placeholderAd(onDone);
+      });
+      return;
+    }
+    this.#placeholderAd(onDone);
+  }
+  #placeholderAd(onDone) {
     const ov = $('#ad-overlay'); const cnt = $('#ad-count'); let left = BALANCE.AD.durationSec;
     ov.hidden = false; cnt.textContent = left;
     const iv = setInterval(() => { left -= 1; cnt.textContent = left; if (left <= 0) { clearInterval(iv); ov.hidden = true; onDone(); this.#refreshQuests(); } }, 1000);
@@ -846,9 +867,28 @@ export class UIManager {
     $('#qa-auto').checked = st.autoAdvance; $('#set-auto').checked = st.autoAdvance; $('#set-stealth').checked = st.excel;
     $('#qa-gridlines').checked = st.gridlines !== false; $('#set-gridlines').checked = st.gridlines !== false; $('#qa-sound').checked = !!st.sound;
     $('#set-safe').checked = st.safeAdvance !== false;
+    $('#cloud-url').value = st.cloud?.url ?? ''; $('#cloud-name').value = st.cloud?.name ?? ''; this.#refreshCloud();
     $('#qa-auto-up').checked = !!st.autoUpgrade; $('#set-auto-up').checked = !!st.autoUpgrade;
     $('#set-sound').checked = !!st.sound; $('#btn-sound').textContent = st.sound ? '🔊 효과음' : '🔇 효과음';
     this.#refreshPrestige();
+  }
+
+  #refreshCloud() {
+    const c = this.game.cloud; const box = $('#cloud-status'); if (!box) return;
+    box.className = `small ${c.status === 'ok' ? 'ok' : c.status === 'error' || c.status === 'rejected' ? 'error' : 'muted'}`;
+    if (!c.enabled()) box.textContent = '서버 주소가 비어 있으면 이 기기(localStorage)에만 저장됩니다.';
+    else if (c.status === 'ok') box.textContent = `연결됨 · 마지막 업로드 ${c.lastPush ? new Date(c.lastPush).toLocaleTimeString() : '-'} · 이름 "${c.cfg().name || '익명 사원'}"`;
+    else if (c.lastError) box.textContent = c.lastError;
+    else box.textContent = '설정됨 · 2분마다 자동 업로드 (연결 확인을 눌러 테스트)';
+  }
+  #refreshBoard(fetch = false) {
+    const tbody = $('#rank-table tbody'); if (!tbody) return; const c = this.game.cloud;
+    if (!c.enabled()) { tbody.innerHTML = ''; tbody.append(el('tr', {}, el('td', { colspan: 7, class: 'muted small' }, '파일 › 옵션에서 클라우드 서버 주소를 입력하면 순위표가 표시됩니다.'))); return; }
+    if (fetch) { c.fetchBoard(50).catch((e) => { tbody.innerHTML = ''; tbody.append(el('tr', {}, el('td', { colspan: 7, class: 'muted small' }, `순위표를 불러올 수 없습니다: ${e.message}`))); }); if (!c.board) return; }
+    const b = c.board; if (!b) return; tbody.innerHTML = '';
+    const rows = [...b.rows, ...(b.mine ? [b.mine] : [])];
+    if (!rows.length) tbody.append(el('tr', {}, el('td', { colspan: 7, class: 'muted small' }, '아직 등록된 사원이 없습니다. "지금 업로드"로 첫 줄을 채워 보세요.')));
+    for (const r of rows) tbody.append(el('tr', { class: r.me ? 'me' : '' }, el('td', { class: 'num' }, r.rank), el('td', {}, `${r.name}${r.me ? ' (나)' : ''}`), el('td', { class: 'num' }, stageLabel(Math.max(1, r.maxCleared))), el('td', { class: 'num' }, r.shares), el('td', { class: 'num' }, fmt(r.dps)), el('td', { class: 'num' }, r.collection), el('td', { class: 'num' }, fmtTime(r.playSeconds))));
   }
 
   #refreshPrestige() {

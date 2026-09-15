@@ -285,6 +285,11 @@
           <div class="chart-obj"><canvas id="chart-stage" width="420" height="230"></canvas></div>
           <div class="chart-obj"><canvas id="chart-party" width="420" height="230"></canvas></div>
         </div>
+        <h3 class="section-title" style="padding-left:10px">순위표 <span class="muted small">(클라우드 서버 연결 시 · 지분 → 최고 스테이지 → DPS 순)</span> <button id="rank-refresh" class="xl-btn small">새로 고침</button></h3>
+        <table class="xl-table compact" id="rank-table">
+          <thead><tr><th class="num">#</th><th>이름</th><th class="num">최고 스테이지</th><th class="num">지분</th><th class="num">DPS</th><th class="num">보유</th><th class="num">플레이</th></tr></thead>
+          <tbody><tr><td colspan="7" class="muted small">파일 › 옵션에서 클라우드 서버 주소를 입력하면 순위표가 표시됩니다.</td></tr></tbody>
+        </table>
       </section>
     </main>
 
@@ -358,6 +363,18 @@
               <table class="xl-table compact"><tbody id="trait-list"></tbody></table>
             </div>
           </div>
+          <h3 class="section-title">클라우드 저장 · 순위표 <span class="muted">(선택 · 무료 Cloudflare Worker, backend/README.md)</span></h3>
+          <div class="cloud-box">
+            <label>서버 주소 <input type="url" id="cloud-url" placeholder="https://excel-heroes-api.<계정>.workers.dev" spellcheck="false"></label>
+            <label>순위표 이름 <input type="text" id="cloud-name" maxlength="16" placeholder="익명 사원"></label>
+            <div class="cloud-actions">
+              <button id="cloud-test" class="xl-btn">연결 확인</button>
+              <button id="cloud-push" class="xl-btn primary">지금 업로드</button>
+              <button id="cloud-pull" class="xl-btn">서버에서 불러오기</button>
+            </div>
+            <div id="cloud-status" class="small muted">서버 주소가 비어 있으면 이 기기(localStorage)에만 저장됩니다.</div>
+            <p class="muted small">저장본은 2분마다 자동 업로드되며, 서버는 골드·보석·처치 수의 타당성을 검사해 조작된 저장본을 순위표에서 걸러냅니다. 기기 식별자는 브라우저에 따로 저장되고 내보내기 파일에는 포함되지 않습니다.</p>
+          </div>
         </section>
         <section class="bs-section" data-bs="save">
           <h2>저장 / 내보내기</h2>
@@ -414,6 +431,9 @@
 </div>
 <div id="toast" class="toast" hidden></div>
 
-<script type="module" src="src/main.js"></script>
+<!-- Rewarded ads (AdSense H5 Games Ads). Leave publisherId empty until the AdSense account is approved; the game then
+       shows its 5-second placeholder instead. See README.md › 광고. -->
+  <script>window.EXCEL_HEROES_ADS = { publisherId: '' };</script>
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>

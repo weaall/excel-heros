@@ -17,6 +17,8 @@ import { HEROES, ROLES } from '../data/heroes.js';
 import { DIVISIONS, SYNERGY, PERKS, divisionOf } from '../data/divisions.js';
 import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
+import { CloudSync } from './CloudSync.js';
+import { migrate } from './state.js';
 
 export class GameManager extends Emitter {
   static HISTORY_STEP = 5; static HISTORY_LEN = 120; // 10 minutes of samples
@@ -31,6 +33,7 @@ export class GameManager extends Emitter {
     // rolling history for the 통계_차트 sheet (in-memory): one sample per HISTORY_STEP seconds, last HISTORY_LEN samples
     this.history = { t: [], goldPerMin: [], dps: [], stage: [] }; this.historyTimer = 0; this.historyGold = this.state.stats.totalGold;
     Quests.ensureDaily(this.state, now);
+    this.cloud = new CloudSync(this);
     this.entities = new EntityManager(this);
     this.entities.rebuildParty();
     this.entities.startStage();
@@ -566,11 +569,26 @@ export class GameManager extends Emitter {
       this.historyTimer = 0; this.emit('history');
     }
     if (this.state.settings.autoUpgrade) { this.autoTimer += dt; if (this.autoTimer >= BALANCE.AUTO_UPGRADE_INTERVAL) { this.autoTimer = 0; this.upgradeCheapestLoop(50); } }
-    this.saveTimer += dt; this.dailyTimer += dt;
+    this.saveTimer += dt; this.dailyTimer += dt; this.cloud?.tick(dt);
     if (this.dailyTimer >= 60) { this.dailyTimer = 0; if (Quests.ensureDaily(this.state, now)) { this.log('새로운 업무일이 시작되었습니다', 'info'); this.emit('quests'); } }
     if (this.saveTimer >= BALANCE.SAVE_INTERVAL_MS / 1000) { this.saveTimer = 0; this.persist(); }
   }
   persist() { if (this.save) { this.save.save(this.state); this.emit('saved'); } }
+  /** 클라우드 설정 (server URL + nickname). Clearing the URL turns the feature off; nothing else changes. */
+  setCloud({ url, name } = {}) {
+    const c = this.state.settings.cloud ?? { url: '', name: '' };
+    if (url !== undefined) c.url = String(url).trim();
+    if (name !== undefined) c.name = String(name).trim().slice(0, 16);
+    this.state.settings.cloud = c; this.cloud.timer = 0; this.persist(); this.emit('settings'); this.emit('cloud', this.cloud);
+  }
+  /** Replace the running game with a save fetched from the server (used by the backstage "서버에서 불러오기" button). */
+  loadCloudSave(raw) {
+    const s = migrate(raw); if (!s) return false;
+    this.state = s; Quests.ensureDaily(this.state);
+    this.entities.rebuildParty(); this.entities.startStage();
+    this.persist(); this.emit('reset'); this.log('서버 저장본을 불러왔습니다', 'info');
+    return true;
+  }
 
   /** Idle/offline reward (also used when the tab was throttled for a long time). */
   applyOffline(report) {
