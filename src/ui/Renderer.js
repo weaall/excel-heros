@@ -81,7 +81,16 @@ export class Renderer {
   /** Ruined-city backdrop (see cityBackdrop.js) tinted by the current district. */
   #drawDungeon(scroll) {
     const theme = phaseTheme(this.game.state.stage);
-    drawCity(this.ctx, scroll, this.t, theme, CANVAS_W, CANVAS_H);
+    // Pixel-art pass: draw the city at full size, downsample to half (nearest neighbour) and blow it back up, so the
+    // backdrop has the same 2px pixel grid as the 2x sprites; scroll is snapped to that grid to avoid shimmer.
+    if (!this.bgFull) {
+      this.bgFull = document.createElement('canvas'); this.bgFull.width = CANVAS_W; this.bgFull.height = CANVAS_H;
+      this.bgSmall = document.createElement('canvas'); this.bgSmall.width = CANVAS_W / 2; this.bgSmall.height = CANVAS_H / 2;
+    }
+    const fctx = this.bgFull.getContext('2d'), sctx = this.bgSmall.getContext('2d');
+    drawCity(fctx, Math.floor(scroll / 2) * 2, this.t, theme, CANVAS_W, CANVAS_H);
+    sctx.imageSmoothingEnabled = false; sctx.drawImage(this.bgFull, 0, 0, CANVAS_W / 2, CANVAS_H / 2);
+    this.ctx.imageSmoothingEnabled = false; this.ctx.drawImage(this.bgSmall, 0, 0, CANVAS_W, CANVAS_H);
     if (theme.tint > 0) { this.ctx.fillStyle = `hsla(${theme.hue}, 60%, 40%, ${theme.tint})`; this.ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
   }
 

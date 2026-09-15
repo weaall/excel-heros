@@ -4,6 +4,9 @@
 const hash = (n) => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = (x * 2246822519) >>> 0; x ^= x >>> 13; return x / 4294967296; };
 const rnd = (seed, i) => hash(seed * 7919 + i * 104729);
 
+const hexToRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mix = (a, b, k) => Math.round(a + (b - a) * k);
+
 export const HORIZON = 262;    // where the road meets the buildings
 const SIDEWALK = 292;          // sidewalk / road boundary
 
@@ -19,13 +22,15 @@ export function drawCity(ctx, scroll, t, theme, W, H) {
 }
 
 function drawSky(ctx, theme, t, scroll, W) {
-  const g = ctx.createLinearGradient(0, 0, 0, HORIZON); g.addColorStop(0, theme.sky[0]); g.addColorStop(1, theme.sky[1]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, HORIZON);
-  // low sun / moon with a haze glow, drifting very slowly
-  const sx = ((W * 0.72 - scroll * 0.03) % (W + 200) + W + 200) % (W + 200) - 100, sy = 120;
-  const glow = ctx.createRadialGradient(sx, sy, 6, sx, sy, 120); glow.addColorStop(0, theme.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, HORIZON);
-  ctx.fillStyle = theme.glow.replace(/[\d.]+\)$/, '0.9)'); ctx.beginPath(); ctx.arc(sx, sy, 22, 0, Math.PI * 2); ctx.fill();
+  // banded sky (pixel-art style: 12 flat steps instead of a smooth gradient)
+  const [top, bot] = [theme.sky[0], theme.sky[1]].map(hexToRgb); const bands = 12;
+  for (let i = 0; i < bands; i++) { const k = i / (bands - 1); ctx.fillStyle = `rgb(${mix(top[0], bot[0], k)},${mix(top[1], bot[1], k)},${mix(top[2], bot[2], k)})`; ctx.fillRect(0, Math.floor((HORIZON * i) / bands), W, Math.ceil(HORIZON / bands) + 1); }
+  // low sun / moon with a stepped haze glow, drifting very slowly
+  const sx = Math.round(((W * 0.72 - scroll * 0.03) % (W + 200) + W + 200) % (W + 200) - 100), sy = 120;
+  const glowBase = theme.glow.replace(/[\d.]+\)$/, '');
+  for (const [r, a] of [[120, 0.08], [86, 0.12], [56, 0.18], [34, 0.3]]) { ctx.fillStyle = `${glowBase}${a})`; ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = `${glowBase}0.95)`; ctx.beginPath(); ctx.arc(sx, sy, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(sx - 10, sy - 14, 8, 4);
   // drifting clouds / smoke haze bands
   ctx.fillStyle = 'rgba(255,255,255,0.05)';
   for (let i = 0; i < 4; i++) { const cx = ((i * 260 + t * 6 * (1 + i * 0.2) - scroll * 0.05) % (W + 300) + W + 300) % (W + 300) - 150; ctx.beginPath(); ctx.ellipse(cx, 40 + i * 38, 120, 12 + i * 3, 0, 0, Math.PI * 2); ctx.fill(); }
@@ -76,7 +81,7 @@ function drawSmoke(ctx, off, t, W, seed) {
   for (let i = -1; i <= W / unit + 2; i++) {
     const col = off0 + i; if (rnd(seed, col + 21) > 0.28) continue;
     const x = i * unit - (off % unit) + 30 + rnd(seed, col + 23) * 30, base = HORIZON - 90 - rnd(seed, col + 3) * 110 + 10;
-    for (let p = 0; p < 6; p++) { const k = ((t * 0.25 + p / 6 + rnd(seed, col + p)) % 1); const r = 6 + k * 22, y = base - k * 110, dx = Math.sin((t + p) * 0.8 + col) * 10 * k; ctx.fillStyle = `rgba(60,60,70,${0.32 * (1 - k)})`; ctx.beginPath(); ctx.arc(x + dx + k * 14, y, r, 0, Math.PI * 2); ctx.fill(); }
+    for (let p = 0; p < 6; p++) { const k = (((t * 0.25 + p / 6 + rnd(seed, col + p)) % 1) + 1) % 1; const r = 6 + k * 22, y = base - k * 110, dx = Math.sin((t + p) * 0.8 + col) * 10 * k; ctx.fillStyle = `rgba(60,60,70,${0.32 * (1 - k)})`; ctx.beginPath(); ctx.arc(x + dx + k * 14, y, r, 0, Math.PI * 2); ctx.fill(); }
   }
 }
 
