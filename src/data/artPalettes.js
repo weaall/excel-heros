@@ -2,64 +2,180 @@
 // colours of each character's illustration, so battle sprites are recoloured to match the card art.
 export const ART_PALETTES = {
   "staff_park": {
-    "H": "#88675d",
-    "B": "#eef7f5",
-    "W": "#78ddfa"
+    "H": "#7f5f54",
+    "B": "#86c9f0",
+    "W": "#84c8f0"
   },
   "parttime": {
-    "B": "#67b6b7",
-    "W": "#d1d1d0"
+    "B": "#fbbe60",
+    "W": "#fbbe5f"
   },
   "guard": {
-    "B": "#1a2c5f",
-    "W": "#4478e3"
+    "B": "#161f40",
+    "W": "#b9f2fd"
   },
   "barista": {
-    "H": "#f68e57",
-    "B": "#fbeee4",
-    "W": "#a5d2da"
+    "H": "#fb7b0d",
+    "B": "#222f2e",
+    "W": "#232f2e"
   },
   "courier": {
-    "B": "#fbc4a6",
-    "W": "#f8a44d"
+    "H": "#2a4987",
+    "B": "#93cfe7",
+    "W": "#ce5a41"
   },
   "contract": {
-    "B": "#b6bac4"
+    "B": "#b7c1cf"
   },
   "vlookup": {
-    "H": "#36487f",
-    "B": "#3e8ba7",
-    "W": "#3b5889"
+    "H": "#15366a",
+    "B": "#33c1d4",
+    "W": "#143863"
   },
   "pivot": {
-    "B": "#6aefdf",
-    "W": "#6af0df"
+    "B": "#4bf6e1"
   },
   "macro": {
-    "H": "#d5f479",
-    "B": "#08f2e1"
+    "H": "#14f6f2",
+    "B": "#0bf8ef",
+    "W": "#0af8ef"
   },
   "hr_jung": {
-    "H": "#fc905e",
-    "B": "#4baa9c",
-    "W": "#4bab9c"
+    "H": "#806361",
+    "B": "#14a599",
+    "W": "#13a699"
   },
   "audit_han": {
-    "B": "#33be8a",
-    "W": "#78e35e"
+    "H": "#1b2d43",
+    "B": "#fde2d0",
+    "W": "#fbaa44"
   },
   "acct_lead": {
-    "H": "#3f4c71",
-    "B": "#1f8dc4",
-    "W": "#fca772"
+    "H": "#406375",
+    "B": "#14a6b9",
+    "W": "#15a6ba"
   },
   "dev_lead": {
-    "H": "#324c93",
-    "B": "#369ff4",
-    "W": "#35a0f4"
+    "H": "#fa7496",
+    "B": "#0672da",
+    "W": "#0572d9"
   },
   "ga_lead": {
-    "B": "#3965bd",
-    "W": "#3b6fca"
+    "B": "#0d427c",
+    "W": "#0d437d"
+  },
+  "welfare": {
+    "H": "#ce1136",
+    "B": "#0e7896",
+    "W": "#fcbfad"
+  },
+  "cfo": {
+    "B": "#225fc6",
+    "W": "#225fc7"
+  },
+  "cto": {
+    "B": "#378cde"
+  },
+  "coo": {
+    "H": "#757795",
+    "B": "#1a1958"
+  },
+  "ceo": {
+    "H": "#9dafeb",
+    "B": "#132344"
+  },
+  "chairman": {
+    "B": "#1b4257"
+  },
+  "helpdesk": {
+    "B": "#199bc7",
+    "W": "#199ac3"
+  },
+  "cleaner": {
+    "H": "#a2afbf",
+    "B": "#9f384b"
+  },
+  "sales_kang": {
+    "H": "#111e41",
+    "B": "#823653"
+  },
+  "legal_yoon": {
+    "H": "#5e8ee1",
+    "B": "#8cdef9",
+    "W": "#8ddef9"
+  },
+  "pm_lead": {
+    "H": "#3671b7",
+    "B": "#30b0c2"
+  },
+  "design_lead": {
+    "B": "#fa5b55",
+    "W": "#fa5a54"
+  },
+  "cmo": {
+    "H": "#82273c",
+    "B": "#b03513",
+    "W": "#ae3413"
+  },
+  "founder": {
+    "H": "#bf674c",
+    "B": "#134d76",
+    "W": "#23b5b8"
+  },
+  "intern_seo": {
+    "B": "#597fbd",
+    "W": "#abdafb"
+  },
+  "pr_yoo": {
+    "H": "#bf3646",
+    "B": "#79c3e2",
+    "W": "#79c3e1"
+  },
+  "nurse_han": {
+    "B": "#80bed4",
+    "W": "#7fbdd4"
+  },
+  "lab_park": {
+    "B": "#99cdd8",
+    "W": "#9aced8"
+  },
+  "chro": {
+    "H": "#324662",
+    "B": "#9f548c",
+    "W": "#fbcad2"
+  },
+  "chairwoman": {
+    "H": "#4f311f",
+    "B": "#f9fcea",
+    "W": "#ba9089"
+  },
+  "intern": {
+    "H": "#636096",
+    "B": "#1e5690",
+    "W": "#052582"
+  },
+  "staff": {
+    "B": "#57ece0"
+  },
+  "senior": {
+    "B": "#043857"
+  },
+  "manager": {
+    "B": "#4369b4",
+    "W": "#436fc5"
+  },
+  "sales": {
+    "H": "#343849",
+    "B": "#a2152e",
+    "W": "#292d43"
+  },
+  "finance": {
+    "H": "#fcbb6e",
+    "B": "#05adbe",
+    "W": "#05acbe"
+  },
+  "admin": {
+    "B": "#fbcd74",
+    "W": "#486188"
   }
 };
