@@ -10,7 +10,12 @@ export async function loadCardArt(url = 'assets/cards/manifest.json') {
     const res = await fetch(url, { cache: 'no-store' }); if (!res.ok) return 0;
     const manifest = await res.json(); const entries = Object.entries(manifest.cards ?? {});
     await Promise.all(entries.map(async ([id, file]) => {
-      try { const r = await fetch(`assets/cards/${file}`); if (!r.ok) return; art.set(id, await createImageBitmap(await r.blob())); }
+      try {
+        if (/.svg$/i.test(file)) { // SVG must go through an <img> (createImageBitmap rejects SVG blobs)
+          const img = new Image(); img.decoding = 'async'; img.src = `assets/cards/${file}`; await img.decode(); art.set(id, img); return;
+        }
+        const r = await fetch(`assets/cards/${file}`); if (!r.ok) return; art.set(id, await createImageBitmap(await r.blob()));
+      }
       catch (e) { console.warn('[cardArt] failed', id, e); }
     }));
     return art.size;

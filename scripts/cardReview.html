@@ -1,0 +1,6 @@
+<!doctype html><meta charset="utf-8"><title>card review</title>
+<style>body{margin:0;background:#2b2b2b;font-family:sans-serif}.g{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:6px}.c{text-align:center;color:#eee;font-size:11px}.c img{width:100%;display:block;border-radius:6px}</style>
+<div class="g" id="g"></div>
+<script>
+fetch('../assets/cards/manifest.json').then(r=>r.json()).then(m=>{const g=document.getElementById('g');for(const [id,f] of Object.entries(m.cards)){const d=document.createElement('div');d.className='c';d.innerHTML=`<img src="../assets/cards/${f}"><div>${id}</div>`;g.append(d);}});
+</script>
