@@ -141,7 +141,7 @@ export class GameManager extends Emitter {
       cost: upgradeCost(entry.level),
       inParty: this.state.party.includes(id),
       skillUnlocked, skillPower,
-      skillName: SKILLS[def.skill.type].name,
+      skillName: def.skill.name ?? SKILLS[def.skill.type].name,
       skillDesc: SKILLS[def.skill.type].desc.replace('{p}', +(def.skill.power * skillPower).toFixed(2)),
       traitName: TRAITS[def.trait].name, traitDesc: TRAITS[def.trait].desc,
       skillUnlockHint: isMain ? `${['인턴', '사원'][BALANCE.MAIN_SKILL_TIER]} 승급 시 해금` : `★${BALANCE.SKILL_UNLOCK_STAR} 해금`,

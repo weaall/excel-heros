@@ -136,12 +136,18 @@ export class Renderer {
     ctx.restore();
   }
 
+  /** Active party buffs (bottom-left): ATK buff, haste, barrier — one status line each, like Excel's status-bar items. */
   #drawBuff(em) {
-    if (em.atkBuff.mult <= 1 || em.atkBuff.until < em.time) return;
-    const { ctx } = this;
-    ctx.fillStyle = 'rgba(142,68,173,0.85)'; ctx.fillRect(8, CANVAS_H - 26, 260, 20);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(`▲ 팀 싱크: ATK ×${em.atkBuff.mult.toFixed(2)} (${Math.max(0, em.atkBuff.until - em.time).toFixed(1)}s)`, 14, CANVAS_H - 16);
+    const { ctx } = this; const lines = [];
+    if (em.atkBuff.mult > 1 && em.atkBuff.until >= em.time) lines.push(['rgba(142,68,173,0.85)', `▲ 팀 싱크: ATK ×${em.atkBuff.mult.toFixed(2)} (${Math.max(0, em.atkBuff.until - em.time).toFixed(1)}s)`]);
+    if (em.hasteBuff?.mult > 1 && em.hasteBuff.until >= em.time) lines.push(['rgba(183,149,11,0.9)', `» 가속: 공격 속도 ×${em.hasteBuff.mult.toFixed(2)} (${Math.max(0, em.hasteBuff.until - em.time).toFixed(1)}s)`]);
+    if (em.barrier?.hp > 0 && em.barrier.until >= em.time) lines.push(['rgba(41,128,185,0.9)', `◈ 보호막: ${Math.round(em.barrier.hp)} / ${em.barrier.max} (${Math.max(0, em.barrier.until - em.time).toFixed(1)}s)`]);
+    lines.forEach(([bg, text], i) => {
+      const y = CANVAS_H - 26 - i * 22;
+      ctx.fillStyle = bg; ctx.fillRect(8, y, 260, 20);
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 12px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(text, 14, y + 10);
+    });
   }
 
   #drawBanner(dt) {
@@ -326,6 +332,16 @@ export class Renderer {
           ctx.fillStyle = '#6d4c41'; ctx.fillRect(-7, 0, 14, 11); ctx.fillStyle = '#fff'; ctx.fillRect(-7, 0, 14, 2); ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 2; ctx.strokeRect(7, 3, 4, 5);
           ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5;
           for (let i = -1; i <= 1; i++) { ctx.beginPath(); for (let j = 0; j <= 4; j++) { const yy = -2 - j * 3 - k * 10, xx = i * 4 + Math.sin(k * 8 + j + i) * 2; if (j) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy); } ctx.stroke(); }
+          ctx.restore(); break;
+        }
+        case 'flame': { // 화상: three pixel flames flicker upward
+          ctx.save(); ctx.globalAlpha = 1 - k;
+          for (let i = -1; i <= 1; i++) { const hgt = 8 + Math.round(Math.sin(this.t * 20 + i) * 3), x = Math.round(f.x + i * 9), y = Math.round(f.y - k * 14); ctx.fillStyle = '#e67e22'; ctx.fillRect(x - 3, y - hgt, 6, hgt); ctx.fillStyle = '#f1c40f'; ctx.fillRect(x - 1, y - hgt + 3, 2, hgt - 5); }
+          ctx.restore(); break;
+        }
+        case 'dash': { // 가속: speed lines trailing behind the hero
+          ctx.save(); ctx.globalAlpha = 1 - k; ctx.fillStyle = '#f9e79f';
+          for (let i = 0; i < 4; i++) { const len = 10 + i * 4, y = Math.round(f.y - 8 + i * 6), x = Math.round(f.x - 20 - k * 30 - i * 5); ctx.fillRect(x - len, y, len, 2); }
           ctx.restore(); break;
         }
         case 'muzzle': { ctx.globalAlpha = 1 - k; ctx.fillStyle = f.color; ctx.fillRect(f.x, f.y - 3, 10 + k * 8, 6); ctx.fillStyle = '#fff'; ctx.fillRect(f.x + 2, f.y - 1, 6, 2); ctx.globalAlpha = 1; break; }

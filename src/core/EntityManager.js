@@ -33,7 +33,7 @@ export class EntityManager {
     this.game = game;
     this.heroes = []; this.monsters = []; this.projectiles = []; this.floaters = []; this.particles = []; this.effects = [];
     this.boss = null; this.bossTimer = 0;
-    this.atkBuff = { mult: 1, until: 0 };
+    this.atkBuff = { mult: 1, until: 0 }; this.hasteBuff = { mult: 1, until: 0 }; this.barrier = { hp: 0, max: 0, until: 0 };
     this.time = 0; this.dmgLog = []; this.rallyMult = 1; this.shake = 0;
     this.scroll = 0;            // background scroll offset (px)
     this.traveling = false; this.travelT = 0;
@@ -161,7 +161,9 @@ export class EntityManager {
     if (this.combo > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
     const heroes = this.heroes.filter((e) => e.alive), monsters = this.monsters.filter((e) => e.alive);
     if (this.atkBuff.until < this.time) this.atkBuff.mult = 1;
-    const speedMult = this.game.speedMult();
+    if (this.hasteBuff.until < this.time) this.hasteBuff.mult = 1;
+    if (this.barrier.until < this.time) this.barrier.hp = 0;
+    const speedMult = this.game.speedMult() * this.hasteBuff.mult;
 
     // --- travel between waves: scroll the dungeon, party runs in place
     if (!monsters.length && !this.boss) {
@@ -214,11 +216,13 @@ export class EntityManager {
       if (h.skillUnlocked && h.skillCd <= 0) {
         const type = h.skill.type;
         const worth = type === 'heal' ? heroes.some((a) => a.hp < a.maxHp * 0.75)
-          : type === 'buff' ? (monsters.length >= 2 || !!this.boss)
-          : type === 'strike' ? true : monsters.some((m) => m.arrived) || !!this.boss;
+          : type === 'buff' || type === 'haste' ? (monsters.length >= 2 || !!this.boss)
+          : type === 'barrier' ? (this.barrier.hp <= 0 && (heroes.some((a) => a.hp < a.maxHp * 0.9) || monsters.length >= 3 || !!this.boss))
+          : type === 'strike' || type === 'execute' ? true : monsters.some((m) => m.arrived) || !!this.boss;
         if (worth) {
-          const skillTarget = type === 'strike' ? (monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? monsters.slice().sort((a, b) => b.hp - a.hp)[0] ?? target) : target;
-          this.#castSkill(h, skillTarget, monsters, heroes); h.skillCd = (SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0));
+          const skillTarget = type === 'strike' ? (monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? monsters.slice().sort((a, b) => b.hp - a.hp)[0] ?? target)
+            : type === 'execute' ? (monsters.find((m) => m.isBoss && m.hp < m.maxHp * 0.3) ?? monsters.filter((m) => m.alive && m.hp < m.maxHp * 0.3).sort((a, b) => b.maxHp - a.maxHp)[0] ?? monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? target) : target;
+          this.castSkill(h, skillTarget, monsters, heroes); h.skillCd = (SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0));
         } else h.skillCd = 0.5; // re-check soon instead of wasting the cast
       }
 
@@ -247,6 +251,7 @@ export class EntityManager {
       if (!m.alive) continue;
       m.animT += dt; m.spawnT += dt; m.shake = Math.max(0, m.shake - dt * 8); m.flash = Math.max(0, m.flash - dt);
       if (m.def.affix?.regen && m.hp < m.maxHp) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * m.def.affix.regen * dt);
+      if (m.burnT > 0) { m.burnT -= dt; m.burnTick = (m.burnTick ?? 0) - dt; if (m.burnTick <= 0) { m.burnTick = 0.5; this.#damage(m, m.burnDps * 0.5, true); if (!m.alive) continue; } } // #damage already reports the kill
       if (m.lunge > 0) m.lunge -= dt;
       if (m.stun > 0) { m.stun -= dt; continue; }
       const stopX = frontX + m.standoff;
@@ -361,6 +366,11 @@ export class EntityManager {
       this.floaters.push({ x: target.x, y: target.y - 50, text: absorbed ? `보호막 -${absorbed}` : '', color: '#74b9ff', t: 0 });
       if (amount <= 0) { this.game.emit('sfx', 'hit'); return 0; }
     }
+    if (target.kind === 'hero' && this.barrier.hp > 0 && this.barrier.until > this.time) { // 파티 보호막 (barrier skill)
+      const absorbed = Math.min(this.barrier.hp, amount); this.barrier.hp -= absorbed; amount -= absorbed;
+      this.fx('ring', { x: target.x, y: target.y + 10, color: '#5dade2', radius: 30, life: 0.25 });
+      if (amount <= 0) { this.game.emit('sfx', 'hit'); return 0; }
+    }
     this.game.emit('sfx', target.kind === 'monster' ? 'hit' : 'hurt');
     if (target.kind === 'monster') this.fx('impact', { x: target.x + (Math.random() * 16 - 8), y: target.y - 24 + (Math.random() * 16 - 8), color: crit ? '#f1c40f' : '#ffffff', life: 0.18, big: isSkill || crit });
     else if (this.combo > 0) { this.floaters.push({ x: target.x, y: target.y - 70, text: `COMBO ×${this.combo} 끊김`, color: '#95a5a6', t: 0 }); this.combo = 0; }
@@ -398,9 +408,30 @@ export class EntityManager {
     for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.6, sp = 90 + Math.random() * 60; this.particles.push({ x, y: y - 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: 0, life: 0.55, color: i % 2 ? '#f1c40f' : '#f9e79f', size: 4, gravity: 260 }); }
   }
 
-  #castSkill(h, target, monsters, heroes) {
+  castSkill(h, target, monsters, heroes) {
     const { type, power } = h.skill; const boost = h.skillPower;
     switch (type) {
+      case 'burn': { // 화상: every enemy takes ATK × p per second for SKILLS.burn.duration s (stacks by refreshing, not adding)
+        const dps = h.atk * power * boost * this.atkBuff.mult * this.rallyMult;
+        for (const m of monsters) { if (!m.alive) continue; m.burnDps = Math.max(m.burnDps ?? 0, dps); m.burnT = SKILLS.burn.duration; m.burnTick = 0.25; this.fx('flame', { x: m.x, y: m.y - 20, life: 0.6 }); }
+        this.fx('papers', { x: h.x + 30, y: h.y - 20, n: 6, spread: 300, life: 0.6 }); this.shake = Math.max(this.shake, 4); break;
+      }
+      case 'barrier': { // 보호막: one shared pool for the party
+        const hp = Math.round(h.atk * power * boost);
+        this.barrier = { hp, max: hp, until: this.time + SKILLS.barrier.duration };
+        for (const a of heroes) this.fx('ring', { x: a.x, y: a.y + 16, color: '#5dade2', radius: 46, life: 0.6 });
+        this.floaters.push({ x: h.x, y: h.y - 76, text: `보호막 ${hp}`, color: '#5dade2', t: 0 }); break;
+      }
+      case 'haste': {
+        this.hasteBuff = { mult: Math.max(this.hasteBuff.mult, 1 + (power * boost) / 100), until: this.time + SKILLS.haste.duration };
+        for (const a of heroes) this.fx('dash', { x: a.x, y: a.y - 10, life: 0.5 }); break;
+      }
+      case 'execute': {
+        const low = target.hp < target.maxHp * 0.3;
+        this.fx('slash', { x: target.x, y: target.y - 6, color: low ? '#e74c3c' : '#f1c40f', angle: -1.1, life: 0.25, big: true });
+        this.fx('stamp', { x: target.x, y: target.y - 30, life: 0.7, text: low ? '최종' : '검토', color: low ? '#c0392b' : '#7f8c8d' });
+        this.shake = Math.max(this.shake, low ? 8 : 4); this.#heroHit(h, target, power * boost * (low ? 2 : 1), true); break;
+      }
       case 'strike': this.fx('slash', { x: target.x, y: target.y - 6, color: '#f1c40f', angle: -0.3, life: 0.25, big: true }); this.fx('stamp', { x: target.x, y: target.y - 30, life: 0.7, text: '결재' }); this.shake = Math.max(this.shake, 4); this.#heroHit(h, target, power * boost, true); break;
       case 'sweep':
         this.fx('ring', { x: h.x, y: h.y, color: '#f1c40f', radius: 420, life: 0.45 }); this.shake = Math.max(this.shake, 6);
