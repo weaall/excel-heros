@@ -122,6 +122,34 @@ export function packHeroIcon(def) {
   const url = c.toDataURL(); cache.set(key, url); return url;
 }
 
+/**
+ * Tiny Creatures tiles carry a 2px dark outline, which reads twice as thick as the 0x72 heroes once both are
+ * drawn at 2×. Thin it to 1px: dark pixels that touch transparency are the true outline and stay; dark pixels that
+ * only touch that outline (the inner ring) take the colour of a neighbouring fill pixel. Dark details fully inside
+ * the body (eyes, mouths) are untouched because they do not touch the outer ring. Cached per tile.
+ */
+const tinyCache = new Map();
+function thinTinyTile(index, sx, sy) {
+  let c = tinyCache.get(index); if (c) return c;
+  const [cv, cx] = canvas(16, 16); cx.drawImage(tiny, sx, sy, 16, 16, 0, 0, 16, 16);
+  const img = cx.getImageData(0, 0, 16, 16), d = img.data;
+  const at = (x, y) => (x < 0 || y < 0 || x > 15 || y > 15 ? -1 : (y * 16 + x) * 4);
+  const dark = (i) => i >= 0 && d[i + 3] > 40 && (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255 < 0.22;
+  const clear = (i) => i < 0 || d[i + 3] <= 40;
+  const N = (x, y) => [at(x + 1, y), at(x - 1, y), at(x, y + 1), at(x, y - 1)];
+  const outer = new Set();
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const i = at(x, y); if (dark(i) && N(x, y).some(clear)) outer.add(i); }
+  const fills = [];
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const i = at(x, y); if (!dark(i) || outer.has(i)) continue;
+    const nb = N(x, y); if (!nb.some((j) => outer.has(j))) continue;             // not the inner ring (eye / mouth) → keep
+    const fill = nb.find((j) => j >= 0 && !clear(j) && !dark(j));                 // a neighbouring body colour
+    if (fill >= 0) fills.push([i, fill]);
+  }
+  for (const [i, f] of fills) { d[i] = d[f]; d[i + 1] = d[f + 1]; d[i + 2] = d[f + 2]; d[i + 3] = d[f + 3]; }
+  cx.putImageData(img, 0, 0); tinyCache.set(index, cv); return cv;
+}
+
 /** Monster frame (idle cycle of 4). 0x72 creatures are mirrored to face left; Tiny Creatures bob. */
 export function packMonsterFrame(mon, frame = 0, hueShift = 0) {
   if (!sheet) return null;
@@ -145,7 +173,7 @@ export function packMonsterFrame(mon, frame = 0, hueShift = 0) {
     const sx = (spec.tiny % 10) * 16, sy = Math.floor(spec.tiny / 10) * 16;
     const bob = [0, -1, 0, 1][fi] * 2;
     ctx.filter = hueShift ? `hue-rotate(${hueShift}deg)` : 'none';
-    ctx.drawImage(tiny, sx, sy, 16, 16, 16, 60 - 32 + bob - 2, 32, 32);
+    ctx.drawImage(thinTinyTile(spec.tiny, sx, sy), 0, 0, 16, 16, 16, 60 - 32 + bob - 2, 32, 32);
     ctx.filter = 'none';
   } else {
     const small = SMALL[spec], big = BIG[spec];
