@@ -3,6 +3,8 @@
 // pixel accessories (glasses, headset, crown, tie…) are stamped at anchors measured per base. Everything is
 // built once per hero into a 9-frame strip (idle 4 · run 4 · hit 1) at native 16×28 and cached.
 
+import { ART_PALETTES } from './artPalettes.js';
+
 /** Base rows on the sheet: colour clusters + anchors (x, y in the 16×28 frame, frame 0). */
 export const BASES = {
   elf_f:     { hair: ['#facb3e', '#ee8e2e'], cloth: ['#4ba747', '#3d734f'], accent: ['#da4e38'],            skin: '#fccba3', eye: [6, 17], top: 12, chin: 20, chest: 22 },
@@ -77,7 +79,8 @@ export function buildHeroStrip(sheet, def, entry) {
   ctx.drawImage(sheet, SHEET_X, SHEET_Y + ROW_H * row, FW * FRAMES, FH, 0, 0, FW * FRAMES, FH);
   if (!b) return c;
   const img = ctx.getImageData(0, 0, c.width, c.height); const px = img.data;
-  const pal = def.palette ?? {}; const look = def.look ?? {};
+  // colours from the generated card art win over the hand-picked palette, so sprite and illustration match
+  const pal = { ...(def.palette ?? {}), ...(ART_PALETTES[def.id] ?? {}) }; const look = def.look ?? {};
   const hairTarget = look.hair === 'bald' && b.skin ? b.skin : (pal.H ?? null);
   const map = new Map([...clusterMap(b.hair, hairTarget), ...clusterMap(b.cloth, pal.B ?? null), ...clusterMap(b.accent, pal.W ?? null)]);
   for (let i = 0; i < px.length; i += 4) {
