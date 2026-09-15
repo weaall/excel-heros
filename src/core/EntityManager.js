@@ -68,6 +68,7 @@ export class EntityManager {
   }
 
   refreshHeroStats() {
+    this.perks = this.game.synergy().perks; // 부문 고유 특성 (party-wide)
     for (const e of this.heroes) e.traitMult = this.game.heroView(e.heroId).traitMult ?? 1;
     this.rallyMult = 1 + this.heroes.filter((h) => h.trait === 'rally').reduce((a, h) => a + tv(h, 'rally'), 0);
     for (const e of this.heroes) {
@@ -186,7 +187,7 @@ export class EntityManager {
       }
       if (this.traveling) continue;
       h.animT += dt;
-      h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (BALANCE.HERO_REGEN_PCT + (h.trait === 'regen' ? tv(h, 'regen') : 0)) * dt);
+      h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (BALANCE.HERO_REGEN_PCT + (h.trait === 'regen' ? tv(h, 'regen') : 0) + (this.perks?.regen ?? 0)) * dt);
       h.cd -= dt * speedMult; h.skillCd -= dt;
 
       let target = this.#byId(monsters, h.targetId);
@@ -212,7 +213,7 @@ export class EntityManager {
           : type === 'strike' ? true : monsters.some((m) => m.arrived) || !!this.boss;
         if (worth) {
           const skillTarget = type === 'strike' ? (monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? monsters.slice().sort((a, b) => b.hp - a.hp)[0] ?? target) : target;
-          this.#castSkill(h, skillTarget, monsters, heroes); h.skillCd = SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10;
+          this.#castSkill(h, skillTarget, monsters, heroes); h.skillCd = (SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0));
         } else h.skillCd = 0.5; // re-check soon instead of wasting the cast
       }
 
@@ -334,8 +335,9 @@ export class EntityManager {
   #heroHit(h, target, mult, isSkill, monsters) {
     let dmg = h.atk * mult * this.atkBuff.mult * this.rallyMult * (1 + Math.min(BALANCE.COMBO.max, this.combo * BALANCE.COMBO.perHit));
     let crit = false;
-    if (h.trait === 'crit' && Math.random() < tv(h, 'crit')) { dmg *= 2; crit = true; }
-    if (h.trait === 'focus' && target.isBoss) dmg *= 1 + tv(h, 'focus');
+    const critChance = (h.trait === 'crit' ? tv(h, 'crit') : 0) + (this.perks?.crit ?? 0);
+    if (critChance > 0 && Math.random() < critChance) { dmg *= 2; crit = true; }
+    if (target.isBoss) dmg *= 1 + (h.trait === 'focus' ? tv(h, 'focus') : 0) + (this.perks?.boss ?? 0);
     if (crit) this.fx('crit', { x: target.x, y: target.y - 30, color: '#f1c40f', life: 0.35 });
     const dealt = this.#damage(target, dmg, isSkill || crit, crit);
     if (dealt > 0) { this.combo++; this.comboT = BALANCE.COMBO.decay; this.game.onCombo?.(this.combo); }
@@ -378,9 +380,9 @@ export class EntityManager {
         else this.game.emit('sfx', 'kill');
         this.game.onMonsterKilled(target);
       } else {
-        target.reviveT = BALANCE.HERO_REVIVE_SEC;
+        target.reviveT = BALANCE.HERO_REVIVE_SEC * (1 - (this.perks?.revive ?? 0));
         this.fx('puff', { x: target.x, y: target.y, color: '#95a5a6', life: 0.4 });
-        this.game.log(`${target.def.name} 쓰러짐 (${BALANCE.HERO_REVIVE_SEC}초 후 복귀)`, 'warn');
+        this.game.log(`${target.def.name} 쓰러짐 (${Math.round(target.reviveT)}초 후 복귀)`, 'warn');
       }
     }
     return dealt;

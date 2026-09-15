@@ -76,3 +76,20 @@ test('오류 도감: kills are counted per base type, bosses separately, elites 
   const m = migrate(JSON.parse(JSON.stringify(g.state)));
   assert.equal(m.bestiary.circ, 2);
 });
+
+test('부문 고유 특성: perks unlock at 2 members, feed gold/skill power and combat hooks', async () => {
+  const { PERKS } = await import('../src/data/divisions.js');
+  const g = new GameManager({ save: memSave() });
+  const admin = HEROES.filter((h) => divisionOf(h.id) === 'admin'), exec = HEROES.filter((h) => divisionOf(h.id) === 'exec');
+  for (const h of [...admin, ...exec]) own(g, h.id);
+  g.state.party = [MAIN_ID];
+  const gold0 = g.goldMult(), skill0 = g.heroView(exec[0].id).skillPower;
+  g.state.party = [MAIN_ID, admin[0].id]; // main is 경영지원본부 → admin pair
+  assert.equal(g.synergy().perks.gold, PERKS.admin.value);
+  assert.ok(Math.abs(g.goldMult() - gold0 - PERKS.admin.value) < 1e-9);
+  g.state.party = [MAIN_ID, exec[0].id, exec[1].id];
+  assert.equal(g.synergy().perks.skill, PERKS.exec.value);
+  assert.ok(Math.abs(g.heroView(exec[0].id).skillPower / skill0 - (1 + PERKS.exec.value)) < 1e-9);
+  g.entities.rebuildParty();
+  assert.equal(g.entities.perks.skill, PERKS.exec.value, 'EntityManager caches perks on rebuild');
+});

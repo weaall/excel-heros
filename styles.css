@@ -432,3 +432,5 @@ body.stealth #roster-table { display: table; }
 #codex-table .tag { display: inline-block; padding: 0 5px; border: 1px solid var(--line-dark); font-size: 11px; margin-right: 4px; color: #444; background: #fafafa; }
 #codex-table .tag.boss { border-color: #c0392b; color: #c0392b; }
 #codex-table .tag.ranged { border-color: #2b7cd3; color: #2b7cd3; }
+
+.dt-div { display: inline-block; padding: 0 6px; border: 1px solid; font-size: 11px; line-height: 16px; background: #fff; }

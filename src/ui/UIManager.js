@@ -2,7 +2,7 @@
 import { BALANCE, teamUpgradeCost, isBossStage, stageLabel } from '../config/balance.js';
 import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, MAIN_ID, MAIN_TIER_TITLES } from '../data/heroes.js';
 import { stagePool, eliteChance, bossForStage, MONSTER_TYPES, BOSSES, PALETTES, phaseOf } from '../data/monsters.js';
-import { DIVISIONS, divisionOf, divisionName } from '../data/divisions.js';
+import { DIVISIONS, PERKS, divisionOf, divisionName } from '../data/divisions.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { phaseName, stageModifier } from '../data/stages.js';
 import * as Achievements from '../core/AchievementManager.js';
@@ -550,11 +550,11 @@ export class UIManager {
   /** 부문 시너지 summary in the roster head and the party task pane. */
   #refreshSynergy() {
     const syn = this.game.synergy();
-    const parts = syn.sets.map((x) => `${x.name} ${x.count}명 (ATK +${Math.round(x.atk * 100)}%${x.hp ? `, HP +${Math.round(x.hp * 100)}%` : ''})`);
+    const parts = syn.sets.map((x) => `${x.name} ${x.count}명 (ATK +${Math.round(x.atk * 100)}%${x.hp ? `, HP +${Math.round(x.hp * 100)}%` : ''} · ${x.perk.desc})`);
     if (syn.balanced) parts.push('균형 편성 (HP +10%)');
     const txt = $('#synergy-text'); if (txt) txt.textContent = parts.length ? parts.join(' · ') : '없음';
     const pane = $('#pane-synergy'); if (!pane) return; pane.innerHTML = '';
-    for (const x of syn.sets) pane.append(el('span', { class: 'syn', style: `--sc:${x.color}` }, el('b', {}, x.name), `${x.count}명 · ATK +${Math.round(x.atk * 100)}%${x.hp ? ` HP +${Math.round(x.hp * 100)}%` : ''}`));
+    for (const x of syn.sets) pane.append(el('span', { class: 'syn', style: `--sc:${x.color}`, title: x.perk.desc }, el('b', {}, x.name), `${x.count}명 · ATK +${Math.round(x.atk * 100)}%${x.hp ? ` HP +${Math.round(x.hp * 100)}%` : ''} · ${x.perk.desc}`));
     pane.append(el('span', { class: `syn ${syn.balanced ? '' : 'off'}`, style: '--sc:#27ae60' }, el('b', {}, '균형 편성'), syn.balanced ? 'HP +10%' : '4개 역할 필요'));
     if (!syn.sets.length) pane.append(el('span', { class: 'syn off' }, '같은 부문 2명 이상 → 시너지'));
   }
@@ -609,6 +609,7 @@ export class UIManager {
       el('span', { class: 'dt-grade', style: `background:${v.grade.color}` }, v.def.grade),
       el('b', { class: 'dt-name' }, v.def.name),
       p ? el('span', { class: 'dt-nick' }, `${p.nick} · ${p.dept}`) : null,
+      p ? (() => { const d = DIVISIONS[divisionOf(v.isMain ? 'main' : id)]; return el('span', { class: 'dt-div', style: `border-color:${d.color}; color:${d.color}`, title: `부문 특성 (2명 이상): ${PERKS[d.id].desc}` }, `${d.name} 부문`); })() : null,
       el('span', { class: 'dt-role' }, `${ROLES[v.def.role].name}${v.isMain ? ` · ${MAIN_TIER_TITLES[v.def.tier]}` : ` · ${stars(v.star)}`}${v.awakened ? ' · ✦각성' : ''}`),
       e.owned ? sb(g.isFavorite(id) ? '♥' : '♡', () => g.toggleFavorite(id), g.isFavorite(id) ? 'fav on' : 'fav', false, '즐겨찾기') : null);
     // --- stat table

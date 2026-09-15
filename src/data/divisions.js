@@ -35,3 +35,15 @@ export const SYNERGY = Object.freeze({
   trio:     { count: 3, atk: 0.12, hp: 0.06 },
   balanced: { hp: 0.10 },
 });
+
+/** 부문 고유 특성: unlocked for the whole party once that division has 2+ members (on top of the ATK/HP ladder).
+ *  Values are additive fractions; EntityManager reads them from GameManager.synergy().perks. */
+export const PERKS = Object.freeze({
+  admin:   { key: 'gold',     value: 0.08, desc: '골드 획득 +8%' },
+  ops:     { key: 'regen',    value: 0.01, desc: '파티 초당 HP 회복 +1%' },
+  people:  { key: 'revive',   value: 0.30, desc: '쓰러진 영웅 복귀 시간 -30%' },
+  finance: { key: 'boss',     value: 0.15, desc: '보스에게 주는 피해 +15%' },
+  tech:    { key: 'cooldown', value: 0.15, desc: '스킬 재사용 대기 -15%' },
+  market:  { key: 'crit',     value: 0.08, desc: '파티 전원 치명타 확률 +8%' },
+  exec:    { key: 'skill',    value: 0.20, desc: '스킬 위력 +20%' },
+});

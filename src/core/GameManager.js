@@ -14,7 +14,7 @@ import * as Quests from './QuestManager.js';
 import * as Achievements from './AchievementManager.js';
 import * as Milestones from './MilestoneManager.js';
 import { HEROES, ROLES } from '../data/heroes.js';
-import { DIVISIONS, SYNERGY, divisionOf } from '../data/divisions.js';
+import { DIVISIONS, SYNERGY, PERKS, divisionOf } from '../data/divisions.js';
 import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
 
@@ -38,7 +38,7 @@ export class GameManager extends Emitter {
 
   // ------------------------------------------------------------- derived --
   stageLabel() { return stageLabel(this.state.stage); }
-  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus(); }
+  goldMult() { return 1 + teamUpgradeBonus('payroll', this.state.team.payroll) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus() + this.synergy().perks.gold; }
   /** Permanent bonus from 지분 (prestige shares): +3% ATK and gold each. */
   prestigeBonus() { return (this.state.prestige?.shares ?? 0) * BALANCE.PRESTIGE.bonusPerShare; }
   prestigeInfo() {
@@ -87,18 +87,19 @@ export class GameManager extends Emitter {
   synergy() {
     const groups = {};
     for (const id of this.state.party) { const d = divisionOf(this.isMain(id) ? 'main' : id); (groups[d] ??= []).push(id); }
-    const sets = [];
+    const sets = []; const perks = { gold: 0, regen: 0, revive: 0, boss: 0, cooldown: 0, crit: 0, skill: 0 };
     let atk = 0, hp = 0;
     for (const [d, ids] of Object.entries(groups)) {
       if (ids.length < SYNERGY.pair.count) continue;
       const tier = ids.length >= SYNERGY.trio.count ? SYNERGY.trio : SYNERGY.pair;
       atk += tier.atk; hp += tier.hp;
-      sets.push({ id: d, name: DIVISIONS[d].name, color: DIVISIONS[d].color, count: ids.length, ids, atk: tier.atk, hp: tier.hp });
+      const perk = PERKS[d]; perks[perk.key] += perk.value;
+      sets.push({ id: d, name: DIVISIONS[d].name, color: DIVISIONS[d].color, count: ids.length, ids, atk: tier.atk, hp: tier.hp, perk });
     }
     const roles = new Set(this.state.party.map((id) => this.heroDef(id).role));
     const balanced = Object.keys(ROLES).every((r) => roles.has(r));
     if (balanced) hp += SYNERGY.balanced.hp;
-    return { sets, balanced, atk, hp };
+    return { sets, balanced, atk, hp, perks };
   }
   partyTraitCount(trait) { return this.state.party.filter((id) => this.heroDef(id).trait === trait).length; }
   speedMult() { return 1 + teamUpgradeBonus('coffee', this.state.team.coffee); }
@@ -117,12 +118,12 @@ export class GameManager extends Emitter {
     const skillUnlocked = isMain ? def.tier >= BALANCE.MAIN_SKILL_TIER : entry.star >= BALANCE.SKILL_UNLOCK_STAR;
     const boosted = isMain ? def.tier >= BALANCE.MAIN_SKILL_BOOST_TIER : entry.star >= BALANCE.SKILL_BOOST_STAR;
     const awakened = !!entry.awakened;
-    const skillPower = (boosted ? BALANCE.SKILL_BOOST_MULT : 1) * (awakened ? BALANCE.AWAKEN.skill : 1);
     const awakenCost = BALANCE.AWAKEN.cards[def.grade];
     const nextCost = isMain ? null : promoteCost(def.grade, star);
     const eCost = enhanceCost(entry.enhance);
     // 부문 시너지 only applies to heroes standing in the party (the roster preview shows base numbers for the bench)
-    const syn = this.state.party.includes(id) ? this.synergy() : { atk: 0, hp: 0 };
+    const syn = this.state.party.includes(id) ? this.synergy() : { atk: 0, hp: 0, perks: { skill: 0 } };
+    const skillPower = (boosted ? BALANCE.SKILL_BOOST_MULT : 1) * (awakened ? BALANCE.AWAKEN.skill : 1) * (1 + syn.perks.skill);
     const view = {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
       atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus() + syn.atk) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1)),
