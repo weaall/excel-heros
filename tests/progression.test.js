@@ -103,7 +103,7 @@ test('야근 모드: once a day, 60 s of kills pay gems without touching stage p
   const { BALANCE } = await import('../src/config/balance.js');
   const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
   g.state.maxStage = 12; g.state.stage = 5; g.state.challenging = false; g.state.heroes.main.level = 80; g.entities.rebuildParty(); g.checkMilestones(); // milestones for the forced maxStage are granted up front so they do not pollute the gem delta
-  const gems0 = g.state.gems, kills0 = g.state.kills, cleared0 = g.state.maxCleared;
+  const gems0 = g.state.gems, kills0 = g.state.kills, cleared0 = g.state.maxCleared, drops0 = g.state.stats.gemDrops ?? 0;
   assert.equal(g.canOvertime(), true);
   assert.equal(g.startOvertime(), true);
   assert.equal(g.combatStage(), 12 + BALANCE.OVERTIME.stageOffset); assert.equal(g.bossActive(), false);
@@ -112,7 +112,7 @@ test('야근 모드: once a day, 60 s of kills pay gems without touching stage p
   for (let i = 0; i < (BALANCE.OVERTIME.duration + 2) * 10; i++) g.tick(0.1);
   assert.ok(ended, 'run ended by the clock'); assert.equal(g.overtime, null);
   assert.ok(ended.kills > 0, `killed something (${ended.kills})`);
-  assert.equal(g.state.gems - gems0, Math.min(BALANCE.OVERTIME.maxGems, ended.kills * BALANCE.OVERTIME.gemsPerKill + ended.elites * BALANCE.OVERTIME.gemsPerElite));
+  assert.equal(g.state.gems - gems0 - ((g.state.stats.gemDrops ?? 0) - drops0), Math.min(BALANCE.OVERTIME.maxGems, ended.kills * BALANCE.OVERTIME.gemsPerKill + ended.elites * BALANCE.OVERTIME.gemsPerElite)); // random 보석 드롭 excluded
   assert.equal(g.state.kills, kills0, 'stage kill counter untouched'); assert.equal(g.state.maxCleared, cleared0); assert.equal(g.state.stage, 5);
   assert.equal(g.state.daily.overtimeDone, true); assert.equal(g.canOvertime(), false); assert.equal(g.startOvertime(), false);
   assert.equal(g.state.stats.overtimes, 1); assert.equal(g.state.stats.overtimeBest, ended.kills);

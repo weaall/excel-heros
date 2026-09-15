@@ -17,6 +17,7 @@ import * as Quests from '../core/QuestManager.js';
 import { fmt, fmtTime, pct, stars } from '../utils/format.js';
 import * as Ads from './Ads.js';
 import { starMult } from '../config/balance.js';
+import { SPARK_COST } from '../data/pickup.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, attrs = {}, ...children) => {
@@ -733,24 +734,32 @@ export class UIManager {
     $('#pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA;
     $('#pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
     $('#total-pulls').textContent = s.stats.totalPulls;
+    const pg = s.stats.pullGrades ?? {}; $('#pull-grades').textContent = s.stats.totalPulls ? `· S ${pg.S ?? 0} · A ${pg.A ?? 0} · B ${pg.B ?? 0} · C ${pg.C ?? 0} · D ${pg.D ?? 0}` : '';
+    $('#pull10').innerHTML = s.stats.totalPulls === 0 ? '10행 가져오기<small>보석 900 · 첫 10행 S 확정</small>' : '10행 가져오기<small>보석 900</small>';
     this.#refreshPickup();
     $('#qa-pull1').disabled = s.gems < BALANCE.GACHA_SINGLE_COST; $('#qa-pull10').disabled = s.gems < BALANCE.GACHA_TEN_COST;
     $('#qa-pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA; $('#qa-pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
     const tbody = $('#gacha-log tbody'); tbody.innerHTML = '';
     this.gachaLog.forEach((r, i) => tbody.append(el('tr', { class: `g-${r.grade}` },
-      el('td', {}, String(this.gachaLog.length - i)), el('td', { style: `color:${GRADES[r.grade].color}` }, r.grade), el('td', {}, r.def.name), el('td', { class: r.pickup ? 'pickup' : '' }, `${r.isNew ? '신규 입사' : `조각 +${r.shards}`}${r.pickup ? ' · 픽업' : ''}`))));
+      el('td', {}, String(this.gachaLog.length - i)), el('td', { style: `color:${GRADES[r.grade].color}` }, r.grade), el('td', {}, r.def.name), el('td', { class: r.pickup ? 'pickup' : '' }, `${r.isNew ? '신규 입사' : `조각 +${r.shards}`}${r.exchange ? ' · 모집 포인트 교환' : r.pickup ? ' · 픽업' : ''}`))));
   }
   /** 오늘의 픽업 cards on the gacha sheet (rebuilt when the date changes). */
   #refreshPickup() {
-    const box = $('#pickup-cards'); if (!box) return; const s = this.game.state; const ids = this.game.pickup();
-    const key = `${s.daily.date}|${Object.values(ids).map((id) => `${id}:${s.heroes[id]?.owned ? 1 : 0}:${s.heroes[id]?.star ?? 0}`).join(',')}`;
+    const box = $('#pickup-cards'); if (!box) return; const s = this.game.state; const ids = this.game.pickup(); const pts = this.game.recruitPoints();
+    $('#pickup-period').textContent = `${this.game.pickupDaysLeft()}일 남음 · 3일마다 교체`; $('#recruit-points').innerHTML = `모집 포인트 <b>${pts}</b>`;
+    const key = `${s.daily.date}|${pts}|${Object.values(ids).map((id) => `${id}:${s.heroes[id]?.owned ? 1 : 0}:${s.heroes[id]?.star ?? 0}`).join(',')}`;
     if (box.dataset.key === key) return; box.dataset.key = key; box.innerHTML = '';
     for (const [grade, id] of Object.entries(ids)) {
       const v = this.game.heroView(id); const e = v.entry;
       const wrap = el('div', { class: `card ${e.owned ? '' : 'locked'} holo`, title: `${v.def.name} · ${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id) },
         cardCanvas(v.def, { star: v.star, owned: e.owned, title: e.owned ? `${stars(e.star)} · Lv ${e.level}` : '미보유', awakened: !!e.awakened }),
         el('span', { class: 'holo-sheen' }), el('span', { class: 'pickup-tag' }, `${grade} 픽업`), e.owned ? el('span', { class: 'pickup-owned' }, `조각 ${e.shards}`) : null);
-      box.append(wrap);
+      const cost = SPARK_COST[grade], can = this.game.canExchangePickup(grade);
+      const col = el('div', { class: 'card-col' }, wrap,
+        el('div', { class: 'spark-bar' }, el('i', { style: `width:${Math.min(100, Math.round(pts / cost * 100))}%` })),
+        el('div', { class: 'spark-txt' }, `${Math.min(pts, cost)} / ${cost}`),
+        btn(e.owned ? `교환 (조각 +${BALANCE.DUPLICATE_SHARDS_MAX})` : '모집 포인트로 영입', () => { const r = this.game.exchangePickup(grade); if (r) { this.gachaLog.unshift(r); this.gachaLog.length = Math.min(this.gachaLog.length, 30); this.#refreshGacha(); } }, `spark ${can ? 'primary' : ''}`, !can));
+      box.append(col);
     }
   }
   #showGachaResults(results) {

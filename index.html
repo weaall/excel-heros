@@ -205,12 +205,14 @@
         <div class="sheet-head">
           <span>보석 <b id="gems-cell">0</b></span>
           <span class="muted">누적 가져오기: <b id="total-pulls">0</b>회</span>
+          <span class="muted small" id="pull-grades"></span>
         </div>
         <div class="gacha-layout">
           <div>
             <div class="pickup-box" id="pickup-box">
-              <div class="pickup-head">오늘의 픽업 <span class="muted small">해당 등급이 나오면 50% 확률로 이 카드 · 매일 자정 교체</span></div>
+              <div class="pickup-head">픽업 모집 <span class="muted small" id="pickup-period">3일 배너</span><span class="spacer"></span><span class="small" id="recruit-points" title="1행 가져올 때마다 모집 포인트 +1 · 만료 없음 · 픽업 카드와 교환">모집 포인트 <b>0</b></span></div>
               <div class="pickup-cards" id="pickup-cards"></div>
+              <div class="pickup-foot muted small">해당 등급이 나오면 50%는 픽업 카드 · 모집 포인트 <b>150</b>(S) / <b>60</b>(A)으로 픽업 카드와 직접 교환 가능</div>
             </div>
             <div class="gacha-actions">
               <button id="pull1" class="xl-btn big">1행 가져오기<small>보석 100</small></button>
@@ -222,9 +224,9 @@
                 <tr><td class="g-D">D · 일반</td><td class="num">45%</td><td>—</td></tr>
                 <tr><td class="g-C">C · 희귀</td><td class="num">30%</td><td>—</td></tr>
                 <tr><td class="g-B">B · 고급</td><td class="num">17%</td><td>—</td></tr>
-                <tr><td class="g-A">A · 영웅</td><td class="num">7%</td><td><b id="pity-a">50</b>회 안에 A 이상 확정</td></tr>
-                <tr><td class="g-S">S · 전설</td><td class="num">1%</td><td><b id="pity-s">100</b>회 안에 S 확정</td></tr>
-                <tr><td colspan="3" class="muted small">10행 가져오기는 항상 A 이상 1장을 보장합니다.</td></tr>
+                <tr><td class="g-A">A · 영웅</td><td class="num">7% <span class="muted small">(픽업 3.5%)</span></td><td><b id="pity-a">50</b>회 안에 A 이상 확정</td></tr>
+                <tr><td class="g-S">S · 전설</td><td class="num">1% <span class="muted small">(픽업 0.5%)</span></td><td><b id="pity-s">100</b>회 안에 S 확정</td></tr>
+                <tr><td colspan="3" class="muted small" id="ten-rule">10행 가져오기는 항상 A 이상 1장을 보장합니다. 첫 10행은 <b>S 확정</b>(신입 환영).</td></tr>
               </tbody>
             </table>
             <p class="muted small">새 카드 → 즉시 ★1 해금. 중복 → 조각 5~10개 (★승급 재료 또는 강화 카드로 변환).</p>

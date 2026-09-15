@@ -18,7 +18,7 @@ import { DIVISIONS, SYNERGY, PERKS, divisionOf } from '../data/divisions.js';
 import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
 import { CloudSync } from './CloudSync.js';
-import { pickupFor } from '../data/pickup.js';
+import { pickupFor, SPARK_COST, bannerDaysLeft } from '../data/pickup.js';
 import { migrate } from './state.js';
 
 export class GameManager extends Emitter {
@@ -241,19 +241,39 @@ export class GameManager extends Emitter {
     return true;
   }
 
-  /** 오늘의 픽업 { S: heroId, A: heroId } — rotates with the daily reset. */
+  /** 픽업 배너 { S: heroId, A: heroId } — rotates every PICKUP_DAYS days. */
   pickup() { return pickupFor(this.state.daily.date); }
+  pickupDaysLeft() { return bannerDaysLeft(this.state.daily.date); }
+  recruitPoints() { return this.state.recruit?.points ?? 0; }
+  canExchangePickup(grade) { return !!this.pickup()[grade] && this.recruitPoints() >= SPARK_COST[grade]; }
+  /** 모집 포인트 exchange: take the current pickup card of `grade` (new → ★1, owned → duplicate shards) for SPARK_COST points. */
+  exchangePickup(grade) {
+    if (!this.canExchangePickup(grade)) return null;
+    const heroId = this.pickup()[grade]; const e = this.state.heroes[heroId];
+    this.state.recruit.points -= SPARK_COST[grade];
+    let isNew = false, shards = 0;
+    if (!e.owned) { e.owned = true; e.star = Math.max(1, e.star); e.level = e.level || 1; isNew = true; shards = BALANCE.UNLOCK_SHARDS; }
+    else { shards = BALANCE.DUPLICATE_SHARDS_MAX; e.shards += shards; }
+    if (isNew && this.state.party.length < BALANCE.PARTY_SIZE) this.state.party.push(heroId);
+    const r = { heroId, grade, isNew, shards, pickup: true, exchange: true, def: HERO_BY_ID[heroId] };
+    this.entities.rebuildParty();
+    this.log(`모집 포인트 ${SPARK_COST[grade]} → ${r.def.name} 영입`, 'gacha');
+    this.emit('roster'); this.emit('party'); this.emit('gacha', [r]); this.emit('gems');
+    return r;
+  }
   pull(count) {
     const cost = count === 10 ? BALANCE.GACHA_TEN_COST : BALANCE.GACHA_SINGLE_COST * count;
     if (this.state.gems < cost) { this.toast('보석이 부족합니다'); return null; }
     this.state.gems -= cost;
-    const results = []; let gotMin = false; const minIdx = GRADES[BALANCE.TEN_PULL_MIN_GRADE] ? ['D', 'C', 'B', 'A', 'S'].indexOf(BALANCE.TEN_PULL_MIN_GRADE) : 99;
+    // 신입 환영: a save's first 10-pull guarantees an S (instead of the usual A) so the roster starts with a face
+    const minGrade = count === 10 && this.state.stats.totalPulls === 0 && BALANCE.FIRST_TEN_GUARANTEE ? BALANCE.FIRST_TEN_GUARANTEE : BALANCE.TEN_PULL_MIN_GRADE;
+    const results = []; let gotMin = false; const minIdx = GRADES[minGrade] ? ['D', 'C', 'B', 'A', 'S'].indexOf(minGrade) : 99;
     for (let i = 0; i < count; i++) {
-      const force = count === 10 && i === count - 1 && !gotMin ? BALANCE.TEN_PULL_MIN_GRADE : null;
+      const force = count === 10 && i === count - 1 && !gotMin ? minGrade : null;
       const r = pullOnce(this.state.pity, this.state.heroes, this.rng, force, this.pickup());
       if (['D', 'C', 'B', 'A', 'S'].indexOf(r.grade) >= minIdx) gotMin = true;
       if (force) r.guaranteed = true;
-      this.state.pity = r.pity; this.state.stats.totalPulls++;
+      this.state.pity = r.pity; this.state.stats.totalPulls++; this.state.stats.pullGrades[r.grade] = (this.state.stats.pullGrades[r.grade] ?? 0) + 1; this.state.recruit.points++;
       results.push({ ...r, def: HERO_BY_ID[r.heroId] });
       if (r.isNew && this.state.party.length < BALANCE.PARTY_SIZE) this.state.party.push(r.heroId); // 빈 자리에 자동 배치
     }

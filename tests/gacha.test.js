@@ -83,14 +83,40 @@ test('오늘의 픽업: deterministic per date, rotates daily, featured card lan
   const { pickupFor, PICKUP_RATE } = await import('../src/data/pickup.js');
   const { heroesOfGrade, HERO_BY_ID } = await import('../src/data/heroes.js');
   const { createRng } = await import('../src/utils/rng.js');
-  const a = pickupFor('2026-09-15'), b = pickupFor('2026-09-15'), c = pickupFor('2026-09-16');
+  const a = pickupFor('2026-09-15'), b = pickupFor('2026-09-15'), c = pickupFor('2026-09-18');
   assert.deepEqual(a, b); assert.equal(HERO_BY_ID[a.S].grade, 'S'); assert.equal(HERO_BY_ID[a.A].grade, 'A');
-  assert.notEqual(a.S, c.S, 'S pickup changes day to day');
-  const days = new Set(); for (let d = 1; d <= 28; d++) days.add(pickupFor(`2026-10-${String(d).padStart(2, '0')}`).A);
+  assert.notEqual(a.S, c.S, 'S pickup changes from one 3-day banner to the next');
+  const days = new Set(); for (let d = 1; d <= 28; d++) days.add(pickupFor(`2026-10-${String(d).padStart(2, '0')}`).A); // 28 days ≥ 6 banners × 3 days
   assert.equal(days.size, heroesOfGrade('A').length, 'every A card gets a day within a rotation');
   const rng = createRng(3); let featured = 0, sRolls = 0;
   for (let i = 0; i < 4000; i++) { const r = pullOnce(initialPity(), {}, rng, 'S', a); sRolls++; if (r.heroId === a.S) featured++; if (r.pickup) assert.equal(r.heroId, a.S); }
   const share = featured / sRolls, uniform = 1 / heroesOfGrade('S').length;
   assert.ok(Math.abs(share - (PICKUP_RATE + (1 - PICKUP_RATE) * uniform)) < 0.04, `featured share ${share}`);
   assert.equal(pullOnce(initialPity(), {}, rng, 'S').pickup, false, 'no banner → never flagged');
+});
+
+test('뽑기 고도화: 3-day banners, 모집 포인트 exchange, first 10-pull guarantees an S, grade tallies', async () => {
+  const { pickupFor, bannerDaysLeft, SPARK_COST, PICKUP_DAYS } = await import('../src/data/pickup.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { createInitialState, migrate } = await import('../src/core/state.js');
+  const { HERO_BY_ID } = await import('../src/data/heroes.js');
+  // banner: identical for 3 consecutive days, then changes; days-left counts down 3 → 1
+  const keys = ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'];
+  const banners = keys.map((k) => pickupFor(k).S), left = keys.map(bannerDaysLeft);
+  const firstChange = banners.findIndex((b, i) => i && b !== banners[i - 1]);
+  assert.ok(firstChange >= 1 && firstChange <= PICKUP_DAYS, 'banner rotates within a period');
+  for (let i = 1; i < keys.length; i++) if (banners[i] === banners[i - 1]) assert.equal(left[i], left[i - 1] - 1, 'days left count down inside a banner');
+  assert.ok(left.every((d) => d >= 1 && d <= PICKUP_DAYS));
+  // first 10-pull of a save contains an S; later 10-pulls only guarantee A+
+  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+  g.state.gems = 100000;
+  const first = g.pull(10); assert.ok(first.some((r) => r.grade === 'S'), 'first ten has an S');
+  assert.equal(g.recruitPoints(), 10); assert.equal(Object.values(g.state.stats.pullGrades).reduce((a, b) => a + b, 0), 10);
+  // exchange: not enough points → null; grant points → pickup S joins the roster
+  const sId = g.pickup().S; assert.equal(g.canExchangePickup('S'), false); assert.equal(g.exchangePickup('S'), null);
+  g.state.recruit.points = SPARK_COST.S; g.state.heroes[sId].owned = false; g.state.heroes[sId].star = 0;
+  const r = g.exchangePickup('S');
+  assert.equal(r.heroId, sId); assert.equal(r.isNew, true); assert.equal(g.state.heroes[sId].owned, true); assert.equal(g.state.heroes[sId].star, 1); assert.equal(g.recruitPoints(), 0); assert.equal(HERO_BY_ID[sId].grade, 'S');
+  g.state.recruit.points = SPARK_COST.S; const dup = g.exchangePickup('S'); assert.equal(dup.isNew, false); assert.ok(g.state.heroes[sId].shards >= dup.shards);
+  const m = migrate(JSON.parse(JSON.stringify(g.state))); assert.equal(m.recruit.points, 0); assert.deepEqual(Object.keys(m.stats.pullGrades).sort(), ['A', 'B', 'C', 'D', 'S']);
 });

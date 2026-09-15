@@ -61,7 +61,8 @@ export const BALANCE = Object.freeze({
   // 승산 forecast (calibrated with headless sims, scripts/calib): power ratio = (partyDPS/enemyHP) / (enemyDPS/partyHP)
   FORECAST: { normal: [2, 10], boss: [3, 15], bossTimeFrac: 0.9 }, // ratio at which win chance is 0% / 100%
   SAFE_ADVANCE_MIN: 0.35,   // auto-advance waits (keeps farming) while the forecast is below this
-  TEN_PULL_MIN_GRADE: 'A',  // a 10-pull always contains at least one A // consecutive hero hits without taking damage: +0.5% dmg each, cap +25%     // seconds between automatic "자동 합계" passes when the toggle is on
+  TEN_PULL_MIN_GRADE: 'A',
+  FIRST_TEN_GUARANTEE: 'S',  // 신입 환영: the very first 10-pull of a save always contains an S  // a 10-pull always contains at least one A // consecutive hero hits without taking damage: +0.5% dmg each, cap +25%     // seconds between automatic "자동 합계" passes when the toggle is on
 
   GEMS_FIRST_CLEAR: 10, GEMS_REPEAT_CLEAR: 1,
   GEMS_BOSS_FIRST: 50,  GEMS_BOSS_REPEAT: 10,
