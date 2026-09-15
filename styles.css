@@ -378,3 +378,33 @@ body.stealth #roster-table { display: table; }
 .toast[hidden] { display: none; }
 
 
+
+/* ------------------------------------------------------------ card detail (record layout) -- */
+.dialog:has(.dt) { width: min(94vw, 720px); }
+.dt { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+.dt .detail-art { width: 220px; }
+.dt-info { min-width: 0; }
+.dt-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 2px solid var(--xl-green); margin-bottom: 8px; }
+.dt-grade { color: #fff; font-weight: 700; font-size: 12px; padding: 1px 7px; }
+.dt-name { font-size: 16px; }
+.dt-nick { color: var(--muted); font-size: 12px; }
+.dt-role { color: #444; font-size: 12px; margin-left: auto; }
+.dt-head .xl-btn.fav { padding: 0 6px; font-size: 13px; }
+.dt-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.dt-table th { text-align: left; width: 82px; background: #f3f3f3; color: #555; font-weight: 600; border: 1px solid var(--line); padding: 5px 8px; font-size: 12px; white-space: nowrap; }
+.dt-table td { border: 1px solid var(--line); padding: 5px 8px; vertical-align: middle; }
+.dt-table td.val { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.dt-table td.val .hint { font-weight: 400; color: var(--muted); font-size: 11px; margin-top: 2px; white-space: normal; }
+.dt-table td.ctl { text-align: right; white-space: nowrap; width: 1%; }
+.ctl-group { display: inline-flex; gap: 3px; }
+.dt-sections { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.dt-sec { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--line); background: #fafafa; }
+.dt-sec > b { color: #555; font-size: 11.5px; min-width: 44px; }
+.dt-sec .nm { font-weight: 700; }
+.dt-sec.trait .nm { color: #1f5fa8; } .dt-sec.skill .nm { color: #6c3483; }
+.dt-sec .ds { color: #444; }
+.dt-sec .lock { color: #b03a2e; }
+.dt-sec.perks { gap: 4px; }
+.dt-sec.profile { display: block; }
+.dt-sec.profile .bio { color: #444; } .dt-sec.profile .quote { color: var(--muted); font-style: italic; margin-top: 2px; }
+.dt-actions { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
