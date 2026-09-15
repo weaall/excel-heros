@@ -9,10 +9,10 @@ main = "worker.js"
 compatibility_date = "2025-01-01"
 
 [vars]
-# Lock CORS to the game's origin once deployed (e.g. "https://weaall.github.io"); "*" while testing.
+# Lock CORS to the game's origin once deployed (e.g. "https://excel-heros.qugo.kr"); "*" while testing.
 ALLOW_ORIGIN = "*"
 # Google OAuth 2.0 *Web application* client ID from console.cloud.google.com › APIs & Services › Credentials.
-# Authorized JavaScript origins must include the game origin (https://weaall.github.io) and http://localhost:8080.
+# Authorized JavaScript origins must include the game origin (https://excel-heros.qugo.kr) and http://localhost:8080.
 GOOGLE_CLIENT_ID = ""
 
 [[d1_databases]]

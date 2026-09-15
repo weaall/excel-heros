@@ -10,7 +10,7 @@ Google 로그인 계정에 진행을 저장하고 순위표·광고 시청 기�
 2. **API 및 서비스 › OAuth 동의 화면**: 사용자 유형 *외부*, 앱 이름 "엑셀 히어로즈", 지원 이메일 입력 후 저장. 범위는 기본(email, profile)만.
    - 게시 상태를 **프로덕션**으로 올려야 본인 외 계정도 로그인할 수 있습니다 (email/profile만 쓰면 검증 없이 바로 됩니다).
 3. **API 및 서비스 › 사용자 인증 정보 › 사용자 인증 정보 만들기 › OAuth 클라이언트 ID** → 애플리케이션 유형 *웹 애플리케이션*.
-   - 승인된 JavaScript 원본: `https://weaall.github.io` 와 `http://localhost:8080`
+   - 승인된 JavaScript 원본: `https://excel-heros.qugo.kr` 와 `http://localhost:8080`
    - 리디렉션 URI는 비워 둡니다 (팝업 방식이라 필요 없음).
 4. 생성된 **클라이언트 ID**(`....apps.googleusercontent.com`)를 복사합니다. 비밀번호(client secret)는 쓰지 않습니다.
 
@@ -35,7 +35,7 @@ wrangler deploy --config backend/wrangler.toml
 <script>window.EXCEL_HEROES_CLOUD = { url: 'https://excel-heroes-api.<계정>.workers.dev', googleClientId: '....apps.googleusercontent.com' };</script>
 ```
 배포 후 게임의 제목 표시줄 계정 버튼 또는 `파일 › 옵션 › 계정`에 Google 로그인 버튼이 나타납니다.
-마지막으로 `wrangler.toml`의 `ALLOW_ORIGIN`을 `"https://weaall.github.io"`로 바꿔 다시 배포하세요.
+마지막으로 `wrangler.toml`의 `ALLOW_ORIGIN`을 `"https://excel-heros.qugo.kr"`로 바꿔 다시 배포하세요.
 
 ## 동작 방식
 
