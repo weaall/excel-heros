@@ -53,7 +53,8 @@ src/main.js                    부트스트랩 + 루프 (setInterval 고정 스�
 src/config/balance.js          모든 상수·공식 (GDD + 확정 수치)
 src/data/heroes.js             D~S 로스터 20장, 역할/스킬, 메인 영웅 직급 트리
 src/data/monsters.js           스테이지별 몬스터, 보스
-src/data/quests.js             일일 업무 정의, 출근/전체 완료 보너스
+src/data/quests.js             일일 업무 정의, 출근/전체 완료 보너스, 연속 출근
+src/data/divisions.js          부서 → 7개 부문 매핑, 부문 시너지 수치
 src/data/sprites.js            문자열 템플릿 → 치비 픽셀 스프라이트, 카드/초상 일러스트 생성
 src/core/GameManager.js        재화, 스테이지 흐름, 플레이어 액션(강화/승진/변환/방출/퀘스트/광고), 이벤트
 src/core/EntityManager.js      한 줄 대열 라인 전투, 웨이브/이동 스크롤, 대시·투사체 타이밍, 스킬

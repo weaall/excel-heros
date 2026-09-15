@@ -22,4 +22,6 @@ export const QUEST_BY_ID = Object.fromEntries(DAILY_QUESTS.map((q) => [q.id, q])
 
 /** Daily check-in ("출근") bonus and the bonus for finishing every quest. */
 export const LOGIN_BONUS = { gems: 100, goldKills: 100 };
+/** 연속 출근: each consecutive day adds gems to the stamp (day 2 → +20 … day 8+ → +140). */
+export const STREAK = { gemsPerDay: 20, maxDays: 7 };
 export const ALL_CLEAR_BONUS = { gems: 100, cards: 20 };

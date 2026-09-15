@@ -10,6 +10,7 @@ export const ACHIEVEMENTS = [
   { id: 'time',       name: '근속 포상',        desc: '플레이 시간',           stat: 'playSeconds', tiers: [3600, 36000, 180000, 720000],      gems: [20, 60, 150, 400], unit: 'time' },
   { id: 'prestige',   name: '회사 이전',        desc: '회사 이전 횟수',        stat: 'prestige',   tiers: [1, 3, 10],                          gems: [100, 250, 600] },
   { id: 'chests',     name: '보물 사냥꾼',      desc: '보물 상자 개봉',        stat: 'chests',     tiers: [1, 10, 50, 200],                    gems: [20, 50, 120, 300] },
+  { id: 'bestiary',   name: '오류 도감',        desc: '처치한 오류 종류',      stat: 'bestiary',   tiers: [5, 12, 20, 29],                     gems: [30, 80, 200, 500] },
   { id: 'collection', name: '인재 도감',        desc: '보유 영웅 종류',        stat: 'collection', tiers: [5, 12, 20, 28, 34],                 gems: [50, 100, 200, 500, 800] },
 ];
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

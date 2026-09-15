@@ -13,7 +13,8 @@ import { EntityManager } from './EntityManager.js';
 import * as Quests from './QuestManager.js';
 import * as Achievements from './AchievementManager.js';
 import * as Milestones from './MilestoneManager.js';
-import { HEROES } from '../data/heroes.js';
+import { HEROES, ROLES } from '../data/heroes.js';
+import { DIVISIONS, SYNERGY, divisionOf } from '../data/divisions.js';
 import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
 
@@ -82,6 +83,23 @@ export class GameManager extends Emitter {
     const C = BALANCE.COLLECTION;
     return { owned: owned.length, total: HEROES.length, stars, atk: owned.length * C.atkPerHero + stars * C.atkPerStar, gold: owned.length * C.goldPerHero };
   }
+  /** 부문 시너지: 2+ party members of one division buff ATK (3+ also HP); a party covering all 4 roles gets extra HP. */
+  synergy() {
+    const groups = {};
+    for (const id of this.state.party) { const d = divisionOf(this.isMain(id) ? 'main' : id); (groups[d] ??= []).push(id); }
+    const sets = [];
+    let atk = 0, hp = 0;
+    for (const [d, ids] of Object.entries(groups)) {
+      if (ids.length < SYNERGY.pair.count) continue;
+      const tier = ids.length >= SYNERGY.trio.count ? SYNERGY.trio : SYNERGY.pair;
+      atk += tier.atk; hp += tier.hp;
+      sets.push({ id: d, name: DIVISIONS[d].name, color: DIVISIONS[d].color, count: ids.length, ids, atk: tier.atk, hp: tier.hp });
+    }
+    const roles = new Set(this.state.party.map((id) => this.heroDef(id).role));
+    const balanced = Object.keys(ROLES).every((r) => roles.has(r));
+    if (balanced) hp += SYNERGY.balanced.hp;
+    return { sets, balanced, atk, hp };
+  }
   partyTraitCount(trait) { return this.state.party.filter((id) => this.heroDef(id).trait === trait).length; }
   speedMult() { return 1 + teamUpgradeBonus('coffee', this.state.team.coffee); }
   hpBonus() { return teamUpgradeBonus('chairs', this.state.team.chairs); }
@@ -103,10 +121,12 @@ export class GameManager extends Emitter {
     const awakenCost = BALANCE.AWAKEN.cards[def.grade];
     const nextCost = isMain ? null : promoteCost(def.grade, star);
     const eCost = enhanceCost(entry.enhance);
+    // 부문 시너지 only applies to heroes standing in the party (the roster preview shows base numbers for the bench)
+    const syn = this.state.party.includes(id) ? this.synergy() : { atk: 0, hp: 0 };
     const view = {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
-      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus()) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1)),
-      hp: Math.floor(heroHP(base.hp, entry.level, star, this.hpBonus(), entry.enhance) * (awakened ? 1 + BALANCE.AWAKEN.hp : 1)),
+      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus() + syn.atk) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1)),
+      hp: Math.floor(heroHP(base.hp, entry.level, star, this.hpBonus() + syn.hp, entry.enhance) * (awakened ? 1 + BALANCE.AWAKEN.hp : 1)),
       awakened, traitMult: awakened ? BALANCE.AWAKEN.trait : (!isMain && star >= BALANCE.STAR_TRAIT_BOOST.star ? BALANCE.STAR_TRAIT_BOOST.mult : 1), awakenCost,
       canAwaken: !isMain && entry.owned && !awakened && star >= BALANCE.AWAKEN.star && this.state.cards >= awakenCost,
       interval: base.interval, range: base.range,
@@ -428,7 +448,7 @@ export class GameManager extends Emitter {
 
   // -------------------------------------------------------------- quests --
   claimQuest(id) { const r = Quests.claimQuest(this.state, id, this.goldMult()); if (r) this.#afterReward(r); return r; }
-  claimLogin() { const r = Quests.claimLogin(this.state, this.goldMult()); if (r) { this.log('오늘의 출근 보상 수령', 'info'); this.#afterReward(r); } return r; }
+  claimLogin() { const r = Quests.claimLogin(this.state, this.goldMult()); if (r) { this.log(`출근 도장 (연속 ${this.state.login.streak}일${r.streakGems ? `, 보석 +${r.streakGems} 추가` : ''})`, 'info'); this.#afterReward(r); } return r; }
   claimAllClear() { const r = Quests.claimAllClear(this.state, this.goldMult()); if (r) this.#afterReward(r); return r; }
   adsLeft() { return Quests.adsLeft(this.state); }
 
@@ -453,6 +473,17 @@ export class GameManager extends Emitter {
   }
 
   // ---------------------------------------------------------- stage flow --
+  /** 오류 도감: kills per base monster type (the ':phase' suffix is stripped so every colour variant counts as one entry). */
+  #recordKill(m) {
+    const key = m.isBoss ? m.def.id : String(m.def.id).split(':')[0];
+    const b = (this.state.bestiary ??= {});
+    const wasNew = !b[key];
+    b[key] = (b[key] ?? 0) + 1;
+    if (m.elite) b[`${key}!`] = (b[`${key}!`] ?? 0) + 1;
+    if (wasNew) this.emit('bestiary', key);
+  }
+  bestiaryCount(typeId) { return this.state.bestiary?.[typeId] ?? 0; }
+  bestiaryDiscovered() { return Object.keys(this.state.bestiary ?? {}).filter((k) => !k.endsWith('!')).length; }
   onMonsterKilled(m) {
     const s = this.state;
     if (m.def.chest) {
@@ -466,6 +497,7 @@ export class GameManager extends Emitter {
     }
     const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1) * (stageModifier(s.stage)?.gold ?? 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
+    this.#recordKill(m);
     Quests.addProgress(s, 'kills', 1); if (m.elite) Quests.addProgress(s, 'elite', 1);
     this.entities.coinBurst(m.x, m.y, gold);
     if (m.isBoss) {

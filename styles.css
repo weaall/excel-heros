@@ -408,3 +408,27 @@ body.stealth #roster-table { display: table; }
 .dt-sec.profile { display: block; }
 .dt-sec.profile .bio { color: #444; } .dt-sec.profile .quote { color: var(--muted); font-style: italic; margin-top: 2px; }
 .dt-actions { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+/* ------------------------------------------------- roster autofilter bar -- */
+.filter-bar { display: flex; align-items: center; gap: 12px; padding: 5px 10px; background: #fff; border-bottom: 1px solid var(--line); font-size: 12px; flex-wrap: wrap; }
+.filter-bar .filter-label { color: var(--xl-green); font-weight: 600; }
+.filter-bar label { display: inline-flex; align-items: center; gap: 4px; color: #555; }
+.filter-bar select { font: inherit; font-size: 12px; padding: 1px 4px; border: 1px solid var(--line-dark); background: #fff; color: #222; border-radius: 0; }
+.filter-bar .xl-btn.small { padding: 1px 8px; font-size: 11.5px; }
+.filter-bar.on { background: #eef6ee; }
+.filter-empty { grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+/* --------------------------------------------------- party pane synergy -- */
+.pane-synergy { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 12px 8px; font-size: 11.5px; color: #555; min-height: 18px; }
+.pane-synergy .syn { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border: 1px solid var(--sc, #999); color: var(--sc, #444); background: #fff; }
+.pane-synergy .syn b { font-weight: 700; }
+.pane-synergy .syn.off { border-style: dashed; color: #999; }
+
+/* --------------------------------------------------------- 오류_도감 sheet -- */
+#codex-table td:first-child { width: 72px; padding: 2px 6px; }
+#codex-table .thumb { width: 64px; height: 64px; image-rendering: pixelated; display: block; }
+#codex-table tr.unknown { color: #999; }
+#codex-table tr.unknown .thumb { filter: brightness(0) opacity(.28); }
+#codex-table .tag { display: inline-block; padding: 0 5px; border: 1px solid var(--line-dark); font-size: 11px; margin-right: 4px; color: #444; background: #fafafa; }
+#codex-table .tag.boss { border-color: #c0392b; color: #c0392b; }
+#codex-table .tag.ranged { border-color: #2b7cd3; color: #2b7cd3; }

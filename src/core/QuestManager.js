@@ -1,6 +1,6 @@
 // Daily quests / check-in / ad placeholder. Pure functions over state.daily.
 import { BALANCE, relativeGold } from '../config/balance.js';
-import { QUEST_BY_ID, LOGIN_BONUS, ALL_CLEAR_BONUS, dailyQuestIds } from '../data/quests.js';
+import { QUEST_BY_ID, LOGIN_BONUS, ALL_CLEAR_BONUS, STREAK, dailyQuestIds } from '../data/quests.js';
 import { localDateKey } from './state.js';
 
 /** Reset daily data when the local date changed. Returns true if a reset happened. */
@@ -44,9 +44,21 @@ export function claimQuest(state, questId, goldMult = 1) {
   return r;
 }
 
-export function claimLogin(state, goldMult = 1) {
+/** Streak the next stamp would reach: continues if the last stamp was yesterday, otherwise restarts at 1. */
+export function nextStreak(state, now = Date.now()) {
+  const login = state.login ?? { streak: 0, last: null };
+  if (login.last === localDateKey(now)) return login.streak;             // already stamped today
+  return login.last === localDateKey(now - 86400000) ? login.streak + 1 : 1;
+}
+/** Extra gems for a streak of n days (capped at STREAK.maxDays). */
+export const streakGems = (n) => Math.min(STREAK.maxDays, Math.max(0, n - 1)) * STREAK.gemsPerDay;
+
+export function claimLogin(state, goldMult = 1, now = Date.now()) {
   if (state.daily.loginClaimed) return null;
+  const streak = nextStreak(state, now);
+  state.login = { streak, last: localDateKey(now) };
   const r = resolveReward(state, LOGIN_BONUS, goldMult);
+  r.streakGems = streakGems(streak); r.gems += r.streakGems; r.streak = streak;
   grant(state, r); state.daily.loginClaimed = true;
   return r;
 }

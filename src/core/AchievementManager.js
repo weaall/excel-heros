@@ -9,6 +9,7 @@ export function achievementValue(state, a) {
   if (a.stat === 'collection') return ownedHeroCount(state);
   if (a.stat === 'maxCleared') return state.maxCleared | 0;
   if (a.stat === 'prestige') return state.prestige?.count ?? 0;
+  if (a.stat === 'bestiary') return Object.keys(state.bestiary ?? {}).filter((k) => !k.endsWith('!')).length;
   return Math.floor(state.stats?.[a.stat] ?? 0);
 }
 export const claimedTiers = (state, id) => state.achievements?.[id] ?? 0;

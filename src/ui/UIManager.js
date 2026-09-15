@@ -1,14 +1,15 @@
 // DOM layer: ribbon, formula bar, sheets, task pane, card grid, quests, boss-key view, dialogs.
 import { BALANCE, teamUpgradeCost, isBossStage, stageLabel } from '../config/balance.js';
 import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, MAIN_ID, MAIN_TIER_TITLES } from '../data/heroes.js';
-import { stagePool, eliteChance, bossForStage } from '../data/monsters.js';
+import { stagePool, eliteChance, bossForStage, MONSTER_TYPES, BOSSES, PALETTES, phaseOf } from '../data/monsters.js';
+import { DIVISIONS, divisionOf, divisionName } from '../data/divisions.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { phaseName, stageModifier } from '../data/stages.js';
 import * as Achievements from '../core/AchievementManager.js';
 import * as Milestones from '../core/MilestoneManager.js';
 import { MILESTONES, milestoneValue } from '../data/milestones.js';
 import { profileOf } from '../data/profiles.js';
-import { ALL_CLEAR_BONUS } from '../data/quests.js';
+import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
 import { cardArtUrl } from '../data/cardArt.js';
 import { GRID } from '../core/EntityManager.js';
@@ -27,6 +28,8 @@ const el = (tag, attrs = {}, ...children) => {
 const btn = (label, onclick, cls = '', disabled = false) => { const b = el('button', { class: `xl-btn ${cls}`, onclick }, label); b.disabled = disabled; return b; };
 
 const RIBBON_SHEET = { home: 'home', insert: 'gacha', data: 'roster', review: 'quests' };
+/** 오류_도감 rows: which phases (0-based) a monster type can appear in — mirrors stagePool()'s rotation. */
+const typePhases = (idx) => { const out = []; for (let p = 0; p < 20; p++) { const start = (p * 2) % MONSTER_TYPES.length; if ([0, 1, 2].some((k) => (start + k) % MONSTER_TYPES.length === idx)) out.push(p); } return out; };
 const GameManager_HISTORY_STEP = () => 5;
 const SHEET_RIBBON = { home: 'home', gacha: 'insert', roster: 'data', quests: 'review' };
 const COLS = 'ABCDEFGHIJKLM';
@@ -124,6 +127,11 @@ export class UIManager {
     this.game.on('history', () => { if (document.querySelector('#sheet-chart.active')) this.#drawCharts(); });
 
     $('#qa-upgrade-all').addEventListener('click', () => { const n = this.game.upgradeCheapestLoop(); this.toast(n ? `자동 합계: 업그레이드 ${n}회 적용` : '골드가 부족합니다'); });
+    this.game.on('bestiary', (key) => { const t = MONSTER_TYPES.find((m) => m.id === key) ?? BOSSES.find((b) => b.id === key); if (t) this.toast(`📒 오류 도감에 「${t.name}」 등록 (${this.game.bestiaryDiscovered()} / ${MONSTER_TYPES.length + BOSSES.length})`); if (document.querySelector('#sheet-codex.active')) this.#buildCodex(); });
+    this.filter = { grade: '', role: '', div: '', owned: '', sort: 'grade' };
+    const divSel = $('#rf-div'); for (const d of Object.values(DIVISIONS)) divSel.append(el('option', { value: d.id }, d.name));
+    for (const k of ['grade', 'role', 'div', 'owned', 'sort']) $(`#rf-${k}`).addEventListener('change', (e) => { this.filter[k] = e.target.value; this.#buildCards(); });
+    $('#rf-clear').addEventListener('click', () => { this.filter = { grade: '', role: '', div: '', owned: '', sort: 'grade' }; for (const k of ['grade', 'role', 'div', 'owned']) $(`#rf-${k}`).value = ''; $('#rf-sort').value = 'grade'; this.#buildCards(); });
     $('#pane-bulk5').addEventListener('click', () => { const n = this.game.upgradeAllMany(5); this.toast(n ? `일괄 레벨업: 파티 전원 총 ${n}레벨` : '골드가 부족합니다'); });
     $('#pane-bulk-max').addEventListener('click', () => { const n = this.game.upgradeAllMany(200); this.toast(n ? `일괄 레벨업(최대): 총 ${n}레벨` : '골드가 부족합니다'); });
     $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
@@ -209,6 +217,7 @@ export class UIManager {
     document.querySelectorAll('.sheet-tab').forEach((b) => b.classList.toggle('active', b.dataset.sheet === name));
     if (SHEET_RIBBON[name]) this.#activateRibbon(SHEET_RIBBON[name]);
     if (name === 'quests') this.#refreshQuests();
+    if (name === 'codex') this.#buildCodex();
   }
   /** Ribbon tabs switch the ribbon contents (like Excel) and jump to the matching sheet; 파일 opens the backstage. */
   showRibbon(name) {
@@ -477,16 +486,39 @@ export class UIManager {
     const s = this.game.state;
     // grade first (S → D), then favourites, then owned — so the grid reads as grade sections
     const rank = (id) => { const e = s.heroes[id]; const g = GRADE_ORDER.indexOf(this.game.heroDef(id).grade); return g * 1000 + (this.game.isFavorite(id) ? 200 : 0) + (e.owned ? 100 : 0); };
-    return [MAIN_ID, ...HEROES.map((h) => h.id).sort((a, b) => rank(b) - rank(a))];
+    const f = this.filter ?? { sort: 'grade' };
+    let ids = HEROES.map((h) => h.id);
+    if (f.grade) ids = ids.filter((id) => this.game.heroDef(id).grade === f.grade);
+    if (f.role) ids = ids.filter((id) => this.game.heroDef(id).role === f.role);
+    if (f.div) ids = ids.filter((id) => divisionOf(id) === f.div);
+    if (f.owned === '1') ids = ids.filter((id) => s.heroes[id].owned);
+    if (f.owned === '0') ids = ids.filter((id) => !s.heroes[id].owned);
+    if (f.owned === 'party') ids = ids.filter((id) => s.party.includes(id));
+    const view = (id) => this.game.heroView(id);
+    const sorters = {
+      grade: (a, b) => rank(b) - rank(a),
+      atk: (a, b) => (s.heroes[b].owned ? view(b).atk : -1) - (s.heroes[a].owned ? view(a).atk : -1) || rank(b) - rank(a),
+      level: (a, b) => (s.heroes[b].owned ? s.heroes[b].level : -1) - (s.heroes[a].owned ? s.heroes[a].level : -1) || rank(b) - rank(a),
+      star: (a, b) => (s.heroes[b].owned ? s.heroes[b].star : -1) - (s.heroes[a].owned ? s.heroes[a].star : -1) || rank(b) - rank(a),
+      name: (a, b) => this.game.heroDef(a).name.localeCompare(this.game.heroDef(b).name, 'ko'),
+    };
+    ids.sort(sorters[f.sort] ?? sorters.grade);
+    const mainFits = (!f.grade || this.game.heroDef(MAIN_ID).grade === f.grade) && (!f.role || this.game.heroDef(MAIN_ID).role === f.role) && (!f.div || divisionOf('main') === f.div) && f.owned !== '0';
+    this.filterActive = !!(f.grade || f.role || f.div || f.owned || (f.sort && f.sort !== 'grade'));
+    return mainFits ? [MAIN_ID, ...ids] : ids;
   }
   #buildCards() {
     const grid = $('#card-grid'); grid.innerHTML = '';
     const tbody = $('#roster-table tbody'); tbody.innerHTML = '';
     const maxAtk = Math.max(1, ...this.#rosterOrder().filter((id) => this.game.state.heroes[id].owned).map((id) => this.game.heroView(id).atk));
     let currentGrade = null;
-    for (const id of this.#rosterOrder()) {
+    const order = this.#rosterOrder();
+    $('#roster-filter').classList.toggle('on', !!this.filterActive);
+    $('#rf-count').textContent = this.filterActive ? `${order.length}개 레코드 중 ${order.length}개 표시 (필터 적용)` : `${order.length}개 레코드`;
+    if (!order.length) grid.append(el('div', { class: 'filter-empty' }, '조건에 맞는 카드가 없습니다. 필터를 지워 보세요.'));
+    for (const id of order) {
       const v = this.game.heroView(id); const e = v.entry;
-      if (!v.isMain && v.def.grade !== currentGrade) { // grade section header (S → D), like grouped rows in a sheet
+      if (!v.isMain && v.def.grade !== currentGrade && (this.filter?.sort ?? 'grade') === 'grade') { // grade section header (S → D), like grouped rows in a sheet
         currentGrade = v.def.grade;
         const all = HEROES.filter((h) => h.grade === currentGrade), owned = all.filter((h) => this.game.state.heroes[h.id].owned).length;
         grid.append(el('div', { class: 'grade-section', style: `--gc:${v.grade.color}; --gb:${v.grade.bg}` }, el('b', {}, `${currentGrade} · ${v.grade.label}`), el('span', { class: 'muted small' }, ` 보유 ${owned} / ${all.length} · 확률 ${Math.round(v.grade.rate * 100)}%`)));
@@ -503,15 +535,55 @@ export class UIManager {
       if (v.isMain) wrap.append(el('span', { class: 'card-badge main' }, '메인'));
       grid.append(wrap);
       tbody.append(el('tr', { class: e.owned ? '' : 'locked' },
-        el('td', {}, v.def.name), el('td', { style: `color:${v.grade.color}` }, v.def.grade), el('td', {}, ROLES[v.def.role].name), el('td', {}, v.traitName),
+        el('td', {}, v.def.name), el('td', { style: `color:${v.grade.color}` }, v.def.grade), el('td', {}, ROLES[v.def.role].name), el('td', { style: `color:${DIVISIONS[divisionOf(v.isMain ? 'main' : id)].color}` }, divisionName(v.isMain ? 'main' : id)), el('td', {}, v.traitName),
         el('td', {}, v.isMain ? v.def.title : (e.owned ? stars(e.star) : '미보유')), el('td', { class: 'num' }, e.owned ? e.level : '-'),
         el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${e.owned ? Math.max(2, Math.round((v.atk / maxAtk) * 96)) : 0}%` }), el('span', {}, e.owned ? fmt(v.atk) : '-')),
         el('td', { class: 'num' }, e.owned ? e.shards : '-')));
     }
     $('#party-count').textContent = `${this.game.state.party.length} / ${BALANCE.PARTY_SIZE}`;
+    this.#refreshSynergy();
     const col = this.game.collection();
     $('#collection-text').textContent = `${col.owned} / ${col.total}종 · ATK +${Math.round(col.atk * 100)}% · 골드 +${Math.round(col.gold * 100)}%`;
     $('#qa-collection').textContent = `도감 ${col.owned} / ${col.total}종 · ATK +${Math.round(col.atk * 100)}% · 골드 +${Math.round(col.gold * 100)}%`;
+  }
+
+  /** 부문 시너지 summary in the roster head and the party task pane. */
+  #refreshSynergy() {
+    const syn = this.game.synergy();
+    const parts = syn.sets.map((x) => `${x.name} ${x.count}명 (ATK +${Math.round(x.atk * 100)}%${x.hp ? `, HP +${Math.round(x.hp * 100)}%` : ''})`);
+    if (syn.balanced) parts.push('균형 편성 (HP +10%)');
+    const txt = $('#synergy-text'); if (txt) txt.textContent = parts.length ? parts.join(' · ') : '없음';
+    const pane = $('#pane-synergy'); if (!pane) return; pane.innerHTML = '';
+    for (const x of syn.sets) pane.append(el('span', { class: 'syn', style: `--sc:${x.color}` }, el('b', {}, x.name), `${x.count}명 · ATK +${Math.round(x.atk * 100)}%${x.hp ? ` HP +${Math.round(x.hp * 100)}%` : ''}`));
+    pane.append(el('span', { class: `syn ${syn.balanced ? '' : 'off'}`, style: '--sc:#27ae60' }, el('b', {}, '균형 편성'), syn.balanced ? 'HP +10%' : '4개 역할 필요'));
+    if (!syn.sets.length) pane.append(el('span', { class: 'syn off' }, '같은 부문 2명 이상 → 시너지'));
+  }
+
+  /** 오류_도감 sheet: one row per monster type (+ bosses), thumbnails greyed out until first kill. */
+  #buildCodex() {
+    const tbody = $('#codex-table tbody'); if (!tbody) return; tbody.innerHTML = '';
+    const g = this.game; const total = MONSTER_TYPES.length + BOSSES.length;
+    $('#codex-count').textContent = `${g.bestiaryDiscovered()} / ${total}`;
+    const row = (def, thumbDef, cls, kind, appear, traits) => {
+      const n = g.bestiaryCount(def.id), ne = g.bestiaryCount(def.id + '!'), known = n > 0;
+      const sprite = monsterSprite(thumbDef, 0); let thumb;
+      if (sprite) { thumb = document.createElement('canvas'); thumb.width = 64; thumb.height = 64; thumb.className = 'thumb'; const cx = thumb.getContext('2d'); cx.imageSmoothingEnabled = false; const sc = Math.min(64 / sprite.width, 64 / sprite.height); const w = Math.floor(sprite.width * sc), h = Math.floor(sprite.height * sc); cx.drawImage(sprite, Math.floor((64 - w) / 2), 64 - h, w, h); }
+      tbody.append(el('tr', { class: `${cls} ${known ? '' : 'unknown'}` },
+        el('td', {}, thumb ?? ''), el('td', { class: 'name' }, known ? def.name : '???', el('div', { class: 'sub' }, known ? (def.desc ?? '') : '처치하면 공개')),
+        el('td', {}, el('span', { class: `tag ${kind === '보스' ? 'boss' : ''}` }, kind)), el('td', { class: 'small' }, appear),
+        el('td', { class: 'small' }, ...traits.map((t) => el('span', { class: `tag ${t.cls ?? ''}` }, t.label))),
+        el('td', { class: 'num' }, known ? fmt(n) : '-'), el('td', { class: 'num' }, known ? fmt(ne) : '-')));
+    };
+    MONSTER_TYPES.forEach((t, i) => {
+      const phases = typePhases(i).slice(0, 3);
+      const appear = phases.map((p) => `Phase ${p + 1}`).join(', ') + (typePhases(i).length > 3 ? ' …' : '');
+      const traits = [];
+      if (t.ranged) traits.push({ label: t.ranged === 'drop' ? '원거리 · 낙하' : t.ranged === 'paper' ? '원거리 · 서류' : '원거리 · 광선', cls: 'ranged' });
+      else traits.push({ label: '근접' });
+      const pal = PALETTES[phases[0] % PALETTES.length];
+      row(t, { ...t, palette: pal, hue: ((phases[0] % PALETTES.length) * 36) % 360 }, '', '일반', appear, traits);
+    });
+    BOSSES.forEach((b, i) => row(b, b, 'boss', '보스', `Phase ${i + 1}, ${i + 1 + BOSSES.length}, ${i + 1 + 2 * BOSSES.length} … (10의 배수 스테이지)`, [{ label: b.desc, cls: 'boss' }]));
   }
 
   // ------------------------------------------------------ hero detail --
@@ -710,6 +782,8 @@ export class UIManager {
     const s = this.game.state; const g = this.game;
     $('#daily-date').textContent = s.daily.date;
     const login = $('#btn-login'); login.disabled = s.daily.loginClaimed; login.textContent = s.daily.loginClaimed ? '출근 완료 ✓' : '출근 도장 찍기';
+    const streak = Quests.nextStreak(s), bonus = Quests.streakGems(streak);
+    $('#streak-text').textContent = s.daily.loginClaimed ? `연속 출근 ${s.login.streak}일째${bonus ? ` · 오늘 보너스 보석 +${bonus}` : ''}` : (streak > 1 ? `연속 출근 ${streak}일째 도장 → 보석 +${bonus} 추가` : `연속 출근 시작 (내일부터 하루당 보석 +${STREAK.gemsPerDay}, 최대 ${STREAK.maxDays}일치)`);
     const tbody = $('#quest-table tbody'); tbody.innerHTML = '';
     for (const q of Quests.activeQuests(s)) {
       const p = Quests.questProgress(s, q.id), done = Quests.questDone(s, q.id), claimed = Quests.questClaimed(s, q.id);

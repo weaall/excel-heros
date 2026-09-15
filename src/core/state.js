@@ -40,6 +40,8 @@ export function createInitialState(now = Date.now()) {
     prestige: { shares: 0, count: 0 }, // 회사 이전: permanent 지분 and how many times
     milestones: {},       // milestone id -> granted
     favorites: {},        // hero id -> true (♥ 즐겨찾기: sorted first in the roster)
+    bestiary: {},         // monster type id -> kills (id + '!' = elite kills) — 오류_도감 sheet
+    login: { streak: 0, last: null }, // consecutive 출근 days and the date key of the last stamp
   };
 }
 
@@ -61,6 +63,8 @@ export function migrate(raw) {
   s.prestige = { ...fresh.prestige, ...(raw.prestige ?? {}) };
   s.milestones = { ...(raw.milestones ?? {}) };
   s.favorites = { ...(raw.favorites ?? {}) };
+  s.bestiary = { ...(raw.bestiary ?? {}) };
+  s.login = { ...fresh.login, ...(raw.login ?? {}) };
   s.party = (Array.isArray(raw.party) ? raw.party : fresh.party).filter((id) => s.heroes[id]?.owned).slice(0, BALANCE.PARTY_SIZE);
   if (s.party.length === 0) s.party = [MAIN_ID];
   s.heroes[MAIN_ID].owned = true;
