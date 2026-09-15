@@ -3,3 +3,6 @@ node_modules/
 Thumbs.db
 *.log
 .claude/
+
+# local Hugging Face token for scripts/genCardsHF.mjs (never commit)
+.hf_token

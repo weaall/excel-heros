@@ -47,12 +47,18 @@ export function prompt(def, profileId) {
   return `${who}, ${hair}, ${bits}, ${outfit}, ${colorName(pal.B ?? '#dfe6e9')} jacket, ${ROLE[def.role]}, looking at viewer, cowboy shot, ${bg}, ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
 }
 
+// Optional Hugging Face token (HF_TOKEN env or a .hf_token file next to package.json, git-ignored): a logged-in
+// user gets a far larger ZeroGPU quota than anonymous callers, which is what stalls long batches.
+const tokenFile = new URL('../.hf_token', import.meta.url);
+const HF_TOKEN = process.env.HF_TOKEN ?? (fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : '');
+const AUTH = HF_TOKEN ? { authorization: `Bearer ${HF_TOKEN}` } : {};
+
 async function callGenerate(text, seed) {
   const data = [text, NEG, seed, 832, 1216, 5, 28, 'Euler a', '832 x 1216', 'Anim4gine', false, 0.55, 1.5, true];
-  const r = await fetch(`${BASE}/call/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ data }) });
+  const r = await fetch(`${BASE}/call/generate`, { method: 'POST', headers: { 'content-type': 'application/json', ...AUTH }, body: JSON.stringify({ data }) });
   if (!r.ok) throw new Error(`call ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const { event_id } = await r.json();
-  const ev = await fetch(`${BASE}/call/generate/${event_id}`, { signal: AbortSignal.timeout(300000) });
+  const ev = await fetch(`${BASE}/call/generate/${event_id}`, { headers: AUTH, signal: AbortSignal.timeout(300000) });
   const txt = await ev.text();
   const lines = txt.split('\n'); let lastEvent = '', payload = null;
   for (const line of lines) { if (line.startsWith('event:')) lastEvent = line.slice(6).trim(); else if (line.startsWith('data:') && (lastEvent === 'complete' || lastEvent === 'error')) payload = line.slice(5).trim(); }
