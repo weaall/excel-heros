@@ -759,7 +759,8 @@ export class UIManager {
     $('#shares-top').textContent = info.shares;
   }
   #buildFormulaSheet() {
-    $('#formula-list').innerHTML = [
+    // the 게임 공식 table was hidden from the backstage by request; keep the builder harmless if the element is absent
+    if ($('#formula-list')) $('#formula-list').innerHTML = [
       ['업그레이드 비용', '=FLOOR(10 * 1.12 ^ (Level - 1))'],
       ['몬스터 HP', '=FLOOR(50 * 1.18 ^ (Stage - 1))'],
       ['몬스터 ATK', '=FLOOR(1 * 1.13 ^ (Stage - 1))'],
