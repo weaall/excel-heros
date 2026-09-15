@@ -147,6 +147,10 @@ button:disabled { cursor: default; opacity: .55; }
 .pane-title { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; font-weight: 600; font-size: 13px; background: var(--panel); border-bottom: 1px solid var(--line-dark); }
 .pane-x { color: var(--muted); font-size: 12px; }
 .pane-body { overflow-y: auto; flex: 1; }
+.pane-actions { display: flex; gap: 6px; padding: 8px 10px 2px; }
+.xl-table td.act .xl-btn + .xl-btn { margin-left: 3px; }
+#hero-table td.act .xl-btn { padding: 2px 5px; font-size: 11px; }
+#hero-table th:last-child { min-width: 78px; }
 .bestiary { display: flex; gap: 8px; padding: 6px 10px 10px; flex-wrap: wrap; }
 .bestiary .beast { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10.5px; color: #444; width: 96px; text-align: center; }
 .bestiary canvas { width: 48px; height: 48px; image-rendering: pixelated; }

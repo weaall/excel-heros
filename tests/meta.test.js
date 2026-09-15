@@ -88,7 +88,7 @@ test('파티 자동 편성 picks the strongest heroes and guarantees a tank and 
 test('stage modifiers, phase names and 각성', async () => {
   const { stageModifier, phaseName, phaseTheme } = await import('../src/data/stages.js');
   assert.equal(stageModifier(5).id, 'rush'); assert.equal(stageModifier(18).id, 'elite'); assert.equal(stageModifier(3), null); assert.equal(stageModifier(10), null);
-  assert.equal(phaseName(1), '인사팀 지하 창고'); assert.equal(phaseName(11), '회계팀 서버실'); assert.equal(phaseName(101), '인사팀 지하 창고 2차');
+  assert.equal(phaseName(1), '무너진 오피스 거리'); assert.equal(phaseName(11), '불타는 상업 지구'); assert.equal(phaseName(101), '무너진 오피스 거리 2차');
   assert.ok(phaseTheme(25).hue >= 0);
   // rush wave spawns more, faster monsters
   const s = createInitialState(); s.stage = 5; s.maxStage = 5; s.maxCleared = 4; s.heroes[MAIN_ID].level = 20;
@@ -114,4 +114,13 @@ test('stage modifiers, phase names and 각성', async () => {
   // combo counts hero hits and resets when a hero is hurt
   run(g2, 20);
   assert.ok(g2.entities.combo >= 0 && Number.isFinite(g2.entities.combo));
+});
+
+test('bulk level-up: +N per hero and round-robin for the whole party, bounded by gold', () => {
+  const s = createInitialState(); s.gold = 100000; s.heroes.guard = { owned: true, star: 1, shards: 0, level: 1, enhance: 0 }; s.party = [MAIN_ID, 'guard'];
+  const g = new GameManager({ state: s, save: memSave() });
+  assert.equal(g.upgradeHeroMany('guard', 10), 10); assert.equal(g.state.heroes.guard.level, 11);
+  const total = g.upgradeAllMany(5); assert.equal(total, 10); assert.equal(g.state.heroes[MAIN_ID].level, 6); assert.equal(g.state.heroes.guard.level, 16);
+  g.state.gold = 0; assert.equal(g.upgradeHeroMany('guard', 10), 0); assert.equal(g.upgradeAllMany(5), 0);
+  assert.equal(g.upgradeHeroMany('cfo', 3), 0, 'unowned heroes cannot be levelled');
 });

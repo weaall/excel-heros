@@ -161,6 +161,22 @@ export class GameManager extends Emitter {
     return true;
   }
 
+  /** Level a hero up to `n` times in one click (stops when gold runs out). Returns levels bought. */
+  upgradeHeroMany(id, n = 10) {
+    const entry = this.state.heroes[id]; if (!entry?.owned) return 0;
+    let bought = 0;
+    for (let i = 0; i < n; i++) { const cost = upgradeCost(entry.level); if (this.state.gold < cost) break; this.state.gold -= cost; entry.level += 1; bought++; }
+    if (bought) { Quests.addProgress(this.state, 'upgrades', bought); this.entities.refreshHeroStats(); this.entities.levelUpFx(id); this.emit('gold'); this.emit('roster'); this.emit('quests'); this.emit('sfx', 'levelup'); }
+    return bought;
+  }
+  /** Level every party member up to `n` times (round-robin so gold is shared fairly). Returns total levels bought. */
+  upgradeAllMany(n = 5) {
+    let total = 0;
+    for (let round = 0; round < n; round++) for (const id of this.state.party) { const cost = upgradeCost(this.state.heroes[id].level); if (this.state.gold < cost) continue; this.state.gold -= cost; this.state.heroes[id].level += 1; total++; }
+    if (total) { Quests.addProgress(this.state, 'upgrades', total); this.entities.refreshHeroStats(); this.emit('gold'); this.emit('roster'); this.emit('quests'); this.emit('sfx', 'levelup'); }
+    return total;
+  }
+
   /** Buy the cheapest party upgrade repeatedly. Returns how many were bought. */
   upgradeCheapestLoop(max = 200) {
     let n = 0;

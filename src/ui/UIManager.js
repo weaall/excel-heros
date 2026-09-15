@@ -124,6 +124,8 @@ export class UIManager {
     this.game.on('history', () => { if (document.querySelector('#sheet-chart.active')) this.#drawCharts(); });
 
     $('#qa-upgrade-all').addEventListener('click', () => { const n = this.game.upgradeCheapestLoop(); this.toast(n ? `자동 합계: 업그레이드 ${n}회 적용` : '골드가 부족합니다'); });
+    $('#pane-bulk5').addEventListener('click', () => { const n = this.game.upgradeAllMany(5); this.toast(n ? `일괄 레벨업: 파티 전원 총 ${n}레벨` : '골드가 부족합니다'); });
+    $('#pane-bulk-max').addEventListener('click', () => { const n = this.game.upgradeAllMany(200); this.toast(n ? `일괄 레벨업(최대): 총 ${n}레벨` : '골드가 부족합니다'); });
     $('#qa-challenge').addEventListener('click', () => { if (this.game.isChallenging()) this.game.cancelChallenge(); else this.game.startChallenge(); });
     $('#qa-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#qa-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
@@ -435,7 +437,7 @@ export class UIManager {
           el('img', { src: heroIconDataURL(v.def), class: 'icon', alt: '' }), el('span', {}, v.def.name),
           el('div', { class: 'sub', style: `color:${v.grade.color}` }, v.isMain ? `${v.def.grade} · ${v.def.title}` : `${v.def.grade} · ${stars(v.star)}`)),
         el('td', { class: 'num lvl' }), el('td', { class: 'num atk' }), el('td', { class: 'num cost' }),
-        el('td', { class: 'act' }, btn('강화', () => { if (!this.game.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'up')),
+        el('td', { class: 'act' }, btn('+1', () => { if (!this.game.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'up'), btn('+10', () => { const n = this.game.upgradeHeroMany(id, 10); if (!n) this.toast('골드가 부족합니다'); }, 'up10')),
       );
       tbody.append(row); this.heroRows.set(id, row);
     }
@@ -446,7 +448,7 @@ export class UIManager {
     for (const [id, row] of this.heroRows) {
       const v = this.game.heroView(id);
       if (!light) { $('.lvl', row).textContent = v.entry.level; $('.atk', row).textContent = fmt(v.atk); $('.cost', row).textContent = fmt(v.cost); }
-      $('.up', row).disabled = gold < v.cost; row.classList.toggle('affordable', gold >= v.cost);
+      $('.up', row).disabled = gold < v.cost; $('.up10', row).disabled = gold < v.cost; row.classList.toggle('affordable', gold >= v.cost);
     }
     if (light) return;
     $('#party-dps').textContent = fmt(this.game.partyDPS());
@@ -816,7 +818,8 @@ export class UIManager {
   }
   showWelcome() {
     this.openModal('새 통합 문서', `
-      <p><b>엑셀 히어로즈</b>에 오신 것을 환영합니다. 파티가 사무실(A1:M8)에서 자동으로 오류 몬스터를 처리합니다.</p>
+      <p>어느 날 아침, 도시에 <b>스프레드시트 괴물</b>이 나타났습니다. 시트를 잘못 병합한 누군가의 실수였다는 소문도 있습니다. 회사 직원들은 사무용품을 들고 폐허가 된 거리로 나섰습니다. 본사까지 가는 길, 열 개의 지구를 되찾아야 합니다.</p>
+      <p><b>엑셀 히어로즈</b>: 파티가 셀 A1:M8 안에서 자동으로 괴물을 처리합니다.</p>
       <ul>
         <li><b>홈</b> — 전투. 오른쪽 <b>파티 관리</b> 창에서 강화. <b>데이터</b> — 카드 명단·승급·직급 승진. <b>삽입</b> — 직원 데이터 가져오기(뽑기). <b>검토</b> — 일일 업무.</li>
         <li>시작 보석 <b>${BALANCE.STARTING_GEMS}</b>개: 바로 10행 가져오기를 해보세요.</li>

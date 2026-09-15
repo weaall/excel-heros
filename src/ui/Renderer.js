@@ -2,7 +2,7 @@
 // particles, hit flashes, screen shake, stage banners and the boss cut-in.
 import { CANVAS_W, CANVAS_H, GROUND_Y, GRID } from '../core/EntityManager.js';
 import { heroSprite, monsterSprite, flashSprite } from '../data/sprites.js';
-import { TILES, PROPS, drawTile, drawProp, packReady } from '../data/packSprites.js';
+import { drawCity } from './cityBackdrop.js';
 import { GRADES } from '../data/heroes.js';
 import { stageLabel, BALANCE } from '../config/balance.js';
 import { bossForStage } from '../data/monsters.js';
@@ -10,8 +10,6 @@ import { phaseTheme, phaseName, stageModifier } from '../data/stages.js';
 import { profileOf } from '../data/profiles.js';
 import { fmt } from '../utils/format.js';
 
-const TILE = 32;                       // 16px tiles drawn at 2x
-const WALL_ROWS = 3;                   // wall band height in tiles
 const hash = (n) => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = (x * 2246822519) >>> 0; x ^= x >>> 13; return x / 4294967296; };
 
 export class Renderer {
@@ -80,59 +78,11 @@ export class Renderer {
   }
 
   // ------------------------------------------------------------- dungeon --
+  /** Ruined-city backdrop (see cityBackdrop.js) tinted by the current district. */
   #drawDungeon(scroll) {
-    const { ctx } = this;
-    const phase = Math.floor((this.game.state.stage - 1) / BALANCE.BOSS_EVERY);
-    if (!packReady()) { this.#drawFallbackDungeon(scroll); return; }
-    // wall band (parallax 0.6) with banners, holes, fountains and columns
-    const wallOff = Math.floor((scroll * 0.6) % TILE);
-    const wallCol0 = Math.floor((scroll * 0.6) / TILE);
-    const flame = Math.floor(this.t * 6) % 3;
-    for (let i = -1; i <= CANVAS_W / TILE + 1; i++) {
-      const col = wallCol0 + i, dx = i * TILE - wallOff;
-      drawTile(ctx, TILES.wall_top, dx, 0);
-      const m5 = ((col % 5) + 5) % 5, m7 = ((col % 7) + 7) % 7, m9 = ((col % 9) + 9) % 9;
-      if (m7 === 3) { // animated fountain
-        drawTile(ctx, TILES.fountain_top, dx, 0); drawTile(ctx, [64 + 16 * flame, 16], dx, TILE); drawTile(ctx, [64 + 16 * flame, 32], dx, TILE * 2); continue;
-      }
-      if (m9 === 5) { drawTile(ctx, TILES.wall_mid, dx, TILE); drawTile(ctx, TILES.column_top, dx, TILE); drawTile(ctx, TILES.column_mid, dx, TILE * 2); drawTile(ctx, TILES.column_base, dx, TILE * 3); continue; }
-      const banner = m5 === 1 ? ['banner_red', 'banner_blue', 'banner_green', 'banner_yellow'][((Math.floor(col / 5) + phase) % 4 + 4) % 4] : null;
-      drawTile(ctx, banner ? TILES[banner] : TILES.wall_mid, dx, TILE);
-      drawTile(ctx, TILES.wall_mid, dx, TILE * 2);
-    }
-    // floor (full-speed scroll), tile picked per world column/row so it stays put while scrolling
-    const floorOff = Math.floor(scroll % TILE), col0 = Math.floor(scroll / TILE);
-    for (let row = WALL_ROWS; row < CANVAS_H / TILE; row++) {
-      for (let i = -1; i <= CANVAS_W / TILE + 1; i++) {
-        const col = col0 + i; const k = hash(col * 101 + row * 7 + phase * 3);
-        const tile = TILES.floor[k < 0.62 ? 0 : Math.floor(k * TILES.floor.length)];
-        drawTile(ctx, tile, i * TILE - floorOff, row * TILE);
-      }
-    }
-    // floor props along the wall base and the bottom edge (crates, flasks, coins) — world-anchored like the tiles
-    const PROP_KEYS = ['crate', 'flask_red', 'flask_blue', 'flask_green', 'coin'];
-    for (let i = -1; i <= CANVAS_W / TILE + 1; i++) {
-      const col = col0 + i, k = hash(col * 31 + phase * 17), dx = i * TILE - floorOff;
-      if (k < 0.14) drawProp(ctx, PROPS[PROP_KEYS[Math.min(PROP_KEYS.length - 1, Math.floor(k / 0.14 * PROP_KEYS.length))]], dx, WALL_ROWS * TILE - (k < 0.028 ? 16 : 0), 2);
-      const k2 = hash(col * 53 + phase * 29 + 7);
-      if (k2 > 0.9) drawProp(ctx, PROPS.crate, dx, CANVAS_H - 44, 2);
-    }
-    // phase tint so deeper phases feel different, plus a soft vignette at the wall base
     const theme = phaseTheme(this.game.state.stage);
-    if (theme.tint > 0) { ctx.fillStyle = `hsla(${theme.hue}, 60%, 40%, ${theme.tint})`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
-    const g = ctx.createLinearGradient(0, WALL_ROWS * TILE, 0, WALL_ROWS * TILE + 40);
-    g.addColorStop(0, 'rgba(0,0,0,0.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(0, WALL_ROWS * TILE, CANVAS_W, 40);
-  }
-
-  #drawFallbackDungeon(scroll) {
-    const { ctx } = this;
-    ctx.fillStyle = '#2c3440'; ctx.fillRect(0, 0, CANVAS_W, TILE * WALL_ROWS);
-    ctx.fillStyle = '#3d4654'; ctx.fillRect(0, TILE * WALL_ROWS, CANVAS_W, CANVAS_H);
-    const off = Math.floor(scroll % TILE);
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath();
-    for (let x = -off; x <= CANVAS_W; x += TILE) { ctx.moveTo(x + 0.5, TILE * WALL_ROWS); ctx.lineTo(x + 0.5, CANVAS_H); }
-    for (let y = TILE * WALL_ROWS; y <= CANVAS_H; y += TILE) { ctx.moveTo(0, y + 0.5); ctx.lineTo(CANVAS_W, y + 0.5); }
-    ctx.stroke();
+    drawCity(this.ctx, scroll, this.t, theme, CANVAS_W, CANVAS_H);
+    if (theme.tint > 0) { this.ctx.fillStyle = `hsla(${theme.hue}, 60%, 40%, ${theme.tint})`; this.ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
   }
 
   // ------------------------------------------------------------ overlays --
