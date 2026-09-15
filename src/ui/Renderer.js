@@ -244,7 +244,7 @@ export class Renderer {
           ctx.restore(); break;
         }
         case 'ring': {
-          const r = 10 + (f.radius - 10) * Math.sqrt(k); ctx.globalAlpha = (1 - k) * 0.8; ctx.strokeStyle = f.color; ctx.lineWidth = 3 + (1 - k) * 3;
+          const r = Math.max(1, 10 + (f.radius - 10) * Math.sqrt(Math.max(0, k))); ctx.globalAlpha = (1 - k) * 0.8; ctx.strokeStyle = f.color; ctx.lineWidth = 3 + (1 - k) * 3;
           ctx.beginPath(); ctx.ellipse(f.x, f.y, r, r * 0.6, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1; break;
         }
         case 'sparkle': {
@@ -254,7 +254,7 @@ export class Renderer {
         }
         case 'puff': {
           ctx.globalAlpha = (1 - k) * 0.7; ctx.fillStyle = f.color;
-          for (let i = 0; i < 4; i++) { const a = i * 1.57 + 0.4, rr = 6 + k * 14; ctx.beginPath(); ctx.arc(f.x + Math.cos(a) * rr, f.y + Math.sin(a) * rr, 5 - k * 3, 0, Math.PI * 2); ctx.fill(); }
+          for (let i = 0; i < 4; i++) { const a = i * 1.57 + 0.4, rr = 6 + k * 14; ctx.beginPath(); ctx.arc(f.x + Math.cos(a) * rr, f.y + Math.sin(a) * rr, Math.max(0.5, 5 - k * 3), 0, Math.PI * 2); ctx.fill(); }
           ctx.globalAlpha = 1; break;
         }
         case 'impact': {
@@ -265,7 +265,7 @@ export class Renderer {
         }
         case 'crit': {
           ctx.save(); ctx.translate(f.x, f.y - k * 10); ctx.rotate(k * 0.6); ctx.globalAlpha = 1 - k; ctx.fillStyle = f.color;
-          const R = 16 + k * 10, r = R * 0.45; ctx.beginPath();
+          const R = Math.max(1, 16 + k * 10), r = R * 0.45; ctx.beginPath();
           for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2, rr = i % 2 ? r : R; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
           ctx.closePath(); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.restore(); break;
         }
