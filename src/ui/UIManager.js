@@ -647,15 +647,35 @@ export class UIManager {
     this.openModal('데이터 가져오기', body);
     const modal = $('#modal .dialog');
     let i = 0; const timers = [];
+    // rarity "tell": high-grade cards glow on their back before they turn, so the player sees it coming
+    for (const f of flips) if (f.r.grade === 'S' || f.r.grade === 'A') f.flip.querySelector('.back').classList.add(`pre-${f.r.grade}`);
+    /** Full-dialog burst for A / S: rotating light rays, flying sparks, a grade stamp, then it fades. */
+    const burst = (f) => {
+      const g = f.r.grade; const fx = el('div', { class: `reveal-fx ${g}` },
+        el('div', { class: 'rays' }),
+        el('div', { class: 'sparks' }, ...Array.from({ length: g === 'S' ? 18 : 10 }, (_, k) => el('span', { style: `--a:${(k / (g === 'S' ? 18 : 10)) * 360}deg; --d:${0.35 + (k % 3) * 0.12}s` }))),
+        el('div', { class: 'stamp' }, el('b', {}, g), el('span', {}, g === 'S' ? '전설 · LEGENDARY' : '영웅 · EPIC')));
+      modal.append(fx);
+      const r = f.flip.getBoundingClientRect(), m = modal.getBoundingClientRect();
+      fx.style.setProperty('--cx', `${r.left + r.width / 2 - m.left}px`); fx.style.setProperty('--cy', `${r.top + r.height / 2 - m.top}px`);
+      setTimeout(() => fx.remove(), g === 'S' ? 1700 : 1000);
+    };
     const revealOne = (f) => {
       if (f.flip.classList.contains('revealed')) return;
       f.flip.classList.add('revealed'); f.wrap.querySelector('.hidden-until')?.classList.remove('hidden-until');
-      if (f.r.grade === 'S') { modal.classList.add('jackpot'); setTimeout(() => modal.classList.remove('jackpot'), 900); this.game.emit('sfx', 'jackpot'); }
-      else if (f.r.grade === 'A') this.game.emit('sfx', 'levelup');
+      if (f.r.grade === 'S') { modal.classList.add('jackpot'); setTimeout(() => modal.classList.remove('jackpot'), 900); this.game.emit('sfx', 'jackpot'); burst(f); }
+      else if (f.r.grade === 'A') { this.game.emit('sfx', 'levelup'); burst(f); }
       else this.game.emit('sfx', 'coin');
     };
-    const finish = () => { $('.reveal-hint', body).textContent = `${results.length}행 가져오기 완료${hasS ? ' — 전설 등급 등장!' : hasA ? ' — 영웅 등급 등장' : ''}. 카드를 누르면 상세.`; };
-    const step = () => { if (i >= flips.length) { finish(); return; } revealOne(flips[i++]); timers.push(setTimeout(step, flips.length > 1 ? 170 : 120)); };
+    const finish = () => { $('.reveal-hint', body).textContent = `${results.length}행 가져오기 완료${hasS ? ' — 전설 등급 등장!' : hasA ? ' — 영웅 등급 등장' : ''}. 카드를 누르면 상세.`; if (hasS) modal.classList.add('has-s'); };
+    // pacing: a beat of suspense before a high-grade card turns, and a longer pause after it so the burst can land
+    const step = () => {
+      if (i >= flips.length) { finish(); return; }
+      const f = flips[i++]; const g = f.r.grade;
+      const before = g === 'S' ? 650 : g === 'A' ? 350 : 0, after = g === 'S' ? 1300 : g === 'A' ? 750 : (flips.length > 1 ? 170 : 120);
+      if (before) f.flip.querySelector('.back').classList.add('charging');
+      timers.push(setTimeout(() => { revealOne(f); timers.push(setTimeout(step, after)); }, before));
+    };
     timers.push(setTimeout(step, 250));
     grid.addEventListener('click', () => { if (i < flips.length) { timers.forEach(clearTimeout); while (i < flips.length) revealOne(flips[i++]); finish(); } }, { once: true });
   }

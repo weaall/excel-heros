@@ -210,11 +210,13 @@ export class Renderer {
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.translate(m.x, bottom); ctx.scale(1 + k * 0.5, 1 - k); ctx.drawImage(img, -img.width / 2, -img.height); ctx.restore();
       return;
     }
-    const pop = m.spawnT < 0.3 ? Math.min(1.15, m.spawnT / 0.3 * 1.15) * (m.spawnT > 0.22 ? (1.15 - (m.spawnT - 0.22) / 0.08 * 0.15) / 1.15 : 1) : 1;
-    const sqx = (m.lunge > 0 ? 1.12 : 1) * pop, sqy = (m.lunge > 0 ? 0.9 : 1) * pop;
+    // Pixel-art rule: never scale the sprite by a fractional factor (it makes outlines uneven / "thick").
+    // Spawn pop and attack lunge are expressed as whole-pixel offsets on the 2px grid instead of squash.
+    const bounce = m.spawnT < 0.3 ? Math.round(Math.sin((m.spawnT / 0.3) * Math.PI) * -6) * 2 : 0;
+    const hop = m.lunge > 0 ? -2 : 0;
     ctx.save();
     if (m.stun > 0) ctx.globalAlpha = 0.7;
-    ctx.translate(Math.round(cx), Math.round(bottom)); ctx.scale(sqx, sqy);
+    ctx.translate(Math.round(cx / 2) * 2, Math.round((bottom + bounce + hop) / 2) * 2);
     ctx.drawImage(img, -img.width / 2, -img.height);
     if (m.flash > 0) { ctx.globalAlpha = Math.min(1, m.flash / 0.12) * 0.85; ctx.drawImage(flashSprite(img), -img.width / 2, -img.height); }
     ctx.restore();
