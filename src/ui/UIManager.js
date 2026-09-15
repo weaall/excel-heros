@@ -8,7 +8,9 @@ import { phaseName, stageModifier } from '../data/stages.js';
 import * as Achievements from '../core/AchievementManager.js';
 import * as Milestones from '../core/MilestoneManager.js';
 import { MILESTONES, milestoneValue } from '../data/milestones.js';
-import { profileOf } from '../data/profiles.js';
+import { profileOf, PROFILES } from '../data/profiles.js';
+import { extraOf } from '../data/profilesExtra.js';
+import { EPISODES, episodeUnlocked } from '../data/story.js';
 import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
 import { cardArtUrl } from '../data/cardArt.js';
@@ -144,6 +146,8 @@ export class UIManager {
     $('#btn-logout').addEventListener('click', async () => { await this.game.cloud.auth.logout(); this.toast('로그아웃했습니다 · 이 브라우저 저장은 유지됩니다'); this.#refreshCloud(); });
     $('#account-btn').addEventListener('click', () => this.openBackstage('options'));
     this.game.on('cloud', () => this.#refreshCloud()); this.game.on('board', () => this.#refreshBoard());
+    this.game.on('affection', ({ id, level }) => { if (level === BALANCE.AFFECTION.unlockSecret || level === BALANCE.AFFECTION.unlockLine || level === BALANCE.AFFECTION.maxLevel) this.toast(`♥ ${this.game.heroDef(id).name} 호감도 Lv ${level}${level === BALANCE.AFFECTION.unlockLine ? ' · 개인 메시지가 사내 메신저에 도착' : level === BALANCE.AFFECTION.maxLevel ? ' · MAX' : ' · 사무실 비화 해금'}`); this.#refreshDetail(); });
+    this.game.on('story', () => { if (document.querySelector('#sheet-story.active')) this.#buildStory(this.storyId, { listOnly: true }); });
     this.game.on('auth', (user) => { this.#refreshCloud(); if (user) this.#afterLogin(user); });
     Ads.setupAds();
     $('#rank-refresh').addEventListener('click', () => this.#refreshBoard(true));
@@ -199,6 +203,7 @@ export class UIManager {
     g.on('wipe', () => this.toast(this.game.isChallenging() ? '팀 전원 번아웃 — 재정비 후 계속' : '팀 전원 번아웃 — 직전 스테이지에서 자동 사냥'));
     g.on('gems', () => this.#refreshGacha());
     g.on('quests', () => this.#refreshQuests());
+    g.on('challenge', () => { if (this.game.isChallenging() && Math.random() < 0.6) this.game.sayLine(); });
     g.on('excel', (on) => this.applyStealth(on));
     g.on('settings', () => this.#refreshSettings());
     g.on('toast', (t) => this.toast(t));
@@ -236,6 +241,7 @@ export class UIManager {
     if (SHEET_RIBBON[name]) this.#activateRibbon(SHEET_RIBBON[name]);
     if (name === 'quests') this.#refreshQuests();
     if (name === 'codex') this.#buildCodex();
+    if (name === 'story') this.#buildStory();
   }
   /** Ribbon tabs switch the ribbon contents (like Excel) and jump to the matching sheet; 파일 opens the backstage. */
   showRibbon(name) {
@@ -550,12 +556,14 @@ export class UIManager {
       if (e.owned && (v.def.grade === 'S' || v.def.grade === 'A' || e.awakened)) wrap.append(el('span', { class: 'holo-sheen' }));
       if (this.game.isFavorite(id)) wrap.append(el('span', { class: 'card-fav', title: '즐겨찾기' }, '♥'));
       if (v.inParty) wrap.append(el('span', { class: 'card-badge' }, '배치'));
+      if (e.owned && v.affection.level >= BALANCE.AFFECTION.unlockSecret) wrap.append(el('span', { class: 'card-heart', title: `호감도 Lv ${v.affection.level}` }, `♥${v.affection.level}`));
       if (v.isMain) wrap.append(el('span', { class: 'card-badge main' }, '메인'));
       grid.append(wrap);
       tbody.append(el('tr', { class: e.owned ? '' : 'locked' },
         el('td', {}, v.def.name), el('td', { style: `color:${v.grade.color}` }, v.def.grade), el('td', {}, ROLES[v.def.role].name), el('td', { style: `color:${DIVISIONS[divisionOf(v.isMain ? 'main' : id)].color}` }, divisionName(v.isMain ? 'main' : id)), el('td', {}, v.traitName),
         el('td', {}, v.isMain ? v.def.title : (e.owned ? stars(e.star) : '미보유')), el('td', { class: 'num' }, e.owned ? e.level : '-'),
         el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${e.owned ? Math.max(2, Math.round((v.atk / maxAtk) * 96)) : 0}%` }), el('span', {}, e.owned ? fmt(v.atk) : '-')),
+        el('td', { class: 'num', style: 'color:#e84393' }, e.owned ? `♥${v.affection.level}` : '-'),
         el('td', { class: 'num' }, e.owned ? e.shards : '-')));
     }
     $('#party-count').textContent = `${this.game.state.party.length} / ${BALANCE.PARTY_SIZE}`;
@@ -575,6 +583,54 @@ export class UIManager {
     for (const x of syn.sets) pane.append(el('span', { class: 'syn', style: `--sc:${x.color}`, title: x.perk.desc }, el('b', {}, x.name), `${x.count}명 · ATK +${Math.round(x.atk * 100)}%${x.hp ? ` HP +${Math.round(x.hp * 100)}%` : ''} · ${x.perk.desc}`));
     pane.append(el('span', { class: `syn ${syn.balanced ? '' : 'off'}`, style: '--sc:#27ae60' }, el('b', {}, '균형 편성'), syn.balanced ? 'HP +10%' : '4개 역할 필요'));
     if (!syn.sets.length) pane.append(el('span', { class: 'syn off' }, '같은 부문 2명 이상 → 시너지'));
+  }
+
+  /** 사내_메신저: episode list + chat log rendered as worksheet rows that appear one by one. */
+  #buildStory(selectId = this.storyId, { listOnly = false } = {}) {
+    const g = this.game, s = g.state; const list = $('#story-list tbody'); if (!list) return; list.innerHTML = '';
+    const personal = HEROES.filter((h) => s.heroes[h.id]?.owned && g.affectionOf(h.id).lineUnlocked && extraOf(h.id));
+    $('#story-count').textContent = `${EPISODES.filter((e) => s.storyRead[e.id]).length} / ${EPISODES.length}`;
+    const rows = [...EPISODES.map((ep) => ({ kind: 'ep', id: ep.id, ep })), ...personal.map((h) => ({ kind: 'dm', id: `dm:${h.id}`, hero: h }))];
+    for (const r of rows) {
+      const unlocked = r.kind === 'dm' || episodeUnlocked(r.ep, s.maxStage); const read = r.kind === 'dm' || !!s.storyRead[r.id];
+      const tr = el('tr', { class: `${unlocked ? '' : 'locked'} ${this.storyId === r.id ? 'active' : ''}`, onclick: () => { if (!unlocked) { this.toast(`${phaseName((r.ep.phase - 1) * 10 + 1)}에 도달하면 열립니다`); return; } this.storyId = r.id; this.#buildStory(r.id); } },
+        el('td', {}, r.kind === 'dm' ? '♥' : String(r.ep.phase)),
+        el('td', {}, r.kind === 'dm' ? `1:1 · ${r.hero.name}` : unlocked ? `${r.ep.room} · ${r.ep.title}` : `${r.ep.room} · ???`, el('div', { class: 'sub' }, r.kind === 'dm' ? '개인 메시지' : unlocked ? phaseName((r.ep.phase - 1) * 10 + 1) : `Phase ${r.ep.phase}-1 도달 시`)),
+        el('td', { class: 'small' }, r.kind === 'dm' ? '호감도 Lv5' : !unlocked ? '🔒' : read ? '읽음' : el('b', { style: 'color:#217346' }, `NEW · 보석 +${BALANCE.STORY.gems}`)));
+      list.append(tr);
+    }
+    if (listOnly) return;
+    const log = $('#story-log tbody'); log.innerHTML = '';
+    if (!selectId) { log.append(el('tr', {}, el('td', { colspan: 3, class: 'muted small' }, '왼쪽 목록에서 에피소드를 선택하세요.'))); return; }
+    let lines, title;
+    if (selectId.startsWith('dm:')) { const hid = selectId.slice(3); const x = extraOf(hid), p = PROFILES[hid]; lines = [[hid, p.line], ['main', '(답장을 고민하는 중…)'], [hid, x.line2]]; title = `1:1 ${g.heroDef(hid).name}`; }
+    else { const ep = EPISODES.find((e) => e.id === selectId); if (!ep || !episodeUnlocked(ep, s.maxStage)) return; lines = ep.lines; title = ep.title; }
+    if (this.storyTimer) clearInterval(this.storyTimer);
+    const t0 = new Date(); t0.setHours(9, 12, 0, 0);
+    const name = (who) => who === 'sys' ? '시스템' : who === 'main' ? `${g.heroDef(MAIN_ID).name} (나)` : (HERO_BY_ID_SAFE(who)?.name ?? who);
+    const HERO_BY_ID_SAFE = (id) => HEROES.find((h) => h.id === id);
+    const icon = (who) => { const def = who === 'main' ? g.heroDef(MAIN_ID) : HERO_BY_ID_SAFE(who); return def ? el('img', { src: heroIconDataURL(def), alt: '' }) : null; };
+    let i = 0;
+    const typing = el('tr', { class: 'typing' }, el('td', { class: 'num' }, ''), el('td', {}, ''), el('td', {}, '입력 중…')); log.append(typing);
+    const step = () => {
+      if (i >= lines.length) { clearInterval(this.storyTimer); this.storyTimer = null; typing.remove();
+        if (!selectId.startsWith('dm:')) { const gems = g.readStory(selectId); if (gems) { log.append(el('tr', {}, el('td', { colspan: 3, class: 'story-reward' }, `✓ ${title} 읽음 — 보석 +${gems}`))); this.toast(`메신저 로그 확인 · 보석 +${gems}`); } }
+        return; }
+      const [who, text] = lines[i++]; const t = new Date(t0.getTime() + i * 47000);
+      const tr = el('tr', { class: who === 'sys' ? 'sys' : who === 'main' ? 'me' : '' }, el('td', { class: 'num small' }, `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`), el('td', { class: 'who' }, icon(who), name(who)), el('td', {}, text));
+      typing.before(tr); this.game.emit('sfx', 'coin');
+    };
+    step(); this.storyTimer = setInterval(step, 650);
+  }
+
+  /** S-grade splash: the full illustration slides in over the reveal dialog with the character's line. */
+  #showSplash(r) {
+    const url = cardArtUrl(r.heroId); if (!url || /\.svg$/i.test(url)) return;
+    const p = profileOf(r.heroId); const modal = $('#modal .dialog');
+    const sp = el('div', { class: 'splash', onclick: () => sp.remove() }, el('img', { src: url, alt: r.def.name }),
+      el('div', { class: 'cap' }, el('b', {}, 'S · LEGENDARY'), el('div', { class: 'nm' }, `${r.def.name}${p ? ` · ${p.nick}` : ''}`), p ? el('div', { class: 'q' }, `"${p.line}"`) : null),
+      el('div', { class: 'hint' }, '클릭하여 닫기'));
+    modal.append(sp); setTimeout(() => { if (sp.isConnected) sp.remove(); }, 3600);
   }
 
   /** 오류_도감 sheet: one row per monster type (+ bosses), thumbnails greyed out until first kill. */
@@ -664,7 +720,14 @@ export class UIManager {
       v.isMain ? null : el('div', { class: 'dt-sec perks' }, el('b', {}, '★ 성장'), ...[
         [2, '스킬 해금'], [3, `특성 ×${BALANCE.STAR_TRAIT_BOOST.mult}`], [4, `스킬 ×${BALANCE.SKILL_BOOST_MULT}`], [5, '각성'],
       ].map(([st, label]) => el('span', { class: `perk ${v.star >= st ? 'on' : ''}` }, `★${st} ${label}`))),
-      p ? el('div', { class: 'dt-sec profile' }, el('div', { class: 'bio' }, p.bio), el('div', { class: 'quote' }, `"${p.line}"`)) : null);
+      p ? el('div', { class: 'dt-sec profile' }, el('div', { class: 'bio' }, p.bio), el('div', { class: 'quote' }, `"${p.line}"`)) : null,
+      e.owned ? (() => { const a = v.affection, A = BALANCE.AFFECTION, x = extraOf(v.isMain ? 'main' : id);
+        return el('div', { class: 'dt-sec affection' }, el('b', {}, '호감도'),
+          el('span', { class: 'hearts' }, ...Array.from({ length: A.maxLevel }, (_, i) => el('span', { class: i < a.level ? '' : 'off' }, '♥'))), el('span', { class: 'ds' }, ` Lv ${a.level}${a.maxed ? ' MAX' : ` · ${a.xp} / ${a.next}`} · ATK/HP +${Math.round(a.bonus * 100)}%`),
+          el('div', { class: 'aff-bar' }, el('i', { style: `width:${Math.round(a.pct * 100)}%` })),
+          el('div', { class: 'small' }, sb(a.gifted ? '오늘 간식 완료 ✓' : a.maxed ? '호감도 MAX' : `간식 사주기 (${fmt(g.giftCost())}g · +${A.giftXp})`, () => { if (g.giveGift(id)) { this.toast(`${v.def.name}: "${p?.line ?? '고마워요'}"`); this.#refreshDetail(); } else this.toast('골드가 부족하거나 오늘은 이미 사줬습니다'); }, a.gifted || a.maxed ? '' : 'primary', a.gifted || a.maxed || s.gold < g.giftCost()), el('span', { class: 'muted' }, ' 파티에 넣고 처치할수록 오른다 (일반 +1 · 보스 +15)')),
+          x ? el('div', { class: `secret ${a.secretUnlocked ? '' : 'locked'}` }, a.secretUnlocked ? `사무실 비화: ${x.secret}` : `🔒 Lv ${A.unlockSecret}: 사무실 비화`) : null,
+          x ? el('div', { class: `line2 ${a.lineUnlocked ? '' : 'locked'}` }, a.lineUnlocked ? `"${x.line2}"` : `🔒 Lv ${A.unlockLine}: 개인 메시지 (사내 메신저)`) : null); })() : null);
     body.append(el('div', { class: 'dt' }, portrait, el('div', { class: 'dt-info' }, head, table, sections)));
     // --- action bar
     if (e.owned) {
@@ -802,7 +865,7 @@ export class UIManager {
     const revealOne = (f) => {
       if (f.flip.classList.contains('revealed')) return;
       f.flip.classList.add('revealed'); f.wrap.querySelector('.hidden-until')?.classList.remove('hidden-until');
-      if (f.r.grade === 'S') { modal.classList.add('jackpot'); setTimeout(() => modal.classList.remove('jackpot'), 900); this.game.emit('sfx', 'jackpot'); burst(f); }
+      if (f.r.grade === 'S') { modal.classList.add('jackpot'); setTimeout(() => modal.classList.remove('jackpot'), 900); this.game.emit('sfx', 'jackpot'); burst(f); setTimeout(() => this.#showSplash(f.r), 700); }
       else if (f.r.grade === 'A') { this.game.emit('sfx', 'levelup'); burst(f); }
       else this.game.emit('sfx', 'coin');
     };

@@ -157,6 +157,7 @@ export class EntityManager {
   // --------------------------------------------------------------- update --
   update(dt) {
     this.time += dt;
+    for (const h of this.heroes) if (h.say) { h.say.t -= dt; if (h.say.t <= 0) h.say = null; } // speech bubbles expire even while travelling
     this.shake = Math.max(0, this.shake - dt * 30); this.flashT = Math.max(0, this.flashT - dt);
     if (this.combo > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
     const heroes = this.heroes.filter((e) => e.alive), monsters = this.monsters.filter((e) => e.alive);

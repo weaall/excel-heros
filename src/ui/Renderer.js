@@ -51,6 +51,7 @@ export class Renderer {
     this.#drawParticles(em);
     this.#drawProjectiles(em);
     this.#drawFloaters(em);
+    this.#drawBubbles(em);
     this.#drawBuff(em);
     this.#drawCombo(em);
     this.#drawOvertime();
@@ -391,6 +392,25 @@ export class Renderer {
         case 'heal': ctx.fillStyle = p.color; ctx.fillRect(-3, -1, 6, 2); ctx.fillRect(-1, -3, 2, 6); break;
         default: ctx.fillStyle = p.color || '#555'; ctx.fillRect(-3, -3, 6, 6); ctx.globalAlpha = 0.4; ctx.fillRect(-(p.tx - p.x) * 0.05 - 2, -2, 4, 4);
       }
+      ctx.restore();
+    }
+  }
+
+  /** Character speech bubbles (profile lines) above heroes — pixel-cornered white box with a tail. */
+  #drawBubbles(em) {
+    const { ctx } = this;
+    for (const h of em.heroes) {
+      if (!h.say || !h.alive) continue;
+      const a = Math.min(1, h.say.t / 0.3, (3.2 - h.say.t) / 0.15 + 0.01);
+      ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, a));
+      ctx.font = '12px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const text = h.say.text.length > 34 ? h.say.text.slice(0, 33) + '…' : h.say.text;
+      const w = Math.ceil(ctx.measureText(text).width) + 16, hgt = 24;
+      let x = Math.round(h.x - w / 2), y = Math.round(h.y - 96);
+      x = Math.max(6, Math.min(CANVAS_W - w - 6, x));
+      ctx.fillStyle = '#fff'; ctx.fillRect(x, y, w, hgt); ctx.fillStyle = '#2c3e50'; ctx.fillRect(x - 2, y + 2, 2, hgt - 4); ctx.fillRect(x + w, y + 2, 2, hgt - 4); ctx.fillRect(x + 2, y - 2, w - 4, 2); ctx.fillRect(x + 2, y + hgt, w - 4, 2);
+      const tx = Math.round(Math.max(x + 8, Math.min(x + w - 12, h.x - 4))); ctx.fillStyle = '#fff'; ctx.fillRect(tx, y + hgt, 8, 4); ctx.fillRect(tx + 2, y + hgt + 4, 4, 2); ctx.fillStyle = '#2c3e50'; ctx.fillRect(tx - 2, y + hgt + 2, 2, 2); ctx.fillRect(tx + 8, y + hgt + 2, 2, 2);
+      ctx.fillStyle = '#222'; ctx.fillText(text, x + 8, y + hgt / 2 + 1);
       ctx.restore();
     }
   }

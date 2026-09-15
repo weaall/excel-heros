@@ -32,7 +32,9 @@ export function createInitialState(now = Date.now()) {
     main: { job: 'intern' },
     party: [MAIN_ID],
     pity: initialPity(),
-    recruit: { points: 0 }, // 모집 포인트: +1 per row pulled, spend SPARK_COST on the current pickup card
+    recruit: { points: 0 },
+    affection: {},        // hero id -> { xp, gift: 'YYYY-MM-DD' of the last 간식 }
+    storyRead: {},        // episode id -> true (first read rewarded) // 모집 포인트: +1 per row pulled, spend SPARK_COST on the current pickup card
     team: { coffee: 0, payroll: 0, chairs: 0 },
     settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true, safeAdvance: true, cloud: { url: '', name: '' } },
     daily: { date: localDateKey(now), quests: dailyQuestIds(localDateKey(now)), progress: {}, claimed: {}, loginClaimed: false, allClearClaimed: false, adsUsed: 0 },
@@ -56,6 +58,8 @@ export function migrate(raw) {
   s.main = { ...fresh.main, ...(raw.main ?? {}) };
   s.pity = { ...fresh.pity, ...(raw.pity ?? {}) };
   s.recruit = { ...fresh.recruit, ...(raw.recruit ?? {}) };
+  s.affection = { ...(raw.affection ?? {}) };
+  s.storyRead = { ...(raw.storyRead ?? {}) };
   s.team = { ...fresh.team, ...(raw.team ?? {}) };
   s.settings = { ...fresh.settings, ...(raw.settings ?? {}) };
   s.daily = { ...fresh.daily, ...(raw.daily ?? {}) };

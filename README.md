@@ -60,7 +60,9 @@ src/core/CloudSync.js          계정 기반 클라우드 저장/순위표 클�
 src/ui/Ads.js                  AdSense H5 Games Ads 보상형 광고 래퍼 (미설정 시 임시 화면)
 backend/                       Cloudflare Worker + D1 백엔드 (worker.js, schema.sql, wrangler.toml)
 src/data/divisions.js          부서 → 7개 부문 매핑, 부문 시너지 수치 · 부문 고유 특성
-src/data/pickup.js             오늘의 픽업 (날짜별 S/A 픽업 카드, 50% 픽업 확률)
+src/data/pickup.js             픽업 배너 (3일 주기 S/A, 50% 픽업 확률, 모집 포인트)
+src/data/story.js              사내 메신저 에피소드 10화 (채팅 로그 형태)
+src/data/profilesExtra.js      호감도 해금 텍스트 (사무실 비화 · 개인 메시지)
 src/data/sprites.js            문자열 템플릿 → 치비 픽셀 스프라이트, 카드/초상 일러스트 생성
 src/core/GameManager.js        재화, 스테이지 흐름, 플레이어 액션(강화/승진/변환/방출/퀘스트/광고), 이벤트
 src/core/EntityManager.js      한 줄 대열 라인 전투, 웨이브/이동 스크롤, 대시·투사체 타이밍, 스킬

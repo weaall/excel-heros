@@ -479,3 +479,26 @@ body.stealth #roster-table { display: table; }
 .save-choice .opt b { display: block; margin-bottom: 4px; }
 
 .xl-table .icon.round { border-radius: 50%; width: 18px; height: 18px; vertical-align: middle; margin-right: 6px; }
+
+/* ------------------------------------------------------- 사내 메신저 -- */
+.story-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; }
+.story-list tbody tr { cursor: pointer; } .story-list tbody tr.locked { color: #999; cursor: default; } .story-list tbody tr.active td { background: #eef6ee; font-weight: 600; }
+#story-log tr.sys td { color: #666; font-style: italic; background: #fafafa; }
+#story-log tr.me td { background: #f3faf3; }
+#story-log td.who { white-space: nowrap; } #story-log td.who img { width: 18px; height: 18px; vertical-align: middle; margin-right: 6px; image-rendering: pixelated; }
+#story-log tr.typing td { color: #999; }
+.story-reward { padding: 8px 10px; color: var(--xl-green); font-weight: 600; }
+/* ------------------------------------------------------- 호감도 -- */
+.dt-sec.affection .hearts { letter-spacing: 1px; color: #e84393; } .dt-sec.affection .hearts .off { color: #ddd; }
+.dt-sec.affection .aff-bar { height: 5px; background: #eee; margin: 4px 0; } .dt-sec.affection .aff-bar i { display: block; height: 100%; background: #e84393; }
+.dt-sec.affection .secret { margin-top: 4px; color: #444; } .dt-sec.affection .line2 { color: #7d3c98; font-style: italic; }
+.dt-sec.affection .locked { color: #999; }
+.card-heart { position: absolute; right: 4px; top: 4px; font-size: 11px; color: #e84393; background: rgba(255,255,255,.9); padding: 0 4px; }
+/* ------------------------------------------------------- S 스플래시 -- */
+.splash { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(255,250,230,.96), rgba(255,255,255,.98)); cursor: pointer; animation: splash-in .35s ease-out; }
+.splash img { max-height: 92%; max-width: 60%; object-fit: contain; filter: drop-shadow(0 12px 30px rgba(0,0,0,.35)); animation: splash-art .6s cubic-bezier(.2,.8,.2,1); }
+.splash .cap { position: absolute; left: 6%; bottom: 10%; max-width: 40%; }
+.splash .cap b { display: block; font-size: 30px; color: #b7950b; letter-spacing: 1px; } .splash .cap .nm { font-size: 22px; font-weight: 700; color: #222; } .splash .cap .q { margin-top: 8px; font-size: 14px; color: #555; font-style: italic; }
+.splash .hint { position: absolute; right: 16px; bottom: 12px; font-size: 11px; color: #888; }
+@keyframes splash-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes splash-art { from { transform: translateX(40px) scale(.94); opacity: 0 } to { transform: none; opacity: 1 } }

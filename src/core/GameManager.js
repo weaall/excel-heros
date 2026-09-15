@@ -19,6 +19,10 @@ import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
 import { CloudSync } from './CloudSync.js';
 import { pickupFor, SPARK_COST, bannerDaysLeft } from '../data/pickup.js';
+import { EPISODE_BY_ID, episodeUnlocked } from '../data/story.js';
+import { PROFILES } from '../data/profiles.js';
+import { localDateKey } from './state.js';
+import { relativeGold } from '../config/balance.js';
 import { migrate } from './state.js';
 
 export class GameManager extends Emitter {
@@ -130,12 +134,13 @@ export class GameManager extends Emitter {
     const eCost = enhanceCost(entry.enhance);
     // 부문 시너지 only applies to heroes standing in the party (the roster preview shows base numbers for the bench)
     const syn = this.state.party.includes(id) ? this.synergy() : { atk: 0, hp: 0, perks: { skill: 0 } };
+    const aff = this.affectionOf(id); const affMult = 1 + aff.level * BALANCE.AFFECTION.bonusPerLevel;
     const skillPower = (boosted ? BALANCE.SKILL_BOOST_MULT : 1) * (awakened ? BALANCE.AWAKEN.skill : 1) * (1 + syn.perks.skill);
     const view = {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
-      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus() + syn.atk) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1)),
-      hp: Math.floor(heroHP(base.hp, entry.level, star, this.hpBonus() + syn.hp, entry.enhance) * (awakened ? 1 + BALANCE.AWAKEN.hp : 1)),
-      awakened, traitMult: awakened ? BALANCE.AWAKEN.trait : (!isMain && star >= BALANCE.STAR_TRAIT_BOOST.star ? BALANCE.STAR_TRAIT_BOOST.mult : 1), awakenCost,
+      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus() + syn.atk) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1) * affMult),
+      hp: Math.floor(heroHP(base.hp, entry.level, star, this.hpBonus() + syn.hp, entry.enhance) * (awakened ? 1 + BALANCE.AWAKEN.hp : 1) * affMult),
+      affection: aff, awakened, traitMult: awakened ? BALANCE.AWAKEN.trait : (!isMain && star >= BALANCE.STAR_TRAIT_BOOST.star ? BALANCE.STAR_TRAIT_BOOST.mult : 1), awakenCost,
       canAwaken: !isMain && entry.owned && !awakened && star >= BALANCE.AWAKEN.star && this.state.cards >= awakenCost,
       interval: base.interval, range: base.range,
       cost: upgradeCost(entry.level),
@@ -528,6 +533,57 @@ export class GameManager extends Emitter {
     this.emit('gold'); this.emit('gems'); this.emit('cards'); this.emit('quests');
   }
 
+  // ------------------------------------------------------------ 호감도 --
+  static affectionXpFor(level) { const A = BALANCE.AFFECTION; return Math.round(A.xpBase * A.xpGrowth ** (level - 1)); } // xp to go from level → level+1
+  affectionOf(id) {
+    const A = BALANCE.AFFECTION; const e = this.state.affection?.[id] ?? { xp: 0 };
+    let level = 0, xp = e.xp | 0, next = GameManager.affectionXpFor(1);
+    while (level < A.maxLevel && xp >= next) { xp -= next; level++; next = level < A.maxLevel ? GameManager.affectionXpFor(level + 1) : 0; }
+    const maxed = level >= A.maxLevel;
+    const today = localDateKey(); const gifted = e.gift === today;
+    return { level, xp: maxed ? 0 : xp, next, pct: maxed ? 1 : xp / next, maxed, gifted, total: e.xp | 0, bonus: level * A.bonusPerLevel,
+      secretUnlocked: level >= A.unlockSecret, lineUnlocked: level >= A.unlockLine };
+  }
+  #addAffection(id, n) {
+    const A = BALANCE.AFFECTION; const before = this.affectionOf(id).level;
+    const e = (this.state.affection[id] ??= { xp: 0 }); const cap = Array.from({ length: A.maxLevel }, (_, i) => GameManager.affectionXpFor(i + 1)).reduce((a, b) => a + b, 0);
+    e.xp = Math.min(cap, (e.xp | 0) + n);
+    const after = this.affectionOf(id).level;
+    if (after > before) { this.emit('affection', { id, level: after }); this.log(`${this.heroDef(id).name} 호감도 Lv ${after}${after === A.unlockSecret ? ' · 사무실 비화 해금' : after === A.unlockLine ? ' · 개인 메시지 해금' : after === A.maxLevel ? ' · MAX' : ''}`, 'info'); this.emit('roster'); }
+  }
+  giftCost() { return relativeGold(this.state.maxStage, BALANCE.AFFECTION.giftGoldKills, this.goldMult()); }
+  /** 간식 사주기: once per hero per day, costs gold relative to the best stage. */
+  giveGift(id) {
+    const e = this.state.heroes[id]; if (!e?.owned) return false;
+    const a = this.affectionOf(id); if (a.gifted || a.maxed) return false;
+    const cost = this.giftCost(); if (this.state.gold < cost) return false;
+    this.state.gold -= cost; (this.state.affection[id] ??= { xp: 0 }).gift = localDateKey();
+    this.#addAffection(id, BALANCE.AFFECTION.giftXp);
+    this.entities.levelUpFx?.(id);
+    this.log(`${this.heroDef(id).name}에게 간식 (-${cost}g)`, 'info');
+    this.emit('gold'); this.emit('roster'); this.emit('affection', { id, level: this.affectionOf(id).level });
+    return true;
+  }
+  // ------------------------------------------------------------ 메신저 --
+  storyUnlocked(id) { const ep = EPISODE_BY_ID[id]; return !!ep && episodeUnlocked(ep, this.state.maxStage); }
+  /** Mark an episode read; the first read pays BALANCE.STORY.gems. Returns gems granted (0 when already read / locked). */
+  readStory(id) {
+    if (!this.storyUnlocked(id) || this.state.storyRead[id]) return 0;
+    this.state.storyRead[id] = true; this.state.gems += BALANCE.STORY.gems;
+    this.log(`메신저 ${EPISODE_BY_ID[id].title} 읽음 · 보석 +${BALANCE.STORY.gems}`, 'info'); this.emit('gems'); this.emit('story');
+    return BALANCE.STORY.gems;
+  }
+  /** A random party member says their line in a speech bubble (stage start / clear). */
+  sayLine(kind = 'line') {
+    const heroes = this.entities.heroes.filter((h) => h.alive); if (!heroes.length) return;
+    const h = heroes[Math.floor(Math.random() * heroes.length)];
+    const p = PROFILES[this.isMain(h.heroId) ? 'main' : h.heroId]; if (!p) return;
+    const aff = this.affectionOf(h.heroId);
+    const text = kind === 'ult' ? p.ult : (aff.lineUnlocked && Math.random() < 0.3 ? null : p.line);
+    if (!text) return;
+    h.say = { text, t: 3.2 };
+  }
+
   // ---------------------------------------------------------- stage flow --
   /** 오류 도감: kills per base monster type (the ':phase' suffix is stripped so every colour variant counts as one entry). */
   #recordKill(m) {
@@ -554,6 +610,7 @@ export class GameManager extends Emitter {
     const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(this.combatStage())) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1) * (stageModifier(s.stage)?.gold ?? 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
     this.#recordKill(m);
+    for (const id of s.party) this.#addAffection(id, m.isBoss ? BALANCE.AFFECTION.xpPerBoss : BALANCE.AFFECTION.xpPerKill);
     Quests.addProgress(s, 'kills', 1); if (m.elite) Quests.addProgress(s, 'elite', 1);
     this.entities.coinBurst(m.x, m.y, gold);
     if (!m.isBoss && this.rng.next() < this.gemDropChance()) { // 보석 드롭 (성과급 제도)
@@ -588,6 +645,7 @@ export class GameManager extends Emitter {
     this.log(`${this.stageLabel()} 마감 +${gems + lucky} 보석${cards ? ` +${cards} 강화 카드` : ''}`, 'stage');
     s.kills = 0; s.challenging = false;
     this.emit('cleared', { stage: s.stage, boss, first });
+    if (boss || first) this.sayLine();
     this.emit('stage'); this.emit('gems'); this.emit('cards'); this.emit('kills'); this.emit('quests');
     const fc = this.challengeForecast(s.stage + 1);
     if (s.settings.autoAdvance && (!s.settings.safeAdvance || fc.prob >= BALANCE.SAFE_ADVANCE_MIN)) this.startChallenge();

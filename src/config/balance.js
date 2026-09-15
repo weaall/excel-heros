@@ -13,6 +13,10 @@ export const BALANCE = Object.freeze({
   // --- Idle / offline (user decision: open = 1.0x, closed = 0.6x up to 10h) --
   OFFLINE_CAP_SEC: 10 * 3600, OFFLINE_EFFICIENCY: 0.6, OFFLINE_MIN_SEC: 60,
   AD: { perDay: 3, offlineMultiplier: 2, instantHours: 1, durationSec: 5 }, // placeholder ad (no SDK)
+  // 호감도: party members earn xp per kill; a daily 간식 (gold) adds a chunk. Each level = +1% ATK/HP for that hero.
+  AFFECTION: { maxLevel: 10, xpBase: 60, xpGrowth: 1.45, xpPerKill: 1, xpPerBoss: 15, giftXp: 45, giftGoldKills: 40, bonusPerLevel: 0.01, unlockSecret: 3, unlockLine: 5 },
+  // 사내 메신저: first read of an episode pays gems
+  STORY: { gems: 30 },
   // 야근 모드: once a day, 60 s of dense waves from (max stage + offset) with a high elite rate; gems per kill, no stage progress
   OVERTIME: { duration: 60, stageOffset: 3, count: 7, elite: 0.35, gemsPerKill: 2, gemsPerElite: 6, maxGems: 400, cardsPerPhase: 2, travel: 0.4 },
 

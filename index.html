@@ -195,7 +195,7 @@
         </div>
         <div class="card-grid" id="card-grid"></div>
         <table class="xl-table compact" id="roster-table">
-          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>부문</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">ATK</th><th class="num">조각</th></tr></thead>
+          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>부문</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">ATK</th><th class="num">호감</th><th class="num">조각</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>
@@ -277,6 +277,20 @@
           <button id="btn-ad-instant" class="xl-btn">광고 보고 1시간 방치 보상 받기</button>
         </div>
         <p class="muted small">방치 보상: 켜두면 100%, 꺼두면 60% (최대 10시간). 복귀 시 광고를 보면 2배.</p>
+      </section>
+
+      <!-- Sheet: 사내_메신저 (story as an exported chat log) ---------------------->
+      <section class="sheet" id="sheet-story">
+        <div class="sheet-head">
+          <span>읽은 에피소드 <b id="story-count">0 / 10</b></span>
+          <span class="muted">구역에 처음 도달하면 메신저 로그가 열립니다 · 처음 읽으면 보석 +30 · 호감도 Lv5 이상 카드의 개인 메시지도 여기서</span>
+        </div>
+        <div class="story-layout">
+          <table class="xl-table compact story-list" id="story-list"><thead><tr><th>#</th><th>대화방 / 제목</th><th>상태</th></tr></thead><tbody></tbody></table>
+          <div class="story-view">
+            <table class="xl-table compact" id="story-log"><thead><tr><th class="num">시간</th><th>보낸 사람</th><th>메시지</th></tr></thead><tbody><tr><td colspan="3" class="muted small">왼쫀 목록에서 에피소드를 선택하세요.</td></tr></tbody></table>
+          </div>
+        </div>
       </section>
 
       <!-- Sheet5: 오류_도감 (bestiary) ------------------------------------------>
@@ -417,6 +431,7 @@
     <button class="sheet-tab" data-sheet="roster">인사_명단</button>
     <button class="sheet-tab" data-sheet="gacha">데이터_가져오기</button>
     <button class="sheet-tab" data-sheet="quests">일일_업무</button>
+    <button class="sheet-tab" data-sheet="story">사내_메신저</button>
     <button class="sheet-tab" data-sheet="codex">오류_도감</button>
     <button class="sheet-tab" data-sheet="chart">통계_차트</button>
     <span class="sheet-add" title="새 시트">⊕</span>
