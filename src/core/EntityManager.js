@@ -165,7 +165,8 @@ export class EntityManager {
       if (this.travelT <= 0) { this.traveling = false; this.#spawnWave(); }
     } else if (this.traveling) { this.traveling = false; }
     if (this.boss) {
-      this.bossTimer -= dt; if (this.bossTimer <= 0 && this.boss.alive) { this.game.onBossTimeout(); return; }
+      // the clock only runs once the boss has reached the line — walking in must not eat into the time limit
+      if (this.boss.arrived) { this.bossTimer -= dt; if (this.bossTimer <= 0 && this.boss.alive) { this.game.onBossTimeout(); return; } }
       const b = this.boss;
       if (b.alive && !b.enraged && b.hp <= b.maxHp * ENRAGE.at) { // 격노: faster, harder, the arena shakes
         b.enraged = true; b.atk = Math.floor(b.atk * ENRAGE.atk); b.speed *= ENRAGE.speed; b.interval *= ENRAGE.interval; b.cd = Math.min(b.cd, 0.6);

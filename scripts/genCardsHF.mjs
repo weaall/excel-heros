@@ -27,7 +27,20 @@ const NEG = 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra
 const HAIR = { short: 'short hair', bob: 'bob cut', grey: 'grey hair', bun: 'hair bun', cap: 'baseball cap', side: 'swept bangs', bald: 'bald', spiky: 'spiked hair', long: 'long hair', curly: 'curly hair' };
 const ACC = { tie: 'necktie', headset: 'headset', mustache: 'mustache', hardhat: 'hardhat', coffee: 'holding coffee cup', badge: 'name tag', lanyard: 'lanyard', glasses: 'glasses', beard: 'beard', clipboard: 'holding clipboard', earring: 'earrings', sunglasses: 'sunglasses', flower: 'hair flower', scarf: 'scarf', crown: 'crown', files: 'holding folder', apron: 'apron', radio: 'walkie-talkie', parcel: 'holding box', phone: 'holding phone', pen: 'holding pen', suspenders: 'suspenders', hoodie: 'hoodie', magnifier: 'magnifying glass', calculator: 'calculator', ledger: 'holding book', watch: 'wristwatch', briefcase: 'briefcase', cane: 'cane', laptop: 'laptop', mop: 'holding mop', tablet: 'drawing tablet' };
 const ROLE = { tank: 'confident, arms crossed', melee: 'energetic, clenched hand, sleeves rolled up', ranged: 'playful, one hand up', healer: 'gentle smile, hands together' };
-const GRADE = { D: 'office lady, casual office wear', C: 'office lady, business casual, id card', B: 'team leader, blazer, lanyard', A: 'executive, formal suit, luxurious', S: 'legendary executive, ornate formal suit, gold trim, sparkles, light particles, glowing' };
+const GRADE = { D: 'casual office wear', C: 'business casual, id card', B: 'team leader look, refined details', A: 'executive, luxurious details', S: 'legendary executive, gold trim, sparkles, light particles, glowing' };
+/** Per-character outfits so the roster does not read as 34 copies of one suit (women especially). */
+const OUTFIT_BY_ID = {
+  parttime: 'reception uniform, vest, ribbon tie, pleated skirt', barista: 'striped shirt, brown barista apron, rolled sleeves, hair tied', contract: 'oversized beige cardigan, blouse, pleated skirt, sneakers',
+  hr_jung: 'teal blazer, white blouse, pencil skirt, earrings', acct_lead: 'black turtleneck, high-waist trousers, glasses', welfare: 'pastel knit sweater, long skirt, scarf', coo: 'sharp navy pantsuit, gold buttons, heels',
+  ceo: 'white long coat over black dress, gold accents, sunglasses', helpdesk: 'hoodie over collared shirt, headset, sneakers', cleaner: 'work jumpsuit, headscarf, rubber gloves, mop', legal_yoon: 'black long coat, white collar, thin glasses',
+  pm_lead: 'denim jacket over blouse, sticky notes, lanyard', design_lead: 'colorful paint-splattered smock, beret, drawing tablet', cmo: 'trendy red dress suit, sunglasses pushed up, statement earrings',
+  intern_seo: 'oversized cardigan, lanyard, sneakers, tablet', pr_yoo: 'bomber jacket, mini skirt, press badge, smartphone', nurse_han: 'white nurse uniform, nurse cap, clipboard', lab_park: 'white lab coat over sweater, glasses, laptop',
+  chro: 'elegant mauve suit dress, pearl earrings, folder', chairwoman: 'black formal gown-style suit, silver hair, small crown, cane',
+  staff_park: 'white shirt sleeves rolled, loosened tie, lanyard', guard: 'navy security uniform, cap, radio', courier: 'orange delivery uniform, cap, gloves, parcel', vlookup: 'vest over shirt, glasses, pen',
+  pivot: 'suspenders, shirt, bald, beard', macro: 'dark hoodie, headphones, laptop', audit_han: 'trench coat, sunglasses, magnifying glass', dev_lead: 'flannel shirt, headset, coffee cup', ga_lead: 'grey work vest, gloves, boxes',
+  cfo: 'three-piece purple suit, pocket watch, glasses', cto: 'black turtleneck under blazer, sunglasses', chairman: 'golden formal suit, cane, crown, beard', founder: 'hoodie under blazer, sneakers, glasses', sales_kang: 'sharp navy suit, red tie, briefcase',
+  intern: 'white shirt, lanyard, files', staff: 'light blue shirt, tie, phone', senior: 'vest over shirt, tie, coffee cup', manager: 'grey suit, glasses, briefcase', sales: 'red suit, sunglasses, briefcase', finance: 'teal suit, glasses, calculator', admin: 'orange work vest, hardhat, radio',
+};
 
 function colorName(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
@@ -41,10 +54,10 @@ export function prompt(def, profileId) {
   const p = PROFILES[profileId] ?? {}; const look = def.look ?? {}; const pal = def.palette ?? {};
   const who = p.gender === 'F' ? '1girl, solo' : '1boy, solo, male focus';
   const hair = look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair, ${HAIR[look.hair] ?? 'short hair'}`;
-  const outfit = GRADE[def.grade].replace('office lady', p.gender === 'F' ? 'office lady' : 'office worker');
-  const bits = [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
+  const outfit = OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${GRADE[def.grade]}` : `${GRADE[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
+  const bits = OUTFIT_BY_ID[def.id] ? '' : [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
   const bg = BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
-  return `${who}, ${hair}, ${bits}, ${outfit}, ${colorName(pal.B ?? '#dfe6e9')} jacket, ${ROLE[def.role]}, looking at viewer, face visible, head in frame, cowboy shot, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
+  return `${who}, ${hair}, ${bits ? bits + ', ' : ''}${outfit}, ${ROLE[def.role]}, looking at viewer, face visible, head in frame, cowboy shot, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
 }
 
 // Optional Hugging Face token (HF_TOKEN env or a .hf_token file next to package.json, git-ignored): a logged-in

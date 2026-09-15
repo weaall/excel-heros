@@ -49,9 +49,9 @@ const BOSS_PALETTE = { M: '#c0392b', D: '#7b241c', E: '#f9e79f', L: '#ffffff', K
 /** Bosses rotate by phase. pattern: fire = 35% fireball at a random hero · sweep = every 3rd attack hits the front two ·
  *  stomp = every 4th attack hits the whole line for 50%. hp/atk/speed/interval scale the base boss numbers. */
 export const BOSSES = [
-  { id: 'boss',        name: '긴급 티켓',        shape: 'ticket', palette: BOSS_PALETTE, pattern: 'fire',  hp: 1,    atk: 1,    speed: 40, interval: 2.0, desc: '35% 확률로 무작위 영웅에게 불덩이' },
-  { id: 'boss_zombie', name: '야근 좀비 부장',   shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#27ae60', D: '#145a32' }, pattern: 'sweep', hp: 1.25, atk: 0.9, speed: 30, interval: 2.4, desc: '3번째 공격마다 앞 두 명을 휩쓸기' },
-  { id: 'boss_ogre',   name: '갑질 거래처 오우거', shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#e67e22', D: '#935116' }, pattern: 'stomp', hp: 1,    atk: 1.15, speed: 45, interval: 2.2, desc: '4번째 공격은 전원 발구르기(50%)' },
+  { id: 'boss',        name: '긴급 티켓',        shape: 'ticket', palette: BOSS_PALETTE, pattern: 'fire',  hp: 1,    atk: 1,    speed: 110, interval: 2.0, desc: '35% 확률로 무작위 영웅에게 불덩이' },
+  { id: 'boss_zombie', name: '야근 좀비 부장',   shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#27ae60', D: '#145a32' }, pattern: 'sweep', hp: 1.25, atk: 0.9, speed: 90, interval: 2.4, desc: '3번째 공격마다 앞 두 명을 휩쓸기' },
+  { id: 'boss_ogre',   name: '갑질 거래처 오우거', shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#e67e22', D: '#935116' }, pattern: 'stomp', hp: 1,    atk: 1.15, speed: 120, interval: 2.2, desc: '4번째 공격은 전원 발구르기(50%)' },
 ];
 /** Treasure chests join normal waves occasionally. The mimic looks the same until it bites. */
 export const CHEST = { id: 'chest', name: '보물 상자', shape: 'cube', chest: true, palette: { M: '#b9770e', D: '#7e5109', E: '#f9e79f' } };
