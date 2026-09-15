@@ -99,8 +99,13 @@ export class EntityManager {
   #frontX() { const alive = this.heroes.filter((h) => h.alive); return alive.length ? Math.max(...alive.map((h) => h.x)) : FRONT_X; }
 
   #spawnWave() {
-    const stage = this.game.state.stage;
+    const stage = this.game.combatStage();
     this.wave++;
+    if (this.game.overtime) { // 야근 모드: dense wave, high elite rate, no chests, short travel
+      const O = BALANCE.OVERTIME;
+      for (let i = 0; i < O.count; i++) { const m = this.#spawnMonster(stage, false, i, null, O.elite); m.speed *= 1.15; }
+      return;
+    }
     if (this.game.bossActive()) {
       this.boss = this.#spawnMonster(stage, true, 0);
       this.bossTimer = BALANCE.BOSS_TIME_LIMIT; this.shake = 8;
@@ -124,9 +129,9 @@ export class EntityManager {
     return e;
   }
 
-  #spawnMonster(stage, isBoss, index, forcedDef = null) {
+  #spawnMonster(stage, isBoss, index, forcedDef = null, eliteRate = null) {
     let def = forcedDef ?? (isBoss ? bossForStage(stage) : monsterForStage(stage, Math.random()));
-    const elite = !isBoss && !forcedDef && Math.random() < eliteChance(stage) * (stageModifier(stage)?.elite ?? 1);
+    const elite = !isBoss && !forcedDef && Math.random() < (eliteRate ?? eliteChance(stage) * (stageModifier(stage)?.elite ?? 1));
     if (elite) def = asElite(def, Math.random());
     const proj = !isBoss ? (def.ranged ?? RANGED_SHAPES[def.shape]) : null;
     const range = (isBoss ? 1.5 : proj ? 3.6 + index * 0.3 : 0.9) * GRID.cellW;
@@ -160,7 +165,7 @@ export class EntityManager {
 
     // --- travel between waves: scroll the dungeon, party runs in place
     if (!monsters.length && !this.boss) {
-      if (!this.traveling) { this.traveling = true; this.travelT = TRAVEL_TIME; }
+      if (!this.traveling) { this.traveling = true; this.travelT = this.game.overtime ? BALANCE.OVERTIME.travel : TRAVEL_TIME; }
       this.travelT -= dt; this.scroll += SCROLL_SPEED * dt;
       for (const h of heroes) { h.anim = 'walk'; h.animT += dt; }
       if (this.travelT <= 0) { this.traveling = false; this.#spawnWave(); }

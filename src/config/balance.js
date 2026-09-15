@@ -13,6 +13,8 @@ export const BALANCE = Object.freeze({
   // --- Idle / offline (user decision: open = 1.0x, closed = 0.6x up to 10h) --
   OFFLINE_CAP_SEC: 10 * 3600, OFFLINE_EFFICIENCY: 0.6, OFFLINE_MIN_SEC: 60,
   AD: { perDay: 3, offlineMultiplier: 2, instantHours: 1, durationSec: 5 }, // placeholder ad (no SDK)
+  // 야근 모드: once a day, 60 s of dense waves from (max stage + offset) with a high elite rate; gems per kill, no stage progress
+  OVERTIME: { duration: 60, stageOffset: 3, count: 7, elite: 0.35, gemsPerKill: 2, gemsPerElite: 6, maxGems: 400, cardsPerPhase: 2, travel: 0.4 },
 
   // --- Derived (not in GDD) ---------------------------------------------
   MONSTER_ATK_BASE: 1,     MONSTER_ATK_GROWTH: 1.13,

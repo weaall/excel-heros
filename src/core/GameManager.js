@@ -35,6 +35,7 @@ export class GameManager extends Emitter {
     this.history = { t: [], goldPerMin: [], dps: [], stage: [] }; this.historyTimer = 0; this.historyGold = this.state.stats.totalGold;
     Quests.ensureDaily(this.state, now);
     this.cloud = new CloudSync(this);
+    this.overtime = null; // { t, kills, elites, stage } while 야근 모드 is running
     this.entities = new EntityManager(this);
     this.entities.rebuildParty();
     this.entities.startStage();
@@ -390,7 +391,33 @@ export class GameManager extends Emitter {
   /** True while the party is fighting to clear the current stage (vs. farming it). */
   isChallenging() { return !!this.state.challenging; }
   /** The boss only appears while challenging a boss stage; farming a boss stage spawns normal monsters. */
-  bossActive() { return this.isChallenging() && isBossStage(this.state.stage); }
+  bossActive() { return !this.overtime && this.isChallenging() && isBossStage(this.state.stage); }
+  /** Stage whose monsters are being spawned right now (야근 모드 borrows a harder stage without changing progress). */
+  combatStage() { return this.overtime ? this.overtime.stage : this.state.stage; }
+  canOvertime() { return !this.overtime && !this.state.daily.overtimeDone; }
+  /** 야근 모드: start the once-a-day 60 s survival run. Returns false when already used today. */
+  startOvertime() {
+    if (!this.canOvertime()) return false;
+    const O = BALANCE.OVERTIME;
+    this.overtime = { t: O.duration, kills: 0, elites: 0, stage: Math.max(1, this.state.maxStage + O.stageOffset), gold: 0 };
+    this.entities.startStage(); this.entities.travelT = O.travel;
+    this.log(`야근 모드 시작: ${stageLabel(this.overtime.stage)} 난이도, ${O.duration}초 동안 처치 수만큼 보석`, 'boss');
+    this.emit('overtime-start', this.overtime); this.emit('overtime'); this.emit('stage');
+    return true;
+  }
+  #endOvertime() {
+    const o = this.overtime; if (!o) return null; const O = BALANCE.OVERTIME;
+    const gems = Math.min(O.maxGems, o.kills * O.gemsPerKill + o.elites * O.gemsPerElite);
+    const cards = (Math.floor((o.stage - 1) / BALANCE.BOSS_EVERY) + 1) * O.cardsPerPhase;
+    this.state.gems += gems; this.state.cards += cards; this.state.daily.overtimeDone = true;
+    this.state.stats.overtimes = (this.state.stats.overtimes ?? 0) + 1; this.state.stats.overtimeBest = Math.max(this.state.stats.overtimeBest ?? 0, o.kills);
+    const report = { ...o, gems, cards, best: this.state.stats.overtimeBest };
+    this.overtime = null;
+    this.entities.startStage();
+    this.log(`야근 종료: 처치 ${o.kills} (엘리트 ${o.elites}) → 보석 +${gems}, 강화 카드 +${cards}`, 'stage');
+    this.emit('overtime-end', report); this.emit('overtime'); this.emit('gems'); this.emit('cards'); this.emit('stage'); this.emit('quests');
+    return report;
+  }
   /** Stage the next challenge would target. */
   nextStage() { const s = this.state; return this.isChallenging() ? s.stage : (s.stage <= s.maxCleared ? s.stage + 1 : s.stage); }
 
@@ -502,11 +529,12 @@ export class GameManager extends Emitter {
       this.emit('cards'); this.emit('gems');
       return;
     }
-    const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(s.stage)) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1) * (stageModifier(s.stage)?.gold ?? 1));
+    const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(this.combatStage())) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1) * (stageModifier(s.stage)?.gold ?? 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
     this.#recordKill(m);
     Quests.addProgress(s, 'kills', 1); if (m.elite) Quests.addProgress(s, 'elite', 1);
     this.entities.coinBurst(m.x, m.y, gold);
+    if (this.overtime) { this.overtime.kills++; if (m.elite) this.overtime.elites++; this.emit('overtime'); this.emit('gold'); return; }
     if (m.isBoss) {
       s.stats.bossKills++; Quests.addProgress(s, 'boss', 1);
       this.log(`보스 처리 완료: ${m.def.name} +${gold}g`, 'boss');
@@ -553,6 +581,7 @@ export class GameManager extends Emitter {
   /** Party wipe: a failed challenge falls back to farming the previous stage; a farming wipe just restarts. */
   onPartyWiped() {
     const s = this.state;
+    if (this.overtime) { this.entities.startStage(); this.entities.travelT = BALANCE.OVERTIME.travel; this.log('야근 중 전원 번아웃 — 재정비 후 계속', 'warn'); this.emit('wipe'); return; }
     if (this.isChallenging() && s.stage === 1 && s.maxCleared === 0) { this.entities.startStage(); this.log('팀 전원 번아웃. Phase 1-1 재정비 (튜토리얼: 진행도 유지)', 'warn'); this.emit('stage'); }
     else if (this.isChallenging()) this.#failChallenge('팀 전원 번아웃');
     else { this.entities.startStage(); this.log(`팀 전원 번아웃. ${this.stageLabel()} 사냥 재시작`, 'warn'); this.emit('stage'); }
@@ -562,6 +591,7 @@ export class GameManager extends Emitter {
   // ----------------------------------------------------------------- loop --
   tick(dt, now = Date.now()) {
     this.state.stats.playSeconds += dt;
+    if (this.overtime) { this.overtime.t -= dt; if (this.overtime.t <= 0) this.#endOvertime(); }
     this.entities.update(dt);
     this.resumeTimer += dt; if (this.resumeTimer >= 2) { this.resumeTimer = 0; this.#maybeResumeAdvance(); this.checkMilestones(); }
     this.historyTimer += dt;

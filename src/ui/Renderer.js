@@ -31,6 +31,8 @@ export class Renderer {
     });
     game.on('enrage', ({ boss }) => { this.banner = { kind: 'boss', text: `${boss.def.name} 격노!`, sub: '공격력 상승 · 속도 상승 — 서둘러 마감하세요', t: 0, life: 1.6 }; });
     game.on('ult', ({ hero }) => { const p = profileOf(hero.heroId); this.banner = { kind: 'skill', text: hero.skillName ?? 'ULT', sub: p?.ult ? `"${p.ult}" — ${hero.def.name}` : hero.def.name, hero, t: 0, life: 1.5 }; });
+    game.on('overtime-start', (o) => { this.banner = { kind: 'boss', text: '야근 모드 시작!', sub: `${stageLabel(o.stage)} 난이도 · ${BALANCE.OVERTIME.duration}초 · 처치마다 보석`, t: 0, life: 1.8 }; });
+    game.on('overtime-end', (r) => { this.banner = { kind: 'clear', text: '야근 종료', sub: `처치 ${r.kills} (엘리트 ${r.elites}) · 보석 +${r.gems} · 카드 +${r.cards}`, t: 0, life: 2.4 }; });
     game.on('milestone', ({ milestone, reward }) => { this.banner = { kind: 'milestone', text: `마일스톤: ${milestone.name}`, sub: `보석 +${reward.gems}${reward.cards ? ` · 강화 카드 +${reward.cards}` : ''}`, t: 0, life: 2.2 }; });
     game.on('challenge', () => { if (!game.isChallenging() && this.banner?.kind !== 'clear') this.banner = { kind: 'farm', text: `${game.stageLabel()} 자동 사냥`, sub: '', t: 0, life: 1.2 }; });
   }
@@ -51,6 +53,7 @@ export class Renderer {
     this.#drawFloaters(em);
     this.#drawBuff(em);
     this.#drawCombo(em);
+    this.#drawOvertime();
     ctx.restore();
     if (em.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${(em.flashT / 0.18) * 0.55})`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
     this.#drawSelection();
@@ -105,6 +108,19 @@ export class Renderer {
     ctx.fillStyle = '#f1c40f'; ctx.fillRect(x, y + h + 2, w * Math.min(1, em.bossTimer / BALANCE.BOSS_TIME_LIMIT), 4);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(`${b.def.name}   ${fmt(b.hp)} / ${fmt(b.maxHp)}   ⏱ ${em.bossTimer.toFixed(1)}s`, x + w / 2, y + h / 2);
+  }
+
+  /** 야근 모드 HUD (top-left): countdown + kills, like a status-bar timer. */
+  #drawOvertime() {
+    const o = this.game.overtime; if (!o) return; const { ctx } = this;
+    const t = Math.max(0, o.t), urgent = t < 10;
+    ctx.save(); ctx.fillStyle = urgent && Math.floor(this.t * 4) % 2 ? 'rgba(192,57,43,0.9)' : 'rgba(44,62,80,0.85)'; ctx.fillRect(8, 8, 232, 40);
+    ctx.fillStyle = '#f1c40f'; ctx.fillRect(8, 8, 232 * (t / BALANCE.OVERTIME.duration), 3);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Consolas, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(`야근 모드  ${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`, 16, 24);
+    ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#ecf0f1';
+    ctx.fillText(`처치 ${o.kills} · 엘리트 ${o.elites} · 예상 보석 +${Math.min(BALANCE.OVERTIME.maxGems, o.kills * BALANCE.OVERTIME.gemsPerKill + o.elites * BALANCE.OVERTIME.gemsPerElite)}`, 16, 40);
+    ctx.restore();
   }
 
   /** Hit combo counter (top-right), Excel style. */

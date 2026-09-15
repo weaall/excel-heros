@@ -141,6 +141,8 @@ export class UIManager {
     $('#cloud-push').addEventListener('click', async () => { this.game.setCloud({ url: $('#cloud-url').value, name: $('#cloud-name').value }); if (!this.game.cloud.enabled()) { this.toast('서버 주소를 먼저 입력하세요'); return; } try { const r = await this.game.cloud.push(); this.toast(r ? '서버에 저장했습니다' : this.game.cloud.lastError ?? '업로드 보류'); } catch (e) { this.toast(`업로드 실패: ${this.game.cloud.lastError ?? e.message}`); } this.#refreshCloud(); });
     $('#cloud-pull').addEventListener('click', async () => { this.game.setCloud({ url: $('#cloud-url').value }); if (!this.game.cloud.enabled()) { this.toast('서버 주소를 먼저 입력하세요'); return; } try { const r = await this.game.cloud.pull(); if (!r) { this.toast('서버에 저장본이 없습니다'); return; } const when = new Date(r.updatedAt).toLocaleString(); if (!confirm(`서버 저장본(${when}, 최고 스테이지 ${r.save.maxStage})으로 현재 진행을 덮어쓸까요?`)) return; this.game.loadCloudSave(r.save); this.toast('서버 저장본을 불러왔습니다'); } catch (e) { this.toast(`불러오기 실패: ${e.message}`); } this.#refreshCloud(); });
     $('#rank-refresh').addEventListener('click', () => this.#refreshBoard(true));
+    $('#btn-overtime').addEventListener('click', () => { if (this.game.startOvertime()) { this.switchSheet('home'); this.toast('야근 모드 시작: 60초 동안 최대한 많이 처치하세요'); } else this.toast('야근 모드는 하루 한 번입니다'); this.#refreshQuests(); });
+    this.game.on('overtime-end', (r) => { this.toast(`야근 종료: 처치 ${r.kills} · 보석 +${r.gems} · 카드 +${r.cards}`); this.openModal('야근 결과 보고서', `<table class="xl-table compact"><tbody><tr><th>난이도</th><td>${stageLabel(r.stage)}</td></tr><tr><th>처치</th><td>${r.kills} (엘리트 ${r.elites})</td></tr><tr><th>보석</th><td>+${r.gems}</td></tr><tr><th>강화 카드</th><td>+${r.cards}</td></tr><tr><th>개인 최고</th><td>${r.best} 처치</td></tr></tbody></table><p class="muted small">내일 다시 야근할 수 있습니다. 파티가 강해질수록 같은 60초에 더 많이 처치합니다.</p>`); });
     this.game.on('cloud', () => this.#refreshCloud()); this.game.on('board', () => this.#refreshBoard());
     Ads.setupAds();
     $('#pane-bulk5').addEventListener('click', () => { const n = this.game.upgradeAllMany(5); this.toast(n ? `일괄 레벨업: 파티 전원 총 ${n}레벨` : '골드가 부족합니다'); });
@@ -821,6 +823,7 @@ export class UIManager {
         el('td', { class: 'small' }, rewardText(r)),
         el('td', { class: 'act' }, btn(claimed ? '완료' : '수령', () => { const rr = g.claimQuest(q.id); if (rr) this.toast(`보상: ${rewardText(rr)}`); }, done && !claimed ? 'primary' : '', !done || claimed))));
     }
+    const ob = $('#btn-overtime'); if (ob) { ob.disabled = !this.game.canOvertime(); ob.textContent = this.game.overtime ? '야근 중…' : s.daily.overtimeDone ? '오늘 야근 완료 ✓' : '야근 시작'; const ot = $('#overtime-text'); if (s.daily.overtimeDone) ot.textContent = `오늘의 야근을 마쳤습니다 · 개인 최고 ${s.stats.overtimeBest ?? 0} 처치 · 누적 ${s.stats.overtimes ?? 0}회`; }
     const all = Quests.allQuestsClaimed(s);
     $('#btn-allclear').disabled = !all || s.daily.allClearClaimed;
     $('#allclear-text').textContent = s.daily.allClearClaimed ? '오늘의 전체 완료 보너스를 받았습니다.' : `모든 업무 완료 시 보석 ${ALL_CLEAR_BONUS.gems} + 강화 카드 ${ALL_CLEAR_BONUS.cards}`;
