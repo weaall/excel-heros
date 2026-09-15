@@ -54,7 +54,7 @@ test('boss timeout falls back to farming 1-9 with auto-advance off; boss kill ad
   const s2 = createInitialState(); s2.stage = 10; s2.maxStage = 10; s2.maxCleared = 9; s2.heroes[MAIN_ID].level = 60;
   const g2 = new GameManager({ state: s2, save: memSave() });
   g2.checkMilestones(); const gemsBefore = g2.state.gems; // level/stage milestones are granted up front
-  run(g2, 30);
+  for (let t = 0; t < 30 && g2.state.stage !== 11; t += 0.05) g2.tick(0.05); // stop right after the boss falls (later waves may drop chest gems)
   assert.equal(g2.state.stage, 11, 'boss killed -> Phase 2-1');
   assert.equal(g2.state.stats.bossKills, 1);
   assert.equal(g2.state.gems, gemsBefore + BALANCE.GEMS_BOSS_FIRST + MILESTONE_GEMS(10));

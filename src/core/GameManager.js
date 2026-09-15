@@ -274,6 +274,14 @@ export class GameManager extends Emitter {
     return true;
   }
 
+  toggleFavorite(id) {
+    this.state.favorites ??= {};
+    if (this.state.favorites[id]) delete this.state.favorites[id]; else this.state.favorites[id] = true;
+    this.emit('roster'); this.emit('party');
+    return !!this.state.favorites[id];
+  }
+  isFavorite(id) { return !!this.state.favorites?.[id]; }
+
   toggleParty(id) {
     const p = this.state.party;
     if (p.includes(id)) {

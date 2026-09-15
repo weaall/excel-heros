@@ -64,3 +64,12 @@ test('card art is optional: without a DOM nothing loads and lookups return null'
   assert.equal(await loadCardArt(), 0);
   assert.equal(cardArt('ceo'), null);
 });
+
+test('favorites toggle, sort first, and persist through migration', () => {
+  const s = createInitialState(); s.heroes.guard = { owned: true, star: 1, shards: 0, level: 1, enhance: 0 };
+  const g = new GameManager({ state: s, save: memSave() });
+  assert.equal(g.isFavorite('guard'), false);
+  assert.equal(g.toggleFavorite('guard'), true); assert.equal(g.isFavorite('guard'), true);
+  const m = migrate(JSON.parse(JSON.stringify(g.state))); assert.equal(m.favorites.guard, true);
+  assert.equal(g.toggleFavorite('guard'), false);
+});

@@ -6,6 +6,8 @@
 //    single-frame 16x16 creatures on a 10-column grid.
 // Everything on the 0x72 sheet faces right; monsters are mirrored to face the party.
 
+import { buildHeroStrip } from './heroSkins.js';
+
 const SHEET_URL = 'assets/sprites/0x72/sheet.png';
 const TINY_URL = 'assets/sprites/tiny-creatures/tilemap_packed.png';
 let sheet = null, tiny = null;
@@ -94,13 +96,18 @@ export function packHeroFrame(def, anim = 'idle', frame = 0, scale = 1) {
   if (cache.has(key)) return cache.get(key);
   const [c, ctx] = canvas(64 * scale, 64 * scale);
   ctx.save(); ctx.scale(scale, scale);
-  // (weapon overlays disabled by request — the sheet's characters already carry their gear)
-  ctx.filter = m.hue ? `hue-rotate(${m.hue}deg)` : 'none';
-  ctx.drawImage(sheet, 128 + 16 * fi, 4 + 32 * row, 16, 28, 16, 4, 32, 56);
-  ctx.filter = 'none';
+  // per-hero skin strip: base recoloured to the hero palette + pixel accessories (heroSkins.js); no weapon overlays
+  ctx.drawImage(heroStrip(def, m), 16 * fi, 0, 16, 28, 16, 4, 32, 56);
   ctx.restore();
   cache.set(key, c);
   return c;
+}
+
+/** Cached 9-frame recoloured strip for a hero (see heroSkins.js). */
+function heroStrip(def, m) {
+  const key = `strip:${def.id}`; let s = cache.get(key);
+  if (!s) { s = buildHeroStrip(sheet, def, m); cache.set(key, s); }
+  return s;
 }
 
 /** Head icon (data URL) cropped from the idle frame. */
@@ -110,8 +117,7 @@ export function packHeroIcon(def) {
   const key = `icon:${def.id}`;
   if (cache.has(key)) return cache.get(key);
   const [c, ctx] = canvas(22, 22);
-  ctx.filter = m.hue ? `hue-rotate(${m.hue}deg)` : 'none';
-  ctx.drawImage(sheet, 128, 4 + 32 * HERO_ROW[m.base] + 4, 16, 16, 3, 3, 16, 16);
+  ctx.drawImage(heroStrip(def, m), 0, 4, 16, 16, 3, 3, 16, 16);
   const url = c.toDataURL(); cache.set(key, url); return url;
 }
 

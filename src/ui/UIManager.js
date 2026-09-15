@@ -239,6 +239,7 @@ export class UIManager {
     if (ent?.kind === 'hero') {
       const v = g.heroView(ent.heroId);
       item('👤', `${v.def.name} 상세 보기`, () => this.openDetail(ent.heroId));
+      item(g.isFavorite(ent.heroId) ? '♥' : '♡', g.isFavorite(ent.heroId) ? '즐겨찾기 해제' : '즐겨찾기', () => g.toggleFavorite(ent.heroId));
       item('▲', `강화 +1 (골드 ${fmt(v.cost)})`, () => { if (!g.upgradeHero(ent.heroId)) this.toast('골드가 부족합니다'); }, { disabled: g.state.gold < v.cost });
       item(v.inParty ? '✕' : '✓', v.inParty ? '파티 해제' : '파티 배치', () => g.toggleParty(ent.heroId), { disabled: v.isMain && g.state.party.length === 1 });
       sep();
@@ -463,7 +464,7 @@ export class UIManager {
   // -------------------------------------------------------------- cards --
   #rosterOrder() {
     const s = this.game.state;
-    const rank = (id) => { const e = s.heroes[id]; const g = GRADE_ORDER.indexOf(this.game.heroDef(id).grade); return (e.owned ? 100 : 0) + g; };
+    const rank = (id) => { const e = s.heroes[id]; const g = GRADE_ORDER.indexOf(this.game.heroDef(id).grade); return (this.game.isFavorite(id) ? 200 : 0) + (e.owned ? 100 : 0) + g; };
     return [MAIN_ID, ...HEROES.map((h) => h.id).sort((a, b) => rank(b) - rank(a))];
   }
   #buildCards() {
@@ -477,7 +478,9 @@ export class UIManager {
         title: v.isMain ? `${v.def.title} · Lv ${e.level}` : (e.owned ? `${stars(e.star)} · Lv ${e.level}` : ''),
         sub: e.enhance ? `+${e.enhance}` : '', awakened: !!e.awakened,
       });
-      const wrap = el('div', { class: `card ${v.inParty ? 'in-party' : ''} ${e.owned ? '' : 'locked'}`, title: `${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id) }, c);
+      const wrap = el('div', { class: `card ${v.inParty ? 'in-party' : ''} ${e.owned ? '' : 'locked'} ${e.owned && (v.def.grade === 'S' || v.def.grade === 'A' || e.awakened) ? 'holo' : ''}`, title: `${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id) }, c);
+      if (e.owned && (v.def.grade === 'S' || v.def.grade === 'A' || e.awakened)) wrap.append(el('span', { class: 'holo-sheen' }));
+      if (this.game.isFavorite(id)) wrap.append(el('span', { class: 'card-fav', title: '즐겨찾기' }, '♥'));
       if (v.inParty) wrap.append(el('span', { class: 'card-badge' }, '배치'));
       if (v.isMain) wrap.append(el('span', { class: 'card-badge main' }, '메인'));
       grid.append(wrap);
@@ -513,6 +516,7 @@ export class UIManager {
     const actions = el('div', { class: 'detail-actions' });
     if (e.owned) {
       actions.append(btn(v.inParty ? '파티 해제' : '파티 배치', () => g.toggleParty(id), v.inParty ? '' : 'primary', v.isMain && v.inParty && s.party.length === 1));
+      actions.append(btn(g.isFavorite(id) ? '♥ 즐겨찾기 해제' : '♡ 즐겨찾기', () => g.toggleFavorite(id), g.isFavorite(id) ? 'fav on' : 'fav'));
       if (!v.isMain) actions.append(btn(`★ 승급 (조각 ${v.promoteCost ?? '-'})`, () => this.#promoteWithDialog(id), '', !v.canPromote));
       if (!v.isMain && v.star >= BALANCE.AWAKEN.star) actions.append(btn(v.awakened ? '각성 완료 ✦' : `✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, v.awakened ? '' : 'primary', !v.canAwaken));
       actions.append(btn(v.enhanceMaxed ? '강화 MAX' : `강화 +1 (카드 ${v.enhanceCost})`, () => { if (!g.enhance(id)) this.toast('강화 카드가 부족합니다'); }, '', !v.canEnhance));
@@ -596,16 +600,35 @@ export class UIManager {
       el('td', {}, String(this.gachaLog.length - i)), el('td', { style: `color:${GRADES[r.grade].color}` }, r.grade), el('td', {}, r.def.name), el('td', {}, r.isNew ? '신규 입사' : `조각 +${r.shards}`))));
   }
   #showGachaResults(results) {
-    const body = el('div', {}, el('p', { class: 'muted' }, `CSV 원본에서 ${results.length}행을 가져왔습니다.`));
-    const grid = el('div', { class: 'card-grid result' });
+    const hasS = results.some((r) => r.grade === 'S'), hasA = results.some((r) => r.grade === 'A');
+    const body = el('div', { class: 'reveal-body' }, el('p', { class: 'muted small reveal-hint' }, `CSV 원본에서 ${results.length}행을 가져오는 중… (클릭하면 모두 공개)`));
+    const grid = el('div', { class: 'card-grid result reveal' });
+    const flips = [];
     for (const r of results) {
-      grid.append(el('div', { class: `card ${r.isNew ? 'new' : ''}`, onclick: () => this.openDetail(r.heroId) },
-        cardCanvas(r.def, { star: this.game.state.heroes[r.heroId].star, title: r.isNew ? '신규 입사!' : `조각 +${r.shards}`, sub: r.guaranteed ? '보장' : '' }),
-        r.isNew ? el('span', { class: 'card-badge new' }, 'NEW') : null,
-        r.isNew && profileOf(r.heroId) ? el('div', { class: 'card-quote' }, `"${profileOf(r.heroId).line}"`) : null));
+      const front = el('div', { class: 'flip-face front' },
+        cardCanvas(r.def, { star: this.game.state.heroes[r.heroId].star, title: r.isNew ? '신규 입사!' : `조각 +${r.shards}`, sub: r.guaranteed ? '보장' : '', awakened: !!this.game.state.heroes[r.heroId].awakened }),
+        r.isNew ? el('span', { class: 'card-badge new' }, 'NEW') : null);
+      const back = el('div', { class: `flip-face back g-${r.grade}` }, el('span', { class: 'back-x' }, 'X'), el('span', { class: 'back-row' }, `ROW ${String(results.indexOf(r) + 1).padStart(2, '0')}`));
+      const flip = el('div', { class: `flip grade-${r.grade}` }, el('div', { class: 'flip-inner' }, back, front));
+      const wrap = el('div', { class: `card ${r.isNew ? 'new' : ''} ${r.grade === 'S' || r.grade === 'A' ? 'holo' : ''}`, onclick: () => { if (flip.classList.contains('revealed')) this.openDetail(r.heroId); } }, flip,
+        r.isNew && profileOf(r.heroId) ? el('div', { class: 'card-quote hidden-until' }, `"${profileOf(r.heroId).line}"`) : null);
+      grid.append(wrap); flips.push({ flip, r, wrap });
     }
     body.append(grid);
-    this.openModal('데이터 가져오기 — 완료', body);
+    this.openModal('데이터 가져오기', body);
+    const modal = $('#modal .dialog');
+    let i = 0; const timers = [];
+    const revealOne = (f) => {
+      if (f.flip.classList.contains('revealed')) return;
+      f.flip.classList.add('revealed'); f.wrap.querySelector('.hidden-until')?.classList.remove('hidden-until');
+      if (f.r.grade === 'S') { modal.classList.add('jackpot'); setTimeout(() => modal.classList.remove('jackpot'), 900); this.game.emit('sfx', 'jackpot'); }
+      else if (f.r.grade === 'A') this.game.emit('sfx', 'levelup');
+      else this.game.emit('sfx', 'coin');
+    };
+    const finish = () => { $('.reveal-hint', body).textContent = `${results.length}행 가져오기 완료${hasS ? ' — 전설 등급 등장!' : hasA ? ' — 영웅 등급 등장' : ''}. 카드를 누르면 상세.`; };
+    const step = () => { if (i >= flips.length) { finish(); return; } revealOne(flips[i++]); timers.push(setTimeout(step, flips.length > 1 ? 170 : 120)); };
+    timers.push(setTimeout(step, 250));
+    grid.addEventListener('click', () => { if (i < flips.length) { timers.forEach(clearTimeout); while (i < flips.length) revealOne(flips[i++]); finish(); } }, { once: true });
   }
 
   // ------------------------------------------------------------- quests --

@@ -1,6 +1,6 @@
 // Zero-dependency WebAudio SFX. Everything is synthesised (no audio files), rate-limited per sound,
 // muted while the boss key (Excel mode) is on, and off by default — this is a game pretending to be a spreadsheet.
-const MIN_GAP = { hit: 0.06, hurt: 0.08, kill: 0.05, coin: 0.05, skill: 0.15, ult: 0.3, boss: 1, clear: 0.5, gacha: 0.2, chest: 0.2, wipe: 1, upgrade: 0.05, levelup: 0.2, prestige: 1 };
+const MIN_GAP = { hit: 0.06, hurt: 0.08, kill: 0.05, coin: 0.05, skill: 0.15, ult: 0.3, boss: 1, clear: 0.5, gacha: 0.2, jackpot: 0.5, chest: 0.2, wipe: 1, upgrade: 0.05, levelup: 0.2, prestige: 1 };
 
 export class SoundManager {
   constructor(game) {
@@ -54,6 +54,7 @@ export class SoundManager {
   _ult(ac, t) { for (const [i, f] of [262, 330, 392, 523].entries()) this.#tone(ac, t, { freq: f, type: 'square', dur: 0.35, vol: 0.05, delay: i * 0.07 }); this.#noise(ac, t, { dur: 0.4, vol: 0.05, freq: 300, delay: 0.25 }); }
   _boss(ac, t) { this.#tone(ac, t, { freq: 110, to: 55, type: 'sawtooth', dur: 0.7, vol: 0.08 }); this.#tone(ac, t, { freq: 165, to: 82, type: 'square', dur: 0.7, vol: 0.04, delay: 0.05 }); }
   _clear(ac, t) { for (const [i, f] of [523, 659, 784].entries()) this.#tone(ac, t, { freq: f, type: 'square', dur: 0.16, vol: 0.06, delay: i * 0.09 }); }
+  _jackpot(ac, t) { for (const [i, f] of [523, 659, 784, 1047, 1319, 1568].entries()) this.#tone(ac, t, { freq: f, type: 'square', dur: 0.22, vol: 0.06, delay: i * 0.08 }); this.#noise(ac, t, { dur: 0.5, vol: 0.05, freq: 3000, delay: 0.4 }); }
   _gacha(ac, t) { for (const [i, f] of [660, 880, 1100, 1320, 1760].entries()) this.#tone(ac, t, { freq: f, type: 'triangle', dur: 0.12, vol: 0.05, delay: i * 0.05 }); }
   _chest(ac, t) { for (const [i, f] of [1568, 1976, 2637].entries()) this.#tone(ac, t, { freq: f, type: 'triangle', dur: 0.14, vol: 0.05, delay: i * 0.06 }); }
   _wipe(ac, t) { this.#tone(ac, t, { freq: 300, to: 60, type: 'sawtooth', dur: 0.6, vol: 0.06 }); }
