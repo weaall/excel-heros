@@ -164,8 +164,18 @@ export class Renderer {
       ctx.fillStyle = '#fff'; ctx.font = 'bold 40px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(b.text, CANVAS_W / 2 - 60 + slide, 178);
       ctx.font = 'bold 15px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#f9e79f'; ctx.fillText(b.sub, CANVAS_W / 2 - 60 + slide, 230);
+      // hazard stripes along the sash edges (긴급 tape)
+      ctx.fillStyle = '#f1c40f';
+      for (let i = -2; i < CANVAS_W / 24 + 4; i++) { const x0 = i * 24 + slide; ctx.beginPath(); ctx.moveTo(x0, 150 - x0 * 0.048); ctx.lineTo(x0 + 12, 150 - (x0 + 12) * 0.048); ctx.lineTo(x0 + 12, 158 - (x0 + 12) * 0.048); ctx.lineTo(x0, 158 - x0 * 0.048); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(x0, 242 - x0 * 0.048); ctx.lineTo(x0 + 12, 242 - (x0 + 12) * 0.048); ctx.lineTo(x0 + 12, 250 - (x0 + 12) * 0.048); ctx.lineTo(x0, 250 - x0 * 0.048); ctx.closePath(); ctx.fill(); }
       const boss = this.game.entities.boss;
-      if (boss) { const img = monsterSprite(boss.def, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, CANVAS_W - 300 + slide * 0.5, 100, img.width * 2, img.height * 2); }
+      if (boss) {
+        const img = monsterSprite(boss.def, 0); ctx.imageSmoothingEnabled = false;
+        const sx = CANVAS_W - 330 + slide * 0.5, sy = 62, sc = 3;
+        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(sx + img.width * sc / 2, sy + img.height * sc - 6, img.width * sc / 2, 14, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.drawImage(img, sx, sy, img.width * sc, img.height * sc);
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Consolas, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(`HP ${Math.round(boss.maxHp).toLocaleString()}  ATK ${Math.round(boss.atk).toLocaleString()}`, sx, sy + img.height * sc + 16);
+      }
     } else if (b.kind === 'skill') {
       // ultimate cut-in: purple sash + the caster's sprite blown up on the left
       ctx.fillStyle = 'rgba(40,0,60,0.35)'; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
@@ -399,16 +409,16 @@ export class Renderer {
   /** Character speech bubbles (profile lines) above heroes — pixel-cornered white box with a tail. */
   #drawBubbles(em) {
     const { ctx } = this;
-    for (const h of em.heroes) {
+    for (const h of [...em.heroes, ...em.monsters.filter((m) => m.isBoss)]) {
       if (!h.say || !h.alive) continue;
       const a = Math.min(1, h.say.t / 0.3, (3.2 - h.say.t) / 0.15 + 0.01);
       ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, a));
       ctx.font = '12px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       const text = h.say.text.length > 34 ? h.say.text.slice(0, 33) + '…' : h.say.text;
       const w = Math.ceil(ctx.measureText(text).width) + 16, hgt = 24;
-      let x = Math.round(h.x - w / 2), y = Math.round(h.y - 96);
+      let x = Math.round(h.x - w / 2), y = Math.round(h.y - (h.isBoss ? 118 : 96));
       x = Math.max(6, Math.min(CANVAS_W - w - 6, x));
-      ctx.fillStyle = '#fff'; ctx.fillRect(x, y, w, hgt); ctx.fillStyle = '#2c3e50'; ctx.fillRect(x - 2, y + 2, 2, hgt - 4); ctx.fillRect(x + w, y + 2, 2, hgt - 4); ctx.fillRect(x + 2, y - 2, w - 4, 2); ctx.fillRect(x + 2, y + hgt, w - 4, 2);
+      ctx.fillStyle = h.isBoss ? '#fdecea' : '#fff'; ctx.fillRect(x, y, w, hgt); ctx.fillStyle = h.isBoss ? '#7b241c' : '#2c3e50'; ctx.fillRect(x - 2, y + 2, 2, hgt - 4); ctx.fillRect(x + w, y + 2, 2, hgt - 4); ctx.fillRect(x + 2, y - 2, w - 4, 2); ctx.fillRect(x + 2, y + hgt, w - 4, 2);
       const tx = Math.round(Math.max(x + 8, Math.min(x + w - 12, h.x - 4))); ctx.fillStyle = '#fff'; ctx.fillRect(tx, y + hgt, 8, 4); ctx.fillRect(tx + 2, y + hgt + 4, 4, 2); ctx.fillStyle = '#2c3e50'; ctx.fillRect(tx - 2, y + hgt + 2, 2, 2); ctx.fillRect(tx + 8, y + hgt + 2, 2, 2);
       ctx.fillStyle = '#222'; ctx.fillText(text, x + 8, y + hgt / 2 + 1);
       ctx.restore();

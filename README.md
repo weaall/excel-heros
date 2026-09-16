@@ -64,6 +64,7 @@ src/data/pickup.js             픽업 배너 (3일 주기 S/A, 50% 픽업 확률
 scripts/thumbs.py              카드 일러 → 416×608 WebP 썸네일 (Pillow) · 매니페스트는 genCardsHF --manifest
 src/data/dollSprites.js        일러를 보고 손으로 짠 16×28 페이퍼돌 도트 스펙 41종 + 조립기
 src/data/skins.js              스킨 2종/영웅 (사복=호감도 Lv10, 정장=보석) · 팔레트/일러 키
+src/data/quips.js              스킬 시전 대사 · 보스 등장 대사 (말풍선)
 src/data/story.js              사내 메신저 에피소드 10화 (채팅 로그 형태)
 src/data/profilesExtra.js      호감도 해금 텍스트 (사무실 비화 · 개인 메시지)
 src/data/sprites.js            문자열 템플릿 → 치비 픽셀 스프라이트, 카드/초상 일러스트 생성

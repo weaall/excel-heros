@@ -6,6 +6,7 @@ import { BALANCE, monsterHP, monsterATK, bossHP, bossATK, isBossStage } from '..
 import { TRAITS, SKILLS, GRADES } from '../data/heroes.js';
 import { stageModifier } from '../data/stages.js';
 import { monsterForStage, bossForStage, eliteChance, asElite, CHEST, MIMIC } from '../data/monsters.js';
+import { skillQuip, bossLine } from '../data/quips.js';
 
 export const GRID = Object.freeze({ cols: 13, rows: 8, cellW: 64, cellH: 52 });
 export const CANVAS_W = GRID.cols * GRID.cellW;   // 832
@@ -158,6 +159,7 @@ export class EntityManager {
   update(dt) {
     this.time += dt;
     for (const h of this.heroes) if (h.say) { h.say.t -= dt; if (h.say.t <= 0) h.say = null; } // speech bubbles expire even while travelling
+    for (const m of this.monsters) if (m.say) { m.say.t -= dt; if (m.say.t <= 0) m.say = null; }
     this.shake = Math.max(0, this.shake - dt * 30); this.flashT = Math.max(0, this.flashT - dt);
     if (this.combo > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
     const heroes = this.heroes.filter((e) => e.alive), monsters = this.monsters.filter((e) => e.alive);
@@ -257,6 +259,7 @@ export class EntityManager {
       if (m.stun > 0) { m.stun -= dt; continue; }
       const stopX = frontX + m.standoff;
       if (m.x > stopX + 2) { m.x = Math.max(stopX, m.x - m.speed * dt); m.anim = 'walk'; continue; }
+      if (!m.arrived && m.isBoss) { m.say = { text: bossLine(m.def.id, Math.random()), t: 3.0 }; this.shake = Math.max(this.shake, 6); }
       m.arrived = true; m.anim = 'idle'; m.cd -= dt;
       if (m.def.chest && !m.def.mimic) continue;   // treasure chests just sit there
       if (m.cd > 0) continue;
@@ -460,6 +463,7 @@ export class EntityManager {
         break;
     }
     h.anim = 'attack'; h.animT = 0;
+    if (type !== 'ult' && !h.say) { const q = skillQuip(type, Math.random()); if (q) h.say = { text: q, t: 1.8 }; }
     this.game.emit('sfx', type === 'ult' ? 'ult' : 'skill');
     this.floaters.push({ x: h.x, y: h.y - 58, text: h.skillName ?? type.toUpperCase(), color: '#8e44ad', t: 0, big: true });
     this.game.log(`${h.def.name}: ${h.skillName ?? type} 발동`, 'skill');

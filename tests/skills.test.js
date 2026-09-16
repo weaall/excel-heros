@@ -74,3 +74,14 @@ test('haste: party attack speed multiplier for the duration; execute: double dam
   b.em.castSkill(b.h, m, b.em.monsters, b.em.heroes); const low = low0 - m.hp;
   assert.ok(low > full * 1.6 && low < full * 2.6, `execute doubles under 30% (${full} → ${low})`);
 });
+
+test('quips: every skill type has lines (except the ultimate cut-in), every boss has lines, casting sets a bubble', async () => {
+  const { SKILL_QUIPS, BOSS_LINES, skillQuip, bossLine } = await import('../src/data/quips.js');
+  const { BOSSES } = await import('../src/data/monsters.js');
+  for (const t of Object.keys(SKILLS)) if (t !== 'ult') assert.ok(SKILL_QUIPS[t]?.length >= 2, `quips for ${t}`);
+  for (const b of BOSSES) assert.ok(BOSS_LINES[b.id]?.length >= 2, `boss lines for ${b.id}`);
+  assert.equal(skillQuip('ult'), null); assert.ok(bossLine('unknown-boss'), 'falls back to the first boss lines');
+  const { em, h } = setup(byType('haste').id);
+  em.castSkill(h, em.monsters[0], em.monsters, em.heroes);
+  assert.ok(h.say && SKILL_QUIPS.haste.includes(h.say.text), 'caster speaks a haste quip');
+});
