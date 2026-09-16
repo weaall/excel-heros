@@ -19,9 +19,9 @@ export const ART_PALETTES = {
     "W": "#e7c4be"
   },
   "courier": {
-    "H": "#2a4987",
-    "B": "#93cfe7",
-    "W": "#ce5a41"
+    "H": "#7b5d55",
+    "B": "#677e8a",
+    "W": "#5d5e74"
   },
   "contract": {
     "B": "#b7c1cf"
@@ -32,7 +32,8 @@ export const ART_PALETTES = {
     "W": "#143863"
   },
   "pivot": {
-    "B": "#4bf6e1"
+    "B": "#c9ccd0",
+    "W": "#caccd0"
   },
   "macro": {
     "H": "#14f6f2",
@@ -73,15 +74,16 @@ export const ART_PALETTES = {
     "W": "#225fc7"
   },
   "cto": {
-    "B": "#378cde"
+    "H": "#9c77cd",
+    "B": "#8475b0"
   },
   "coo": {
-    "H": "#757795",
-    "B": "#1a1958"
+    "B": "#827153",
+    "W": "#827154"
   },
   "ceo": {
-    "H": "#9dafeb",
-    "B": "#132344"
+    "B": "#7a6076",
+    "W": "#ede1f0"
   },
   "chairman": {
     "B": "#1b4257"
@@ -99,9 +101,9 @@ export const ART_PALETTES = {
     "B": "#823653"
   },
   "legal_yoon": {
-    "H": "#5e8ee1",
-    "B": "#8cdef9",
-    "W": "#8ddef9"
+    "H": "#495881",
+    "B": "#f6eff0",
+    "W": "#b2cade"
   },
   "pm_lead": {
     "H": "#3671b7",
@@ -112,14 +114,13 @@ export const ART_PALETTES = {
     "W": "#fa5a54"
   },
   "cmo": {
-    "H": "#82273c",
-    "B": "#b03513",
-    "W": "#ae3413"
+    "H": "#e27270",
+    "B": "#da6f6b",
+    "W": "#f9edea"
   },
   "founder": {
-    "H": "#bf674c",
-    "B": "#134d76",
-    "W": "#23b5b8"
+    "B": "#184177",
+    "W": "#9c89bd"
   },
   "intern_seo": {
     "B": "#597fbd",
@@ -203,9 +204,9 @@ export const ART_PALETTES = {
     "W": "#eb9764"
   },
   "cdo": {
-    "H": "#5b6070",
-    "B": "#2a3248",
-    "W": "#293248"
+    "H": "#5f80b8",
+    "B": "#65b8ea",
+    "W": "#bde1f9"
   },
   "cco": {
     "H": "#ec99a4",
@@ -213,14 +214,13 @@ export const ART_PALETTES = {
     "W": "#b77873"
   },
   "chief_of_staff": {
-    "H": "#7d614d",
-    "B": "#f8d3c9",
-    "W": "#fdfab3"
+    "B": "#2b3241",
+    "W": "#b7c0d8"
   },
   "chairwoman": {
-    "H": "#4f311f",
-    "B": "#f9fcea",
-    "W": "#ba9089"
+    "H": "#9199b8",
+    "B": "#4b6693",
+    "W": "#4a6693"
   },
   "intern": {
     "H": "#636096",
@@ -248,9 +248,8 @@ export const ART_PALETTES = {
     "B": "#fdddc8"
   },
   "finance_manager": {
-    "H": "#68728b",
-    "B": "#3e7094",
-    "W": "#b48981"
+    "B": "#3aabbb",
+    "W": "#fdeeea"
   },
   "finance": {
     "H": "#fcbb6e",

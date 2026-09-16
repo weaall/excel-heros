@@ -9,3 +9,4 @@ Thumbs.db
 
 # wrangler local cache (account metadata)
 .wrangler/
+.hf_tokens
