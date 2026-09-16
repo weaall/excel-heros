@@ -355,6 +355,25 @@ export class UIManager {
     this.#lineChart($('#chart-stage'), '스테이지 진행', [{ name: '현재 스테이지', data: h.stage }], { unit: '시간 (5초 간격)' });
     const party = g.state.party.map((id) => g.heroView(id));
     this.#barChart($('#chart-party'), '파티 ATK 구성', party.map((v) => ({ label: v.def.name, value: v.atk, color: v.grade.color })));
+    // 도감 구성: owned per grade (doughnut, Excel default palette by grade colour)
+    const byGrade = GRADE_ORDER.slice().reverse().map((gr) => { const all = HEROES.filter((h) => h.grade === gr), owned = all.filter((h) => g.state.heroes[h.id]?.owned).length; return { label: `${gr} ${owned}/${all.length}`, value: owned, color: GRADES[gr].color }; });
+    this.#doughnutChart($('#chart-grade'), '도감 구성 (보유 카드 등급별)', byGrade, `${byGrade.reduce((a, b) => a + b.value, 0)} / ${HEROES.length}`);
+    // 부문 편성: party members per division
+    const div = {}; for (const id of g.state.party) { const d = divisionOf(g.isMain(id) ? 'main' : id); div[d] = (div[d] ?? 0) + 1; }
+    this.#doughnutChart($('#chart-division'), '파티 부문 편성', Object.entries(div).map(([d, n]) => ({ label: `${DIVISIONS[d].name} ${n}`, value: n, color: DIVISIONS[d].color })), `${g.state.party.length}명`);
+  }
+  /** Excel-style doughnut chart with a centre label and a right-hand legend. */
+  #doughnutChart(canvas, title, slices, centre = '') {
+    if (!canvas) return; const ctx = canvas.getContext('2d'); const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#595959'; ctx.font = '14px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(title, W / 2, 16);
+    const total = slices.reduce((a, s) => a + s.value, 0); const cx = 120, cy = H / 2 + 12, R = 74, r = 44;
+    if (!total) { ctx.strokeStyle = '#d9d9d9'; ctx.lineWidth = R - r; ctx.beginPath(); ctx.arc(cx, cy, (R + r) / 2, 0, Math.PI * 2); ctx.stroke(); }
+    let a0 = -Math.PI / 2;
+    for (const s of slices) { if (!s.value) continue; const a1 = a0 + (s.value / total) * Math.PI * 2; ctx.fillStyle = s.color; ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1); ctx.arc(cx, cy, r, a1, a0, true); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); a0 = a1; }
+    ctx.fillStyle = '#333'; ctx.font = 'bold 15px "Segoe UI", Arial'; ctx.fillText(centre, cx, cy);
+    ctx.textAlign = 'left'; ctx.font = '11.5px "Malgun Gothic", "Segoe UI", sans-serif';
+    slices.forEach((s, i) => { const y = 48 + i * 20; ctx.fillStyle = s.color; ctx.fillRect(220, y - 6, 12, 12); ctx.fillStyle = '#404040'; ctx.fillText(`${s.label}${total ? ` (${Math.round((s.value / total) * 100)}%)` : ''}`, 240, y); });
   }
   /** Excel-style clustered bar chart for the party. */
   #barChart(canvas, title, bars) {
