@@ -1,6 +1,6 @@
 // DOM layer: ribbon, formula bar, sheets, task pane, card grid, quests, boss-key view, dialogs.
 import { BALANCE, teamUpgradeCost, isBossStage, stageLabel } from '../config/balance.js';
-import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, MAIN_ID, MAIN_TIER_TITLES, MAIN_TRACKS } from '../data/heroes.js';
+import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, SKILLS, MAIN_ID, MAIN_TIER_TITLES, MAIN_TRACKS } from '../data/heroes.js';
 import { stagePool, eliteChance, bossForStage, MONSTER_TYPES, BOSSES, PALETTES, phaseOf } from '../data/monsters.js';
 import { DIVISIONS, PERKS, divisionOf, divisionName } from '../data/divisions.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
@@ -664,9 +664,9 @@ export class UIManager {
   }
 
   /** Small idle-sprite preview used by the skin chips. */
-  #skinPreview(def) {
-    const c = document.createElement('canvas'); c.width = 64; c.height = 112; c.className = 'skin-prev'; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; // 4× pixel preview
-    const img = heroSprite(def, 'idle', 0); if (img) ctx.drawImage(img, 16, 4, 32, 56, 0, 0, 64, 112); // default scale → 64×64 frame, doll at (16,4) 32×56
+  #skinPreview(def, k = 2) {
+    const c = document.createElement('canvas'); c.width = 32 * k; c.height = 56 * k; c.className = 'skin-prev'; c.style.width = `${32 * k}px`; c.style.height = `${56 * k}px`; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; // 2k× pixel preview
+    const img = heroSprite(def, 'idle', 0); if (img) ctx.drawImage(img, 16, 4, 32, 56, 0, 0, 32 * k, 56 * k); // default scale → 64×64 frame, doll at (16,4) 32×56
     return c;
   }
 
@@ -761,35 +761,74 @@ export class UIManager {
         v.awakened ? null : sb(`✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, 'primary', !v.canAwaken),
         `ATK/HP +${Math.round(BALANCE.AWAKEN.atk * 100)}% · 특성 ×${BALANCE.AWAKEN.trait} · 스킬 ×${BALANCE.AWAKEN.skill} · 강화 한계 +${BALANCE.ENHANCE_CAP_AWAKEN}`));
     }
-    // --- trait / skill / ★ ladder / profile
-    const growth = el('div', { class: 'dt-sections pane-growth' },
-      el('div', { class: 'dt-sec trait' }, el('b', {}, '특성'), el('span', { class: 'nm' }, v.traitName), el('span', { class: 'ds' }, v.traitDesc)),
-      (() => { const sl = g.skillLevelInfo(id); return el('div', { class: 'dt-sec skill' }, el('b', {}, '스킬'), el('span', { class: 'nm' }, `${v.skillName}${sl.level ? ` Lv ${sl.level}` : ''}`), el('span', { class: 'ds' }, v.skillDesc, v.skillUnlocked ? '' : el('span', { class: 'lock' }, ` 🔒 ${v.skillUnlockHint}`)),
-        e.owned && v.skillUnlocked ? el('span', { class: 'ds small' }, sl.cost === null ? ' · 스킬 Lv MAX' : sb(`스킬 강화 Lv ${sl.level + 1} (카드 ${sl.cost})`, () => { if (g.upgradeSkill(id)) { this.toast(`${v.def.name} 스킬 Lv ${sl.level + 1}: 위력 +${Math.round(BALANCE.SKILL_LEVEL.powerPerLevel * 100)}%, 대기 -${Math.round(BALANCE.SKILL_LEVEL.cooldownPerLevel * 100)}%`); this.#refreshDetail(); } else this.toast('강화 카드가 부족합니다'); }, sl.can ? 'primary' : '', !sl.can), ` 위력 ×${sl.power.toFixed(2)} · 대기 ×${sl.cooldown.toFixed(2)}`) : null); })(),
-      v.isMain ? null : el('div', { class: 'dt-sec perks' }, el('b', {}, '★ 성장'), ...[
-        [2, '스킬 해금'], [3, `특성 ×${BALANCE.STAR_TRAIT_BOOST.mult}`], [4, `스킬 ×${BALANCE.SKILL_BOOST_MULT}`], [5, '각성'],
-      ].map(([st, label]) => el('span', { class: `perk ${v.star >= st ? 'on' : ''}` }, `★${st} ${label}`))),
-      e.owned ? el('div', { class: 'dt-sec skins' }, el('b', {}, '스킨'), el('div', { class: 'skin-list' },
-        el('button', { class: `skin-chip ${!v.def.skin ? 'active' : ''}`, onclick: () => { g.equipSkin(id, null); this.#refreshDetail(); } }, this.#skinPreview({ ...v.def, skin: undefined }), el('span', {}, '기본')),
-        ...g.skinsOf(id).map((sk) => el('button', { class: `skin-chip ${sk.active ? 'active' : ''} ${sk.owned ? '' : 'locked'}`, title: sk.desc, style: `--sc:${sk.frame}`,
-          onclick: () => { if (sk.owned) { g.equipSkin(id, sk.active ? null : sk.id); this.#refreshDetail(); } else if (sk.canUnlock) { if (g.unlockSkin(id, sk.id)) { g.equipSkin(id, sk.id); this.toast(`스킨 「${sk.name}」 해금 · 장착`); this.#refreshDetail(); } } else this.toast(sk.reason); } },
-          this.#skinPreview({ ...v.def, skin: sk }), el('span', {}, sk.name), el('small', {}, sk.owned ? (sk.active ? '장착 중' : '보유') : sk.reason))))) : null);
-    const profileSec = el('div', { class: 'dt-sections pane-profile' },
-      p ? el('div', { class: 'dt-sec profile' }, el('div', { class: 'bio' }, p.bio), el('div', { class: 'quote' }, `"${p.line}"`)) : null,
-      e.owned ? (() => { const a = v.affection, A = BALANCE.AFFECTION, x = extraOf(v.isMain ? 'main' : id);
-        return el('div', { class: 'dt-sec affection' }, el('b', {}, '호감도'),
-          el('span', { class: 'hearts' }, ...Array.from({ length: A.maxLevel }, (_, i) => el('span', { class: i < a.level ? '' : 'off' }, '♥'))), el('span', { class: 'ds' }, ` Lv ${a.level}${a.maxed ? ' MAX' : ` · ${a.xp} / ${a.next}`} · ATK/HP +${Math.round(a.bonus * 100)}%`),
-          el('div', { class: 'aff-bar' }, el('i', { style: `width:${Math.round(a.pct * 100)}%` })),
-          el('div', { class: 'small' }, sb(a.gifted ? '오늘 간식 완료 ✓' : a.maxed ? '호감도 MAX' : `간식 사주기 (${fmt(g.giftCost())}g · +${A.giftXp})`, () => { if (g.giveGift(id)) { this.toast(`${v.def.name}: "${p?.line ?? '고마워요'}"`); this.#refreshDetail(); } else this.toast('골드가 부족하거나 오늘은 이미 사줬습니다'); }, a.gifted || a.maxed ? '' : 'primary', a.gifted || a.maxed || s.gold < g.giftCost()), el('span', { class: 'muted' }, ' 파티에 넣고 처치할수록 오른다 (일반 +1 · 보스 +15)')),
-          x ? el('div', { class: `secret ${a.secretUnlocked ? '' : 'locked'}` }, a.secretUnlocked ? `사무실 비화: ${x.secret}` : `🔒 Lv ${A.unlockSecret}: 사무실 비화`) : null,
-          x ? el('div', { class: `line2 ${a.lineUnlocked ? '' : 'locked'}` }, a.lineUnlocked ? `"${x.line2}"` : `🔒 Lv ${A.unlockLine}: 개인 메시지 (사내 메신저)`) : null); })() : null);
-    // tabs: 정보(stats) · 성장(trait/skill/★/skin) · 프로필(bio/호감도) — remembered across refreshes
-    this.detailTab ??= 'info';
-    const panes = { info: table, growth, profile: profileSec };
-    const tabs = el('div', { class: 'dt-tabs' }, ...[['info', '정보'], ['growth', '스킬 · 스킨'], ['profile', '프로필 · 호감도']].map(([k, label]) =>
-      el('button', { class: `dt-tab ${this.detailTab === k ? 'active' : ''}`, onclick: () => { this.detailTab = k; this.#renderDetail(); } }, label)));
+    table.append(row('특성', el('span', { class: 'nm-trait' }, v.traitName), null, v.traitDesc));
+    // --- 스킬 pane: one record per number (name / effect / power / cooldown / level), then the ★ growth ladder
+    const sl = g.skillLevelInfo(id); const SK = SKILLS[v.def.skill.type]; const L = BALANCE.SKILL_LEVEL;
+    const skillPane = el('div', { class: 'dt-sections pane-skill' }, el('table', { class: 'dt-table' },
+      row('스킬명', el('span', { class: 'nm-skill' }, v.skillName), null, `${SK.name} 계열${v.def.skill.name && v.def.skill.name !== SK.name ? ` · ${v.def.name} 고유 명칭` : ''}`),
+      row('효과', v.skillDesc, null, v.skillUnlocked ? null : el('span', { class: 'lock' }, `🔒 ${v.skillUnlockHint}`)),
+      row('위력', `×${(v.def.skill.power * v.skillPower).toFixed(2)}`, null, `기본 ×${v.def.skill.power}${sl.level ? ` · 스킬 Lv ×${sl.power.toFixed(2)}` : ''}${!v.isMain && v.star >= BALANCE.SKILL_BOOST_STAR ? ` · ★${BALANCE.SKILL_BOOST_STAR} ×${BALANCE.SKILL_BOOST_MULT}` : ''}${v.awakened ? ` · 각성 ×${BALANCE.AWAKEN.skill}` : ''}`),
+      row('대기 시간', `${(SK.cooldown * sl.cooldown).toFixed(1)}s`, null, `기본 ${SK.cooldown}s${sl.level ? ` · 스킬 Lv ×${sl.cooldown.toFixed(2)}` : ''}`),
+      SK.duration ? row('지속', `${SK.duration}s`) : null,
+      e.owned ? row('스킬 Lv', `${sl.level} / ${sl.max}`,
+        v.skillUnlocked ? sb(sl.cost === null ? 'MAX' : `강화 Lv ${sl.level + 1} (카드 ${sl.cost})`, () => { if (g.upgradeSkill(id)) { this.toast(`${v.def.name} 스킬 Lv ${sl.level + 1}: 위력 +${Math.round(L.powerPerLevel * 100)}%, 대기 -${Math.round(L.cooldownPerLevel * 100)}%`); this.#refreshDetail(); } else this.toast('강화 카드가 부족합니다'); }, sl.can ? 'primary' : '', !sl.can) : null,
+        v.skillUnlocked ? `Lv당 위력 +${Math.round(L.powerPerLevel * 100)}% · 대기 -${Math.round(L.cooldownPerLevel * 100)}% · 카드 ${L.cardCost[v.def.grade]} × 다음 Lv` : `해금 후 강화 가능 · ${v.skillUnlockHint}`) : null,
+      v.isMain
+        ? row('승진 효과', MAIN_TIER_TITLES[v.def.tier], null, `스킬 해금 = ${MAIN_TIER_TITLES[BALANCE.MAIN_SKILL_TIER]} · 스킬 ×${BALANCE.SKILL_BOOST_MULT} = ${MAIN_TIER_TITLES[BALANCE.MAIN_SKILL_BOOST_TIER]} · 트랙마다 스킬 종류가 다름`)
+        : row('★ 성장', el('div', { class: 'star-perks' }, ...[[2, '스킬 해금'], [3, `특성 ×${BALANCE.STAR_TRAIT_BOOST.mult}`], [4, `스킬 ×${BALANCE.SKILL_BOOST_MULT}`], [5, '각성']].map(([st, label]) => el('span', { class: `perk ${v.star >= st ? 'on' : ''}` }, `★${st} ${label}`))), null, `현재 ${stars(v.star)} · 한계 돌파로 다음 단계 해금`)));
+    // --- 스킨 pane: what is equipped, how each skin unlocks, then a grid of 6× previews
+    const skins = e.owned ? g.skinsOf(id) : []; const activeSkin = skins.find((x) => x.active);
+    const skinPane = el('div', { class: 'dt-sections pane-skin' });
+    if (!e.owned) skinPane.append(el('p', { class: 'muted small' }, '미보유 카드입니다. 획득하면 기본 복장 외에 사복·정장 스킨을 장착할 수 있습니다.'));
+    else {
+      skinPane.append(el('table', { class: 'dt-table' },
+        row('장착 중', activeSkin ? activeSkin.name : '기본', activeSkin ? sb('기본으로', () => { g.equipSkin(id, null); this.#refreshDetail(); }) : null, activeSkin ? activeSkin.desc : '입사 당시 복장 · 카드 일러스트와 도트 원본'),
+        row('해금', `${skins.filter((x) => x.owned).length} / ${skins.length}`, null, skins.map((x) => `${x.name}: ${x.unlock.affection ? `호감도 Lv ${x.unlock.affection}` : `보석 ${x.unlock.gems}`}`).join(' · ')),
+        row('적용 범위', '도트 · 카드 · 앨범', null, '전투 도트 팔레트가 바뀌고, 스킨 일러스트가 있으면 카드와 앨범도 교체됩니다')));
+      const chip = (sk, label, sub, active, cls, onclick, title = '') => el('button', { class: `skin-chip ${active ? 'active' : ''} ${cls}`, title, style: sk ? `--sc:${sk.frame}` : '', onclick },
+        this.#skinPreview({ ...v.def, skin: sk ?? undefined }, 3), el('span', { class: 'skin-name' }, label), el('small', {}, sub));
+      skinPane.append(el('div', { class: 'skin-grid' },
+        chip(null, '기본', activeSkin ? '클릭하여 장착' : '장착 중', !activeSkin, '', () => { g.equipSkin(id, null); this.#refreshDetail(); }),
+        ...skins.map((sk) => chip(sk, sk.name, sk.owned ? (sk.active ? '장착 중' : '보유 · 클릭하여 장착') : sk.canUnlock ? `${sk.reason} · 클릭하여 해금` : sk.reason, sk.active, sk.owned ? '' : 'locked',
+          () => { if (sk.owned) { g.equipSkin(id, sk.active ? null : sk.id); this.#refreshDetail(); } else if (sk.canUnlock) { if (g.unlockSkin(id, sk.id)) { g.equipSkin(id, sk.id); this.toast(`스킨 「${sk.name}」 해금 · 장착`); this.#refreshDetail(); } } else this.toast(sk.reason); }, sk.desc))));
+    }
+    // --- 프로필 pane: the personnel record
+    const dv = p ? DIVISIONS[divisionOf(v.isMain ? 'main' : id)] : null;
+    const profilePane = el('div', { class: 'dt-sections pane-profile' }, p ? el('table', { class: 'dt-table' },
+      row('이름', v.def.name, null, v.isMain ? `${v.def.title} · 승진으로 직급이 바뀝니다` : `${v.grade.name}급 ${v.grade.label}`),
+      row('별명', p.nick),
+      row('부서', p.dept, null, dv ? `${dv.name} 부문 · 부문 특성(2명 이상): ${PERKS[dv.id].desc}` : null),
+      row('직무', `${ROLES[v.def.role].name}`, null, `특성 ${v.traitName} · 스킬 ${v.skillName}`),
+      row('소개', el('span', { class: 'bio' }, p.bio)),
+      row('한마디', el('span', { class: 'quote' }, `"${p.line}"`), null, v.def.grade === 'S' || v.isMain ? '필살기: 스킬 발동 시 컷인 대사' : null)) : el('p', { class: 'muted small' }, '프로필 정보가 없습니다.'));
+    // --- 호감도 pane: level / xp / bonus / 간식, then the unlock ladder (비화 · 개인 메시지 · 사복 스킨 + 절친)
+    const affPane = el('div', { class: 'dt-sections pane-affection' });
+    if (!e.owned) affPane.append(el('p', { class: 'muted small' }, '미보유 카드입니다. 획득 후 파티에 넣고 함께 일하면 호감도가 오릅니다.'));
+    else {
+      const a = v.affection, A = BALANCE.AFFECTION, x = extraOf(v.isMain ? 'main' : id);
+      const hearts = el('span', { class: 'hearts' }, ...Array.from({ length: A.maxLevel }, (_, i) => el('span', { class: i < a.level ? '' : 'off' }, '♥')));
+      affPane.append(el('table', { class: 'dt-table' },
+        row('호감도', el('span', {}, hearts, ` Lv ${a.level}${a.maxed ? ' MAX' : ''}`), null, a.maxed ? '절친 · 카드 핑크 프레임' : `다음 Lv까지 ${a.next - a.xp} xp`),
+        row('경험치', a.maxed ? 'MAX' : `${a.xp} / ${a.next}`, null, el('div', { class: 'aff-bar' }, el('i', { style: `width:${Math.round(a.pct * 100)}%` }))),
+        row('보너스', `ATK/HP +${Math.round(a.bonus * 100)}%`, null, `Lv당 +${Math.round(A.bonusPerLevel * 100)}% · 최대 +${Math.round(A.bonusPerLevel * A.maxLevel * 100)}%`),
+        row('간식', a.gifted ? '오늘 완료 ✓' : a.maxed ? '-' : `골드 ${fmt(g.giftCost())}`,
+          sb(a.gifted ? '오늘 간식 완료' : a.maxed ? '호감도 MAX' : `간식 사주기 (+${A.giftXp} xp)`, () => { if (g.giveGift(id)) { this.toast(`${v.def.name}: "${p?.line ?? '고마워요'}"`); this.#refreshDetail(); } else this.toast('골드가 부족하거나 오늘은 이미 사줬습니다'); }, a.gifted || a.maxed ? '' : 'primary', a.gifted || a.maxed || s.gold < g.giftCost()),
+          `하루 1회 · 파티에서 처치 +${A.xpPerKill} · 보스 +${A.xpPerBoss}`)));
+      const ms = (lv, title, body, on) => el('li', { class: on ? 'on' : 'off' }, el('b', {}, `Lv ${lv}`), el('span', { class: 'ms-title' }, title), el('div', { class: 'ms-body' }, on ? body : `🔒 Lv ${lv} 달성 시 공개`));
+      affPane.append(el('div', { class: 'dt-sec aff-ladder' }, el('b', {}, '해금'), el('ul', { class: 'aff-ms' },
+        ms(A.unlockSecret, '사무실 비화', x?.secret ?? '', a.secretUnlocked),
+        ms(A.unlockLine, '개인 메시지 (사내 메신저)', x ? `"${x.line2}"` : '', a.lineUnlocked),
+        ms(A.maxLevel, '절친 칭호 · 사복 스킨 · 핑크 프레임', '스킨 탭에서 「퇴근 사복」을 장착할 수 있습니다', a.maxed))));
+    }
+    // tabs: 정보 · 스킬 · 스킨 · 프로필 · 호감도 — remembered across refreshes (old 'growth' key → 스킬)
+    this.detailTab ??= 'info'; if (this.detailTab === 'growth') this.detailTab = 'skill';
+    const panes = { info: table, skill: skillPane, skin: skinPane, profile: profilePane, affection: affPane };
+    if (!panes[this.detailTab]) this.detailTab = 'info';
+    const tabDefs = [['info', '정보', ''], ['skill', '스킬', e.owned && v.skillUnlocked ? `Lv ${sl.level}` : ''], ['skin', '스킨', activeSkin ? activeSkin.name : ''], ['profile', '프로필', ''], ['affection', '호감도', e.owned ? `♥${v.affection.level}` : '']];
+    const tabs = el('div', { class: 'dt-tabs' }, ...tabDefs.map(([k, label, badge]) =>
+      el('button', { class: `dt-tab ${this.detailTab === k ? 'active' : ''}`, onclick: () => { this.detailTab = k; this.#renderDetail(); } }, label, badge ? el('small', {}, badge) : null)));
     for (const [k, pane] of Object.entries(panes)) pane.hidden = k !== this.detailTab;
-    body.append(el('div', { class: 'dt' }, portrait, el('div', { class: 'dt-info' }, head, tabs, table, growth, profileSec)));
+    body.append(el('div', { class: 'dt' }, portrait, el('div', { class: 'dt-info' }, head, tabs, table, skillPane, skinPane, profilePane, affPane)));
     // --- action bar
     if (e.owned) {
       body.append(el('div', { class: 'dt-actions' },

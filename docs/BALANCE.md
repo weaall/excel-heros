@@ -351,3 +351,9 @@
 - 사용자 원칙: 선글라스 같은 소품은 괜찮지만 **얼굴이 음영에 묻히거나 작게 보이는 일러는 매력이 없다**. 61장을 컨택트 시트로 전수 점검해 18장(barista, courier, pivot, cto, coo, ceo, legal_yoon, cmo, founder, union_chief, security_yang, secretary_yun, logistics_bae, cdo, cco, chief_of_staff, chairwoman, finance_manager)을 재생성.
 - 프롬프트 공통 규칙(`scripts/genCardsHF.mjs`): `cowboy shot` → `medium shot, upper body, waist up, face focus, soft even front lighting, bright face`. 네거티브에 `shadowed face, low key lighting, full body, wide shot, distant, small face` 추가. S 등급 기본 배경의 `dramatic lighting` 제거, 야경/역광 배경(cto, union_chief, security_yang, chairman)을 밝은 배경으로 교체.
 - 검수 방법: `IDS=a,b node scripts/artSheet.mjs out.png 8 180`으로 시트를 만들고 눈으로 확인 → 문제 카드만 `SEED=<n> --force`로 재생성 → `python scripts/thumbs.py --force` → `--manifest` → `extractPalettes`.
+
+## 6-40. 58차: 상세 창 5탭 분리 — 정보 · 스킬 · 스킨 · 프로필 · 호감도
+
+- 사용자 요청: 정보/스킬·스킨/프로필·호감도 3탭을 각각 따로 두고 레이아웃을 강화. 모든 탭을 Excel 표(`dt-table`, 머리글 열 + 값 + 컨트롤 + 힌트) 형식으로 통일.
+- **정보**: 기존 스탯 표 + 특성 행. **스킬**: 스킬명(계열/고유 명칭) · 효과 · 위력(기본 × 스킬 Lv × ★4 × 각성 분해) · 대기 시간 · 지속 · 스킬 Lv(강화 버튼) · ★ 성장 사다리(메인은 승진 효과). **스킨**: 장착 중(기본으로 되돌리기) · 해금 n/2와 조건 · 적용 범위 + 6× 도트 미리보기 그리드(96×168). **프로필**: 인사 기록 카드(이름/별명/부서+부문 특성/직무/소개/한마디). **호감도**: 하트·Lv·경험치 바·보너스·간식 행 + 해금 사다리(Lv 3 비화 · Lv 5 개인 메시지 · Lv 10 절친/사복/핑크 프레임).
+- 탭 버튼에 배지: 스킬 `Lv n`, 스킨 `장착 스킨명`, 호감도 `♥n`. 저장된 탭 키 `growth`는 `skill`로 이관.
