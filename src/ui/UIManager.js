@@ -1055,7 +1055,7 @@ export class UIManager {
     card.hidden = !user; gsi.hidden = !!user;
     if (user) { $('#account-pic').src = user.picture ?? ''; $('#account-title').textContent = user.name; $('#account-sub').textContent = user.email ?? 'Google 계정'; }
     else if (!c.configured() || !a.base() || !globalThis.EXCEL_HEROES_CLOUD?.googleClientId) gsi.classList.add('unconfigured');
-    else { gsi.classList.remove('unconfigured'); if (!gsi.childElementCount && !document.querySelector('#backstage')?.hidden) a.renderButton(gsi); }
+    else { gsi.classList.remove('unconfigured'); if (!gsi.dataset.rendered && !document.querySelector('#backstage')?.hidden) { gsi.dataset.rendered = '1'; a.renderButton(gsi); } }
     box.className = `small ${c.status === 'ok' ? 'ok' : c.status === 'error' || c.status === 'rejected' || a.error ? 'error' : 'muted'}`;
     if (!c.configured()) box.textContent = '서버가 설정되지 않아 이 브라우저에만 저장됩니다.';
     else if (!user) box.textContent = a.error ?? '로그인하면 진행 상황이 계정에 저장되어 어느 기기에서든 이어서 할 수 있습니다.';

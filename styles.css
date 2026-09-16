@@ -552,3 +552,5 @@ body.stealth #roster-table { display: table; }
 .qs-block .xl-table { margin: 0; } .qs-block .dispatch-box, .qs-block .ad-box { margin: 8px; } .qs-note { padding: 0 10px 8px; margin: 0; }
 .sheet-head .spacer { flex: 1; }
 #btn-claim-all:disabled { opacity: .55; } #btn-claim-all b { background: #fff; color: var(--xl-green); border-radius: 9px; padding: 0 6px; margin-left: 4px; }
+
+.account-card[hidden], .gsi-button[hidden] { display: none; }
