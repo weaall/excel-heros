@@ -35,6 +35,7 @@ export function createInitialState(now = Date.now()) {
     recruit: { points: 0 },
     affection: {},        // hero id -> { xp, gift: 'YYYY-MM-DD' of the last 간식 }
     skins: {},            // hero id -> { owned: [skinId], active: skinId | null }
+    dispatch: { heroIds: [], startedAt: 0, endsAt: 0, date: null, count: 0 }, // 출장 in progress + today's count
     storyRead: {},        // episode id -> true (first read rewarded) // 모집 포인트: +1 per row pulled, spend SPARK_COST on the current pickup card
     team: { coffee: 0, payroll: 0, chairs: 0 },
     settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true, safeAdvance: true, cloud: { url: '', name: '' } },
@@ -61,6 +62,7 @@ export function migrate(raw) {
   s.recruit = { ...fresh.recruit, ...(raw.recruit ?? {}) };
   s.affection = { ...(raw.affection ?? {}) };
   s.skins = { ...(raw.skins ?? {}) };
+  s.dispatch = { ...fresh.dispatch, ...(raw.dispatch ?? {}) }; s.dispatch.heroIds = (s.dispatch.heroIds ?? []).filter((id) => s.heroes[id]?.owned);
   s.storyRead = { ...(raw.storyRead ?? {}) };
   s.team = { ...fresh.team, ...(raw.team ?? {}) };
   s.settings = { ...fresh.settings, ...(raw.settings ?? {}) };

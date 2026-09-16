@@ -256,6 +256,11 @@
           <span id="allclear-text" class="muted small"></span>
           <button id="btn-allclear" class="xl-btn">전체 완료 보너스</button>
         </div>
+        <h3 class="section-title">출장 <span class="muted">(대기 사원 최대 3명 · 4시간 · 하루 2회 · 등급별 보석 + 강화 카드 + 호감도)</span></h3>
+        <div class="dispatch-box" id="dispatch-box">
+          <div class="dispatch-pick" id="dispatch-pick"></div>
+          <div class="dispatch-row"><span id="dispatch-text" class="small"></span><button id="btn-dispatch" class="xl-btn primary">출장 보내기</button><button id="btn-dispatch-claim" class="xl-btn" hidden>복귀 · 보상 받기</button></div>
+        </div>
         <h3 class="section-title">야근 모드 <span class="muted">(1일 1회 · 60초 · 최고 스테이지 +3 난이도)</span></h3>
         <div class="ad-box overtime-box">
           <span id="overtime-text" class="small">처치 1건마다 보석 2, 엘리트는 6 (최대 400) · 스테이지 진행은 바뀌지 않음</span>
@@ -291,6 +296,16 @@
             <table class="xl-table compact" id="story-log"><thead><tr><th class="num">시간</th><th>보낸 사람</th><th>메시지</th></tr></thead><tbody><tr><td colspan="3" class="muted small">왼쫀 목록에서 에피소드를 선택하세요.</td></tr></tbody></table>
           </div>
         </div>
+      </section>
+
+      <!-- Sheet: 사원_앨범 (illustration gallery) ------------------------------->
+      <section class="sheet" id="sheet-album">
+        <div class="sheet-head">
+          <span>보유 <b id="album-count">0 / 0</b></span>
+          <label class="small"><input type="checkbox" id="album-owned"> 보유 카드만</label>
+          <span class="muted">일러스트를 눌러 원본 크기로 · 장착한 스킨 일러가 있으면 그 버전이 표시됩니다</span>
+        </div>
+        <div class="album-grid" id="album-grid"></div>
       </section>
 
       <!-- Sheet5: 오류_도감 (bestiary) ------------------------------------------>
@@ -432,6 +447,7 @@
     <button class="sheet-tab" data-sheet="gacha">데이터_가져오기</button>
     <button class="sheet-tab" data-sheet="quests">일일_업무</button>
     <button class="sheet-tab" data-sheet="story">사내_메신저</button>
+    <button class="sheet-tab" data-sheet="album">사원_앨범</button>
     <button class="sheet-tab" data-sheet="codex">오류_도감</button>
     <button class="sheet-tab" data-sheet="chart">통계_차트</button>
     <span class="sheet-add" title="새 시트">⊕</span>
@@ -458,6 +474,7 @@
     <div class="dialog-actions" id="modal-actions"><button id="modal-ok" class="xl-btn primary">확인</button></div>
   </div>
 </div>
+<div id="card-memo" class="card-memo" hidden><img alt=""><div class="memo-body"><b></b><span class="memo-dept"></span><em></em></div></div>
 <div id="lightbox" class="lightbox" hidden><img alt=""><div class="lb-caption"></div></div>
 <div id="ad-overlay" class="ad-overlay" hidden>
   <div class="ad-card">

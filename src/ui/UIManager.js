@@ -147,6 +147,10 @@ export class UIManager {
     $('#account-btn').addEventListener('click', () => this.openBackstage('options'));
     this.game.on('cloud', () => this.#refreshCloud()); this.game.on('board', () => this.#refreshBoard());
     this.game.on('affection', ({ id, level }) => { if (level === BALANCE.AFFECTION.unlockSecret || level === BALANCE.AFFECTION.unlockLine || level === BALANCE.AFFECTION.maxLevel) this.toast(`♥ ${this.game.heroDef(id).name} 호감도 Lv ${level}${level === BALANCE.AFFECTION.unlockLine ? ' · 개인 메시지가 사내 메신저에 도착' : level === BALANCE.AFFECTION.maxLevel ? ' · MAX' : ' · 사무실 비화 해금'}`); this.#refreshDetail(); });
+    this.game.on('dispatch', () => this.#refreshDispatch()); this.game.on('skin', () => { if (document.querySelector('#sheet-album.active')) this.#buildAlbum(); });
+    $('#btn-dispatch').addEventListener('click', () => { const ids = [...document.querySelectorAll('#dispatch-pick input:checked')].map((i) => i.value); if (!ids.length) { this.toast('출장 보낼 대기 사원을 선택하세요 (파티 밖 카드)'); return; } if (this.game.startDispatch(ids)) this.toast(`출장 출발 · ${BALANCE.DISPATCH.hours}시간 후 복귀`); else this.toast('출장을 시작할 수 없습니다 (하루 2회, 진행 중이면 대기)'); });
+    $('#btn-dispatch-claim').addEventListener('click', () => { const r = this.game.claimDispatch(); if (r) this.toast(`출장 복귀: 보석 +${r.gems} · 강화 카드 +${r.cards}`); });
+    $('#album-owned').addEventListener('change', () => this.#buildAlbum());
     this.game.on('story', () => { if (document.querySelector('#sheet-story.active')) this.#buildStory(this.storyId, { listOnly: true }); });
     this.game.on('auth', (user) => { this.#refreshCloud(); if (user) this.#afterLogin(user); });
     Ads.setupAds();
@@ -226,6 +230,7 @@ export class UIManager {
       this.acc = 0;
       this.#refreshStatus();
       this.#refreshHeroTable(true);
+      if (document.querySelector('#sheet-quests.active') && this.game.dispatchInfo().active) this.#refreshDispatch(true);
       this.#refreshTeamTable(true);
       if (this.game.state.settings.excel && this.stealthTimer >= 0.5) { this.stealthTimer = 0; this.#refreshStealth(); }
       this.#refreshFormulaSheetValues();
@@ -242,6 +247,7 @@ export class UIManager {
     if (name === 'quests') this.#refreshQuests();
     if (name === 'codex') this.#buildCodex();
     if (name === 'story') this.#buildStory();
+    if (name === 'album') this.#buildAlbum();
   }
   /** Ribbon tabs switch the ribbon contents (like Excel) and jump to the matching sheet; 파일 opens the backstage. */
   showRibbon(name) {
@@ -552,7 +558,7 @@ export class UIManager {
         title: v.isMain ? `${v.def.title} · Lv ${e.level}` : (e.owned ? `${stars(e.star)} · Lv ${e.level}` : ''),
         sub: e.enhance ? `+${e.enhance}` : '', awakened: !!e.awakened,
       });
-      const wrap = el('div', { class: `card ${v.inParty ? 'in-party' : ''} ${e.owned ? '' : 'locked'} ${e.owned && (v.def.grade === 'S' || v.def.grade === 'A' || e.awakened) ? 'holo' : ''}`, title: `${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id) }, c);
+      const wrap = el('div', { class: `card ${v.inParty ? 'in-party' : ''} ${e.owned ? '' : 'locked'} ${e.owned && (v.def.grade === 'S' || v.def.grade === 'A' || e.awakened) ? 'holo' : ''}`, title: `${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id), onmouseenter: (ev) => this.#showCardMemo(id, ev), onmousemove: (ev) => this.#moveCardMemo(ev), onmouseleave: () => this.#hideCardMemo() }, c);
       if (e.owned && (v.def.grade === 'S' || v.def.grade === 'A' || e.awakened)) wrap.append(el('span', { class: 'holo-sheen' }));
       if (this.game.isFavorite(id)) wrap.append(el('span', { class: 'card-fav', title: '즐겨찾기' }, '♥'));
       if (v.inParty) wrap.append(el('span', { class: 'card-badge' }, '배치'));
@@ -919,6 +925,7 @@ export class UIManager {
         el('td', { class: 'small' }, rewardText(r)),
         el('td', { class: 'act' }, btn(claimed ? '완료' : '수령', () => { const rr = g.claimQuest(q.id); if (rr) this.toast(`보상: ${rewardText(rr)}`); }, done && !claimed ? 'primary' : '', !done || claimed))));
     }
+    this.#refreshDispatch();
     const ob = $('#btn-overtime'); if (ob) { ob.disabled = !this.game.canOvertime(); ob.textContent = this.game.overtime ? '야근 중…' : s.daily.overtimeDone ? '오늘 야근 완료 ✓' : '야근 시작'; const ot = $('#overtime-text'); if (s.daily.overtimeDone) ot.textContent = `오늘의 야근을 마쳤습니다 · 개인 최고 ${s.stats.overtimeBest ?? 0} 처치 · 누적 ${s.stats.overtimes ?? 0}회`; }
     const all = Quests.allQuestsClaimed(s);
     $('#btn-allclear').disabled = !all || s.daily.allClearClaimed;
@@ -928,6 +935,53 @@ export class UIManager {
     $('#ad-left').textContent = `오늘 남은 광고 ${left} / ${BALANCE.AD.perDay}회`;
     $('#btn-ad-instant').disabled = left <= 0;
   }
+
+  /** 출장 box: bench pick list (checkbox chips) + status/timer + start/claim buttons. */
+  #refreshDispatch(light = false) {
+    const box = $('#dispatch-pick'); if (!box) return; const g = this.game; const info = g.dispatchInfo(); const D = BALANCE.DISPATCH;
+    const fmtT = (sec) => `${Math.floor(sec / 3600)}:${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+    const txt = $('#dispatch-text');
+    if (info.active) txt.textContent = info.done ? `복귀 완료: ${info.heroIds.map((id) => g.heroDef(id).name).join(', ')} → 보석 +${info.reward.gems} · 카드 +${info.reward.cards}` : `출장 중: ${info.heroIds.map((id) => g.heroDef(id).name).join(', ')} · 남은 시간 ${fmtT(info.remaining)} · 예정 보상 보석 +${info.reward.gems}, 카드 +${info.reward.cards}`;
+    else txt.textContent = info.bench.length ? `오늘 남은 출장 ${info.left} / ${D.maxPerDay} · 대기 사원 ${info.bench.length}명 중 최대 ${D.slots}명 선택 (등급이 높을수록 보석 ↑)` : '파티 밖에 대기 중인 사원이 없습니다. 카드를 더 모으거나 파티에서 빼 두세요.';
+    $('#btn-dispatch').hidden = info.active; $('#btn-dispatch').disabled = !info.canStart;
+    $('#btn-dispatch-claim').hidden = !info.active; $('#btn-dispatch-claim').disabled = !info.done; $('#btn-dispatch-claim').textContent = info.done ? '복귀 · 보상 받기' : `복귀까지 ${fmtT(info.remaining)}`;
+    if (light) return;
+    box.innerHTML = '';
+    const ids = info.active ? info.heroIds : info.bench;
+    for (const id of ids) {
+      const v = g.heroView(id); const away = info.active;
+      const cb = el('input', { type: 'checkbox', value: id }); cb.checked = away; cb.disabled = away;
+      const lab = el('label', { class: away ? 'away' : '', style: `--gc:${v.grade.color}` }, cb, el('img', { src: heroIconDataURL(v.def), alt: '' }), el('span', {}, `${v.def.name} `, el('b', { style: `color:${v.grade.color}` }, v.def.grade)), away ? el('small', { class: 'muted' }, ' 출장 중') : null);
+      cb.addEventListener('change', () => { const on = [...box.querySelectorAll('input:checked')]; if (on.length > D.slots) { cb.checked = false; this.toast(`최대 ${D.slots}명`); } lab.classList.toggle('on', cb.checked); const picked = [...box.querySelectorAll('input:checked')].map((i) => i.value); if (picked.length && !info.active) { const p = info.preview(picked); txt.textContent = `선택 ${picked.length}명 → 보석 +${p.gems} · 카드 +${p.cards} · 각 호감도 +${D.affectionXp} (${D.hours}시간)`; } });
+      box.append(lab);
+    }
+  }
+
+  /** 사원_앨범: illustration gallery (owned in colour, unowned greyed), equipped skin art when present. */
+  #buildAlbum() {
+    const grid = $('#album-grid'); if (!grid) return; grid.innerHTML = ''; const g = this.game; const ownedOnly = $('#album-owned').checked;
+    const ids = [MAIN_ID, ...HEROES.map((h) => h.id)]; let owned = 0, shown = 0;
+    for (const id of ids) {
+      const v = g.heroView(id); const e = v.entry; if (e.owned) owned++;
+      if (ownedOnly && !e.owned) continue;
+      const url = cardArtUrlFor(v.def) ?? cardArtUrl(v.isMain ? v.def.id : id); if (!url) continue; shown++;
+      const p = profileOf(v.isMain ? 'main' : id);
+      grid.append(el('div', { class: `album-item ${e.owned ? '' : 'locked'}`, style: `--gc:${v.grade.color}`, title: p ? `${p.nick} · "${p.line}"` : v.def.name, onclick: () => { if (e.owned) this.openLightbox(url, `${v.def.name} · ${p?.nick ?? ''}${v.def.skin ? ` · ${v.def.skin.name}` : ''}`); else this.openDetail(id); } },
+        el('img', { src: url, alt: v.def.name, loading: 'lazy' }), v.def.skin ? el('span', { class: 'skin-tag' }, v.def.skin.name) : null,
+        el('div', { class: 'cap' }, el('span', {}, v.def.name), el('b', {}, v.def.grade))));
+    }
+    $('#album-count').textContent = `${owned} / ${ids.length}${ownedOnly ? ` · 표시 ${shown}` : ''}`;
+  }
+
+  /** Excel comment-style memo that follows the pointer over roster cards: art + nick + line. */
+  #showCardMemo(id, ev) {
+    const memo = $('#card-memo'); if (!memo) return; const v = this.game.heroView(id); const p = profileOf(v.isMain ? 'main' : id);
+    const url = cardArtUrlFor(v.def) ?? cardArtUrl(v.isMain ? v.def.id : id); if (!url || !p) { memo.hidden = true; return; }
+    $('img', memo).src = url; $('b', memo).textContent = `${v.def.name} · ${p.nick}`; $('.memo-dept', memo).textContent = `${p.dept} · ${v.grade.name}급 ${v.grade.label}`; $('em', memo).textContent = `"${p.line}"`;
+    memo.hidden = false; this.#moveCardMemo(ev);
+  }
+  #moveCardMemo(ev) { const memo = $('#card-memo'); if (memo.hidden) return; const x = Math.min(window.innerWidth - 272, ev.clientX + 18), y = Math.min(window.innerHeight - 170, ev.clientY + 12); memo.style.left = `${x}px`; memo.style.top = `${y}px`; }
+  #hideCardMemo() { const memo = $('#card-memo'); if (memo) memo.hidden = true; }
 
   #refreshMilestones() {
     const s = this.game.state; const tbody = $('#ms-table tbody'); if (!tbody) return; tbody.innerHTML = '';

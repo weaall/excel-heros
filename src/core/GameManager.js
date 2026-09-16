@@ -74,7 +74,7 @@ export class GameManager extends Emitter {
 
   /** 파티 자동 편성: the strongest owned heroes by ATK, guaranteeing one tank and one healer when available. */
   autoParty() {
-    const owned = Object.keys(this.state.heroes).filter((id) => this.state.heroes[id].owned && !this.isMain(id))
+    const owned = Object.keys(this.state.heroes).filter((id) => this.state.heroes[id].owned && !this.isMain(id) && !this.isDispatched(id))
       .map((id) => this.heroView(id)).sort((a, b) => b.atk - a.atk);
     const slots = BALANCE.PARTY_SIZE - 1;
     const pick = [];
@@ -153,6 +153,40 @@ export class GameManager extends Emitter {
     st.active = skinId || null;
     this.entities.rebuildParty(); this.emit('skin', { id, skinId: st.active }); this.emit('roster'); this.emit('party'); this.persist();
     return true;
+  }
+  // ---------------------------------------------------------------- 출장 --
+  isDispatched(id) { return (this.state.dispatch?.heroIds ?? []).includes(id); }
+  dispatchInfo(now = Date.now()) {
+    const D = BALANCE.DISPATCH; const d = this.state.dispatch; const today = localDateKey(now);
+    const count = d.date === today ? d.count : 0;
+    const active = d.heroIds.length > 0; const remaining = active ? Math.max(0, Math.ceil((d.endsAt - now) / 1000)) : 0;
+    const bench = Object.keys(this.state.heroes).filter((id) => this.state.heroes[id].owned && !this.state.party.includes(id) && !this.isMain(id));
+    const phase = Math.floor((Math.max(1, this.state.maxStage) - 1) / BALANCE.BOSS_EVERY) + 1;
+    const preview = (ids) => ({ gems: D.gemsBase + ids.reduce((a, id) => a + (D.gemsPerGrade[this.heroDef(id).grade] ?? 0), 0), cards: phase * D.cardsPerPhase });
+    return { active, heroIds: d.heroIds, remaining, done: active && remaining === 0, count, left: Math.max(0, D.maxPerDay - count), bench, canStart: !active && count < D.maxPerDay && bench.length > 0, hours: D.hours, slots: D.slots, preview, reward: active ? preview(d.heroIds) : null };
+  }
+  /** 출장 시작: up to DISPATCH.slots owned bench heroes leave for DISPATCH.hours; they cannot join the party meanwhile. */
+  startDispatch(ids, now = Date.now()) {
+    const info = this.dispatchInfo(now); const D = BALANCE.DISPATCH;
+    const pick = [...new Set(ids)].filter((id) => info.bench.includes(id)).slice(0, D.slots);
+    if (!info.canStart || !pick.length) return false;
+    const today = localDateKey(now);
+    this.state.dispatch = { heroIds: pick, startedAt: now, endsAt: now + D.hours * 3600000, date: today, count: (this.state.dispatch.date === today ? this.state.dispatch.count : 0) + 1 };
+    this.log(`출장 시작: ${pick.map((id) => this.heroDef(id).name).join(', ')} (${D.hours}시간)`, 'info');
+    this.persist(); this.emit('dispatch'); this.emit('roster');
+    return true;
+  }
+  /** Collect a finished 출장: gems by grade, cards by phase, affection for the travellers. */
+  claimDispatch(now = Date.now()) {
+    const info = this.dispatchInfo(now); if (!info.done) return null;
+    const r = info.reward; const ids = [...this.state.dispatch.heroIds];
+    this.state.gems += r.gems; this.state.cards += r.cards;
+    for (const id of ids) this.#addAffection(id, BALANCE.DISPATCH.affectionXp);
+    this.state.stats.dispatches = (this.state.stats.dispatches ?? 0) + 1;
+    this.state.dispatch = { ...this.state.dispatch, heroIds: [], startedAt: 0, endsAt: 0 };
+    this.log(`출장 복귀: ${ids.map((id) => this.heroDef(id).name).join(', ')} → 보석 +${r.gems}, 강화 카드 +${r.cards}`, 'stage');
+    this.persist(); this.emit('gems'); this.emit('cards'); this.emit('dispatch'); this.emit('roster');
+    return { ...r, heroIds: ids };
   }
   // ------------------------------------------------------------ 스킬 강화 --
   skillLevelInfo(id) {
@@ -420,6 +454,7 @@ export class GameManager extends Emitter {
       p.splice(p.indexOf(id), 1);
     } else {
       if (!this.state.heroes[id]?.owned) return false;
+      if (this.isDispatched(id)) { this.toast('출장 중인 사원은 파티에 넣을 수 없습니다'); return false; }
       if (p.length >= BALANCE.PARTY_SIZE) { this.toast('파티가 가득 찼습니다 (5/5)'); return false; }
       p.push(id);
     }
