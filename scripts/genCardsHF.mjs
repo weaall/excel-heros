@@ -4,9 +4,11 @@
 //   node scripts/genCardsHF.mjs ceo coo hr_jung      # given ids
 //   node scripts/genCardsHF.mjs                      # every hero/job without a png yet
 //   node scripts/genCardsHF.mjs --force ceo          # regenerate
+//   node scripts/genCardsHF.mjs --skin [ceo …]       # skin illustrations <id>__casual.png / <id>__formal.png (heroes only unless ids given)
 //   SEED=3 SPACE=asahina2k-animagine-xl-4-0 node scripts/genCardsHF.mjs ...
 import fs from 'node:fs';
 import { HEROES, MAIN_JOBS } from '../src/data/heroes.js';
+import { SKINS } from '../src/data/skins.js';
 import { PROFILES } from '../src/data/profiles.js';
 
 const SPACE = process.env.SPACE ?? 'asahina2k-animagine-xl-4-0';
@@ -62,17 +64,18 @@ function colorName(hex) {
   return (l > 0.72 ? 'light ' : l < 0.3 ? 'dark ' : '') + name;
 }
 /** Character description only (who / hair / accessories / outfit / role) — shared by the card and pixel-sprite prompts. */
-export function describe(def, profileId) {
+export function describe(def, profileId, outfitOverride = null) {
   const p = PROFILES[profileId] ?? {}; const look = def.look ?? {}; const pal = def.palette ?? {};
   const who = p.gender === 'F' ? '1girl, solo' : '1boy, solo, male focus';
   const hair = look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair, ${HAIR[look.hair] ?? 'short hair'}`;
-  const outfit = OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${GRADE[def.grade]}` : `${GRADE[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
-  const bits = OUTFIT_BY_ID[def.id] ? '' : [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
+  const outfit = outfitOverride ? `${outfitOverride}, ${GRADE[def.grade]}` : OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${GRADE[def.grade]}` : `${GRADE[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
+  const bits = outfitOverride || OUTFIT_BY_ID[def.id] ? '' : [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
   return `${who}, ${hair}, ${bits ? bits + ', ' : ''}${outfit}, ${ROLE[def.role]}`;
 }
-export function prompt(def, profileId) {
-  const bg = BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
-  return `${describe(def, profileId)}, looking at viewer, face fully visible, eyes visible, head in frame, medium shot, upper body, waist up, face focus, soft even front lighting, bright face, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
+const SKIN_BG = { casual: 'city street at dusk, cafe lights, after work', formal: 'company anniversary hall, banners, warm chandelier light' };
+export function prompt(def, profileId, skin = null) {
+  const bg = skin ? SKIN_BG[skin.id] ?? BG_BY_GRADE[def.grade] : BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
+  return `${describe(def, profileId, skin?.prompt ?? null)}, looking at viewer, face fully visible, eyes visible, head in frame, medium shot, upper body, waist up, face focus, soft even front lighting, bright face, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
 }
 
 // Optional Hugging Face token (HF_TOKEN env or a .hf_token file next to package.json, git-ignored): a logged-in
@@ -137,7 +140,8 @@ export async function callGenerate(text, seed, { width = 832, height = 1216, sty
 /** Rebuild assets/cards/manifest.json from the files on disk: png (generated art) > svg (vector placeholder). */
 export function rebuildManifest() {
   const outDir = new URL('../assets/cards/', import.meta.url); const cards = {};
-  for (const id of [...HEROES.map((h) => h.id), ...Object.values(MAIN_JOBS).map((j) => j.id)]) {
+  const baseIds = [...HEROES.map((h) => h.id), ...Object.values(MAIN_JOBS).map((j) => j.id)];
+  for (const id of [...baseIds, ...baseIds.flatMap((b) => (SKINS[b] ?? []).map((sk) => `${b}__${sk.id}`))]) {
     if (fs.existsSync(new URL(`${id}.png`, outDir))) cards[id] = fs.existsSync(new URL(`thumb/${id}.webp`, outDir)) ? { file: `${id}.png`, thumb: `thumb/${id}.webp` } : `${id}.png`; // thumb: drawn on cards; file: lightbox / splash
     else if (fs.existsSync(new URL(`${id}.svg`, outDir))) cards[id] = `${id}.svg`;
   }
@@ -152,14 +156,18 @@ if (isMain && process.argv.includes('--manifest')) {
 } else if (isMain) {
   const args = process.argv.slice(2); const force = args.includes('--force'); const ids = args.filter((a) => !a.startsWith('--'));
   const seed = Number(process.env.SEED ?? 1);
-  const defs = [...HEROES.map((h) => [h.id, h, h.id]), ...Object.values(MAIN_JOBS).map((j) => [j.id, j, 'main'])].filter(([id]) => !ids.length || ids.includes(id));
+  const skinMode = args.includes('--skin');
+  const baseDefs = [...HEROES.map((h) => [h.id, h, h.id]), ...Object.values(MAIN_JOBS).map((j) => [j.id, j, 'main'])];
+  const defs = skinMode
+    ? baseDefs.filter(([id, , pid]) => ids.length ? ids.includes(id) : pid !== 'main').flatMap(([id, def, pid]) => (SKINS[id] ?? []).map((sk) => [`${id}__${sk.id}`, def, pid, sk])) // heroes only by default (main jobs: pass ids)
+    : baseDefs.filter(([id]) => !ids.length || ids.includes(id));
   const outDir = new URL('../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', outDir);
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   let ok = 0;
-  for (const [id, def, pid] of defs) {
+  for (const [id, def, pid, skin = null] of defs) {
     const file = `${id}.png`; const target = new URL(file, outDir);
     if (!force && fs.existsSync(target)) { console.log(`skip ${id}`); ok++; continue; } // (manifest entries may be { file, thumb } objects)
-    const text = prompt(def, pid);
+    const text = prompt(def, pid, skin);
     // ZeroGPU quota: the Space answers "You have exceeded your free ZeroGPU quota (90s requested vs. Ns left). Try again in H:MM:SS" — wait that long.
     // Each image needs 90 s of quota; the account quota and the anonymous per-IP quota (HF_ANON=1) are separate pools.
     const maxAttempts = Number(process.env.MAX_ATTEMPTS ?? 12), quotaWait = Number(process.env.QUOTA_WAIT_MS ?? 240000);
