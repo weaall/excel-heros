@@ -781,6 +781,7 @@ export class GameManager extends Emitter {
 
   // ----------------------------------------------------------------- loop --
   tick(dt, now = Date.now()) {
+    if (this.paused) return; // login gate: nothing moves until the account is known
     this.state.stats.playSeconds += dt;
     if (this.overtime) { this.overtime.t -= dt; if (this.overtime.t <= 0) this.#endOvertime(); }
     this.entities.update(dt);

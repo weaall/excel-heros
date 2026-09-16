@@ -24,23 +24,29 @@ const ui = new UIManager(game, renderer);
 ui.sound = new SoundManager(game);
 document.addEventListener('pointerdown', () => ui.sound.unlock(), { once: true });
 
-if (loaded) {
-  const report = SaveManager.computeOffline(loaded, Date.now(), (stage) => game.goldPerSecAt(stage));
+// --- Account first -----------------------------------------------------------
+// With a cloud server configured, the game does not start until the player signs in with Google; the account copy
+// is the source of truth and this browser's save is only an offline cache.
+const devGuest = location.hostname === 'localhost' && new URLSearchParams(location.search).has('guest'); // local testing only
+const needGate = !devGuest && game.cloud.configured() && !!globalThis.EXCEL_HEROES_CLOUD?.googleClientId && !game.cloud.auth.loggedIn();
+if (needGate) await ui.showLoginGate();
+let cloudLoaded = false;
+if (game.cloud.enabled()) {
+  try {
+    const r = await game.cloud.pull(); // server copy wins when it is newer or further along
+    const local = game.state; const srv = r?.save;
+    if (srv && ((r.updatedAt ?? 0) > (local.lastSaved ?? 0) + 5000 || (srv.stats?.playSeconds ?? 0) > local.stats.playSeconds + 30)) { game.loadCloudSave(srv); cloudLoaded = true; }
+  } catch { /* offline or server down: keep local */ }
+}
+const startState = game.state;
+if (loaded || cloudLoaded) {
+  const report = SaveManager.computeOffline(startState, Date.now(), (stage) => game.goldPerSecAt(stage));
   if (report && report.gold > 0) { game.applyOffline(report); ui.showOffline(report); }
 } else {
   game.log('새 통합 문서가 생성되었습니다. 입사를 환영합니다!', 'info');
   ui.showWelcome();
 }
 game.persist();
-// Logged-in players: the account is the source of truth. If the server copy is newer or further along than this
-// browser's save, load it (the browser copy stays as an offline cache). Failures fall back to local silently.
-if (game.cloud.enabled()) {
-  try {
-    const r = await game.cloud.pull(); // server copy wins
-    const local = game.state; const srv = r?.save;
-    if (srv && ((r.updatedAt ?? 0) > (local.lastSaved ?? 0) + 5000 || (srv.stats?.playSeconds ?? 0) > local.stats.playSeconds + 30)) { game.loadCloudSave(srv); ui.toast('계정 저장본을 불러왔습니다'); }
-  } catch { /* offline or server down: keep local */ }
-}
 
 // --- Simulation loop -------------------------------------------------------
 // setInterval keeps ticking (≥1 Hz) in throttled/background tabs; the elapsed

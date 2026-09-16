@@ -96,7 +96,7 @@ function fakeDB() {
 const req = (path, init = {}, token = null) => new Request(`https://api.test${path}`, { ...init, headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}), ...(init.headers ?? {}) } });
 
 test('worker: google login → session, me/save/board/logout, plausibility rejection, auth failures', async () => {
-  const env = { DB: fakeDB(), ALLOW_ORIGIN: 'https://weaall.github.io', GOOGLE_CLIENT_ID: CLIENT_ID, fetchFn: tokeninfo(goodClaims()) };
+  const env = { DB: fakeDB(), ALLOW_ORIGIN: 'https://weaall.github.io', GOOGLE_CLIENT_ID: CLIENT_ID, SAVE_MIN_GAP_MS: 0, fetchFn: tokeninfo(goodClaims()) };
   const ping = await (await worker.fetch(req('/v1/ping'), env)).json(); assert.equal(ping.ok, true); assert.equal(ping.google, true);
   assert.equal((await worker.fetch(req('/v1/save'), env)).status, 401, 'no session → 401');
   assert.equal((await worker.fetch(req('/v1/save', {}, 'f'.repeat(64)), env)).status, 401, 'unknown session → 401');
@@ -178,7 +178,7 @@ test('delta plausibility: normal progress passes; gem spikes, rollbacks and kill
 });
 
 test('worker: a second PUT with an implausible jump is rejected (422) while honest progress is stored', async () => {
-  const env = { DB: fakeDB(), ALLOW_ORIGIN: '*', GOOGLE_CLIENT_ID: CLIENT_ID, fetchFn: tokeninfo(goodClaims()) };
+  const env = { DB: fakeDB(), ALLOW_ORIGIN: '*', GOOGLE_CLIENT_ID: CLIENT_ID, SAVE_MIN_GAP_MS: 0, fetchFn: tokeninfo(goodClaims()) };
   const { token } = await (await worker.fetch(req('/v1/auth/google', { method: 'POST', body: JSON.stringify({ credential: 'x'.repeat(40) }) }), env)).json();
   const now = Date.now(); const save = legitSave(now);
   assert.equal((await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save }) }, token), env)).status, 200);

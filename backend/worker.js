@@ -48,6 +48,9 @@ async function auth(req, env, origin) {
   return { id: row.id, name: row.name, picture: row.picture, token: m[1] };
 }
 
+/** Best-effort per-isolate rate limit: at most one PUT /v1/save per user per 20 s (the client saves every 5 min). */
+const lastPut = new Map();
+function rateLimit(id, now, minGapMs = 20000) { const t = lastPut.get(id) ?? 0; if (now - t < minGapMs) return false; lastPut.set(id, now); if (lastPut.size > 5000) lastPut.clear(); return true; }
 const userView = (u) => ({ id: u.id, name: u.name, picture: u.picture, email: u.email ?? null });
 
 export default {
@@ -104,7 +107,9 @@ export default {
         const len = Number(req.headers.get('content-length') ?? 0); if (len > MAX_SAVE_BYTES * 1.2) return json({ error: 'payload too large' }, 413, origin);
         const a = await auth(req, env, origin); if (a instanceof Response) return a;
         const body = await req.json().catch(() => null); if (!body?.save) return json({ error: 'body.save required' }, 400, origin);
-        const now = Date.now(); const check = checkSave(body.save, now);
+        const now = Date.now();
+        if (!rateLimit(a.id, now, Number(env.SAVE_MIN_GAP_MS ?? 20000))) return json({ error: 'too many saves; try again in a moment' }, 429, origin);
+        const check = checkSave(body.save, now);
         if (!check.ok) return json({ error: 'implausible save', check }, 422, origin);
         const prevRow = await env.DB.prepare('SELECT save, updated_at FROM saves WHERE id = ?').bind(a.id).first();
         const delta = checkDelta(prevRow ? JSON.parse(prevRow.save) : null, body.save, prevRow?.updated_at ?? now, now, body.force === true);

@@ -152,9 +152,9 @@ export class UIManager {
     $('#btn-dispatch-claim').addEventListener('click', () => { const r = this.game.claimDispatch(); if (r) this.toast(`출장 복귀: 보석 +${r.gems} · 강화 카드 +${r.cards}`); });
     $('#album-owned').addEventListener('change', () => this.#buildAlbum());
     this.game.on('story', () => { if (document.querySelector('#sheet-story.active')) this.#buildStory(this.storyId, { listOnly: true }); });
-    this.game.on('auth', (user) => { this.#refreshCloud(); if (user) this.#afterLogin(user); });
+    this.game.on('auth', (user) => { this.#refreshCloud(); if (user) this.#afterLogin(user); else if (this.game.cloud.configured() && globalThis.EXCEL_HEROES_CLOUD?.googleClientId) this.showLoginGate(); });
     Ads.setupAds();
-    $('#rank-refresh').addEventListener('click', () => this.#refreshBoard(true));
+    $('#rank-refresh').addEventListener('click', () => { this.game.cloud.board = null; this.#refreshBoard(true); });
     $('#btn-claim-all').addEventListener('click', () => { const r = this.game.claimAll(); this.toast(r.count ? `한꺼번에 수령 ${r.count}건: 보석 +${r.gems}${r.gold ? ` · 골드 +${fmt(r.gold)}` : ''}${r.cards ? ` · 카드 +${r.cards}` : ''}` : '수령할 보상이 없습니다'); this.#refreshQuests(); });
     $('#btn-overtime').addEventListener('click', () => { if (this.game.startOvertime()) { this.switchSheet('home'); this.toast('야근 모드 시작: 60초 동안 최대한 많이 처치하세요'); } else this.toast('야근 모드는 하루 한 번입니다'); this.#refreshQuests(); });
     this.game.on('overtime-end', (r) => { this.toast(`야근 종료: 처치 ${r.kills} · 보석 +${r.gems} · 카드 +${r.cards}`); this.openModal('야근 결과 보고서', `<table class="xl-table compact"><tbody><tr><th>난이도</th><td>${stageLabel(r.stage)}</td></tr><tr><th>처치</th><td>${r.kills} (엘리트 ${r.elites})</td></tr><tr><th>보석</th><td>+${r.gems}</td></tr><tr><th>강화 카드</th><td>+${r.cards}</td></tr><tr><th>개인 최고</th><td>${r.best} 처치</td></tr></tbody></table><p class="muted small">내일 다시 야근할 수 있습니다. 파티가 강해질수록 같은 60초에 더 많이 처치합니다.</p>`); });
@@ -192,8 +192,8 @@ export class UIManager {
     $('#modal-ok').addEventListener('click', () => this.closeModal());
     $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') this.closeModal(); });
 
-    window.addEventListener('beforeunload', () => this.game.persist());
-    document.addEventListener('visibilitychange', () => { if (document.hidden) this.game.persist(); });
+    window.addEventListener('pagehide', () => { this.game.persist(); this.game.cloud?.flush(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { this.game.persist(); this.game.cloud?.flush(); } });
   }
 
   #subscribe() {
@@ -628,6 +628,18 @@ export class UIManager {
       typing.before(tr); this.game.emit('sfx', 'coin');
     };
     step(); this.storyTimer = setInterval(step, 650);
+  }
+
+  /** Mandatory sign-in screen (when a cloud server is configured). Resolves once the player is logged in. */
+  showLoginGate() {
+    const gate = $('#login-gate'); if (!gate) return Promise.resolve();
+    const a = this.game.cloud.auth; if (a.loggedIn()) return Promise.resolve();
+    gate.hidden = false; this.game.paused = true;
+    const note = $('#lg-note'); const box = $('#gsi-gate'); box.innerHTML = '';
+    a.renderButton(box, { size: 'large', text: 'signin_with' }).then((ok) => { note.textContent = ok ? 'Google 계정으로 로그인하면 바로 시작합니다.' : 'Google 로그인 스크립트를 불러오지 못했습니다. 새로 고침해 주세요.'; });
+    return new Promise((resolve) => {
+      const off = a.on((user) => { if (user) { off(); gate.hidden = true; this.game.paused = false; resolve(user); } else if (a.error) note.textContent = a.error; });
+    });
   }
 
   /** Small idle-sprite preview used by the skin chips. */

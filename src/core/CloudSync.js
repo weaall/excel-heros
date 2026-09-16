@@ -3,13 +3,17 @@
 import { checkSave } from './plausibility.js';
 import { Auth, cloudConfig } from './Auth.js';
 
-export const CLOUD_PUSH_INTERVAL = 120; // seconds between automatic uploads while logged in
+export const CLOUD_PUSH_INTERVAL = 300; // seconds between automatic uploads while logged in (only when something changed)
+export const BOARD_CACHE_SEC = 300;    // leaderboard is re-fetched at most this often
 
 export class CloudSync {
   constructor(game, { storage = globalThis.localStorage, fetchFn = globalThis.fetch?.bind(globalThis), auth = null } = {}) {
     this.game = game; this.storage = storage; this.fetchFn = fetchFn;
     this.auth = auth ?? new Auth({ storage, fetchFn });
     this.timer = 0; this.status = 'off'; this.lastError = null; this.lastPush = 0; this.board = null; this.busy = false; this.dirty = false;
+    // dirty: something worth saving happened since the last successful push (spend/gain/roster/stage)
+    for (const ev of ['gems', 'cards', 'gold', 'roster', 'party', 'stage', 'cleared', 'prestige', 'skin', 'dispatch', 'affection', 'story']) game.on(ev, () => { this.dirty = true; });
+    this.boardAt = 0;
     this.auth.on(() => { this.timer = 0; this.status = this.auth.loggedIn() ? 'idle' : 'off'; this.lastError = this.auth.error; this.game.emit('cloud', this); this.game.emit('auth', this.auth.user); });
   }
   cfg() { return this.game.state.settings.cloud ?? { url: '', name: '' }; }
@@ -31,7 +35,7 @@ export class CloudSync {
   tick(dt) {
     if (!this.enabled()) { this.status = this.auth.loggedIn() ? 'idle' : 'off'; return; }
     this.timer += dt;
-    if (this.timer >= CLOUD_PUSH_INTERVAL) { this.timer = 0; this.push().catch(() => {}); }
+    if (this.timer >= CLOUD_PUSH_INTERVAL) { this.timer = 0; if (this.dirty) this.push().catch(() => {}); }
   }
 
   async ping() {
@@ -49,7 +53,7 @@ export class CloudSync {
     this.busy = true;
     try {
       const r = await this.#call('/v1/save', { method: 'PUT', body: JSON.stringify({ save: this.game.state, name: this.cfg().name || this.auth.user?.name, dps: this.game.partyDPS(), force }) });
-      this.status = 'ok'; this.lastError = null; this.lastPush = r.updatedAt ?? Date.now(); this.game.emit('cloud', this); return r;
+      this.status = 'ok'; this.lastError = null; this.lastPush = r.updatedAt ?? Date.now(); this.dirty = false; this.game.emit('cloud', this); return r;
     } catch (e) { this.status = 'error'; this.lastError = e.status === 422 ? `서버가 저장을 거부: ${(e.body?.check?.reasons ?? []).join(', ')}` : e.message; this.game.emit('cloud', this); throw e; }
     finally { this.busy = false; }
   }
@@ -61,12 +65,20 @@ export class CloudSync {
     catch (e) { if (e.status === 404) return null; this.status = 'error'; this.lastError = e.message; this.game.emit('cloud', this); throw e; }
   }
 
-  async fetchBoard(limit = 50) {
+  async fetchBoard(limit = 50, { force = false } = {}) {
     if (!this.configured()) return null;
+    if (!force && this.board && Date.now() - this.boardAt < BOARD_CACHE_SEC * 1000) return this.board; // cached
+    this.boardAt = Date.now();
     const b = await this.#call(`/v1/board?limit=${limit}`, { method: 'GET' });
     this.board = b; this.game.emit('board', b); return b;
   }
 
+  /** Fire-and-forget save when the tab is hidden or closed (keepalive lets the request outlive the page). */
+  flush() {
+    if (!this.enabled() || !this.dirty || this.busy) return;
+    const check = checkSave(this.game.state, Date.now()); if (!check.ok) return;
+    try { this.fetchFn(`${this.base()}/v1/save`, { method: 'PUT', headers: this.headers(), keepalive: true, body: JSON.stringify({ save: this.game.state, name: this.cfg().name || this.auth.user?.name, dps: this.game.partyDPS() }) }); this.dirty = false; } catch { /* best effort */ }
+  }
   /** Record a rewarded-ad view (audit trail only; the reward itself is granted locally). */
   async recordAd(kind = 'reward') { if (!this.enabled()) return null; return this.#call('/v1/ad', { method: 'POST', body: JSON.stringify({ kind }) }).catch(() => null); }
 }
