@@ -19,6 +19,8 @@
 import { checkSave, boardEntry, boardScore, MAX_SAVE_BYTES } from '../src/core/plausibility.js';
 
 export const SESSION_DAYS = 30;
+/** ALLOW_ORIGIN may list several origins (comma-separated); echo the caller's origin when it is on the list, else the first. */
+const pickOrigin = (env, req) => { const list = String(env.ALLOW_ORIGIN ?? '*').split(',').map((s) => s.trim()).filter(Boolean); if (list.includes('*')) return '*'; const o = req.headers.get('origin'); return o && list.includes(o) ? o : list[0]; };
 const json = (body, status = 200, origin = '*') => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(origin) } });
 const cors = (origin) => ({ 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,PUT,POST,OPTIONS', 'access-control-allow-headers': 'content-type,authorization', 'access-control-max-age': '86400' });
 const randomToken = () => { const a = new Uint8Array(32); crypto.getRandomValues(a); return [...a].map((b) => b.toString(16).padStart(2, '0')).join(''); };
@@ -51,7 +53,7 @@ const userView = (u) => ({ id: u.id, name: u.name, picture: u.picture, email: u.
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    const origin = env.ALLOW_ORIGIN ?? '*';
+    const origin = pickOrigin(env, req);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
     try {
       if (url.pathname === '/v1/ping') return json({ ok: true, time: Date.now(), google: !!env.GOOGLE_CLIENT_ID }, 200, origin);

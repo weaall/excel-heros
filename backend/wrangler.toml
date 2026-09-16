@@ -10,7 +10,7 @@ compatibility_date = "2025-01-01"
 
 [vars]
 # Lock CORS to the game's origin once deployed (e.g. "https://excel-heros.qugo.kr"); "*" while testing.
-ALLOW_ORIGIN = "*"
+ALLOW_ORIGIN = "https://excel-heros.qugo.kr,http://localhost:8080"
 # Google OAuth 2.0 *Web application* client ID from console.cloud.google.com › APIs & Services › Credentials.
 # Authorized JavaScript origins must include the game origin (https://excel-heros.qugo.kr) and http://localhost:8080.
 GOOGLE_CLIENT_ID = "555871048582-jfcopkcrj6nomp1o5dvd6fm4mkfslai4.apps.googleusercontent.com"
@@ -18,4 +18,4 @@ GOOGLE_CLIENT_ID = "555871048582-jfcopkcrj6nomp1o5dvd6fm4mkfslai4.apps.googleuse
 [[d1_databases]]
 binding = "DB"
 database_name = "excel-heroes"
-database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+database_id = "5d201419-6318-4806-8b56-1eee3a0a339a"
