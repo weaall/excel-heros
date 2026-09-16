@@ -47,10 +47,19 @@ export function checkSave(state, now = Date.now()) {
   return { ok: reasons.length === 0, reasons };
 }
 
+const BAD_WORDS = ['씨발', '시발', '병신', '개새', '좆', '지랄', '니애미', 'fuck', 'shit', 'bitch', 'asshole', 'nazi', '운영자', '관리자', 'admin', 'gm'];
+/** Leaderboard display name: trimmed, control/zero-width characters removed, profanity and staff titles masked, ≤ 16 chars. */
+export function sanitizeName(raw) {
+  let n = String(raw ?? '').replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202f\ufeff]/g, '').replace(/\s+/g, ' ').trim();
+  const low = n.toLowerCase().replace(/\s/g, '');
+  if (BAD_WORDS.some((w) => low.includes(w))) n = '';
+  n = n.slice(0, 16);
+  return n || '익명 사원';
+}
 /** Leaderboard row derived from a save (what the server actually ranks). */
 export function boardEntry(state, name, dps = 0) {
   return {
-    name: String(name ?? '').slice(0, 16) || '익명 사원',
+    name: sanitizeName(name),
     maxCleared: state.maxCleared | 0,
     shares: state.prestige?.shares ?? 0,
     prestige: state.prestige?.count ?? 0,

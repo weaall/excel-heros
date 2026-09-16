@@ -16,7 +16,7 @@
 //   POST /v1/ad     { kind }               → { ok, count }
 //
 // Deploy: see backend/README.md (wrangler login → d1 create → d1 execute schema.sql → set GOOGLE_CLIENT_ID → deploy).
-import { checkSave, checkDelta, boardEntry, boardScore, MAX_SAVE_BYTES } from '../src/core/plausibility.js';
+import { checkSave, checkDelta, boardEntry, boardScore, sanitizeName, MAX_SAVE_BYTES } from '../src/core/plausibility.js';
 
 export const SESSION_DAYS = 30;
 /** ALLOW_ORIGIN may list several origins (comma-separated); echo the caller's origin when it is on the list, else the first. */
@@ -116,7 +116,7 @@ export default {
         if (!delta.ok) return json({ error: 'implausible change since the last save', check: delta }, 422, origin);
         const text = JSON.stringify(body.save);
         await env.DB.prepare('INSERT INTO saves (id, save, updated_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET save = excluded.save, updated_at = excluded.updated_at').bind(a.id, text, now).run();
-        const e = boardEntry(body.save, body.name || a.name, Number(body.dps) || 0);
+        const e = boardEntry(body.save, sanitizeName(body.name) === '익명 사원' && a.name ? a.name : body.name, Number(body.dps) || 0); // Google name as fallback, both sanitised
         await env.DB.prepare('INSERT INTO board (id, name, picture, max_cleared, shares, prestige, dps, play_seconds, collection, score, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, picture = excluded.picture, max_cleared = excluded.max_cleared, shares = excluded.shares, prestige = excluded.prestige, dps = excluded.dps, play_seconds = excluded.play_seconds, collection = excluded.collection, score = excluded.score, updated_at = excluded.updated_at')
           .bind(a.id, e.name, a.picture, e.maxCleared, e.shares, e.prestige, e.dps, e.playSeconds, e.collection, boardScore(e), now).run();
         return json({ ok: true, updatedAt: now, check }, 200, origin);

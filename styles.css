@@ -602,3 +602,5 @@ body.stealth #roster-table { display: table; }
 #synergy-table td.eff { color: #444; font-size: 11.5px; } #synergy-table tr.off td { color: #999; }
 .pane-body .section-title { margin: 10px 10px 0; }
 .bestiary { border: 1px solid var(--line); margin: 0 10px 10px; background: #fafafa; }
+
+.dt-bond { display: inline-block; padding: 0 6px; border: 1px solid #e84393; color: #e84393; font-size: 11px; line-height: 16px; background: #fff; }

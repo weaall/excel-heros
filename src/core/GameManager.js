@@ -25,6 +25,7 @@ import { skinsOf, skinById } from '../data/skins.js';
 import { PROFILES } from '../data/profiles.js';
 import { localDateKey } from './state.js';
 import { relativeGold } from '../config/balance.js';
+import { sanitizeName } from './plausibility.js';
 import { migrate } from './state.js';
 
 export class GameManager extends Emitter {
@@ -809,7 +810,7 @@ export class GameManager extends Emitter {
   setCloud({ url, name } = {}) {
     const c = this.state.settings.cloud ?? { url: '', name: '' };
     if (url !== undefined) c.url = String(url).trim();
-    if (name !== undefined) c.name = String(name).trim().slice(0, 16);
+    if (name !== undefined) c.name = name.trim() ? sanitizeName(name) : '';
     this.state.settings.cloud = c; this.cloud.timer = 0; this.persist(); this.emit('settings'); this.emit('cloud', this.cloud);
   }
   /** Replace the running game with a save fetched from the server (used by the backstage "서버에서 불러오기" button). */

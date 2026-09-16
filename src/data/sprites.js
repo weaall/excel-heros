@@ -305,7 +305,7 @@ const ART_H = 150;
  * Excel-style card: a data record. The illustration sits whole (contain-fit) in the top cell; below it two rows of
  * cells hold name + grade tag and stars + level. Thin cell borders, square tags, no shadows.
  */
-export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', awakened = false } = {}) {
+export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', awakened = false, bond = false } = {}) {
   const g = GRADES[def.grade];
   // rendered at 2× and displayed at CARD_W×CARD_H (CSS .card-canvas) so illustrations stay crisp on HiDPI screens
   const c = document.createElement('canvas'); c.width = CARD_W * 2; c.height = CARD_H * 2; c.className = 'card-canvas';
@@ -353,6 +353,8 @@ export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', 
   }
   // --- frame
   ctx.strokeStyle = '#bfbfbf'; ctx.lineWidth = 1; ctx.strokeRect(0.5, 0.5, CARD_W - 1, CARD_H - 1);
+  if (bond && !awakened) { ctx.strokeStyle = '#e84393'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, CARD_W - 2, CARD_H - 2); } // 호감도 MAX: pink frame (gold awakening wins when both)
+  if (bond) { ctx.fillStyle = '#e84393'; ctx.fillRect(1, 1, 30, 16); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px "Malgun Gothic", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('♥절친', 16, 9.5); }
   if (awakened) { ctx.strokeStyle = '#d4a017'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, CARD_W - 2, CARD_H - 2); ctx.fillStyle = '#d4a017'; ctx.fillRect(CARD_W - 29, 1, 28, 16); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px "Malgun Gothic", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('각성', CARD_W - 15, 9.5); }
   return c;
 }

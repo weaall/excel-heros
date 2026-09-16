@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createInitialState } from '../src/core/state.js';
 import { GameManager } from '../src/core/GameManager.js';
-import { checkSave, checkDelta, goldInLevels, boardEntry, boardScore } from '../src/core/plausibility.js';
+import { checkSave, checkDelta, goldInLevels, boardEntry, boardScore, sanitizeName } from '../src/core/plausibility.js';
 import { CloudSync } from '../src/core/CloudSync.js';
 import { Auth } from '../src/core/Auth.js';
 import worker, { verifyGoogleToken } from '../backend/worker.js';
@@ -187,4 +187,14 @@ test('worker: a second PUT with an implausible jump is rejected (422) while hone
   assert.equal(r.status, 422); assert.match((await r.json()).error, /change since/);
   const honest = JSON.parse(JSON.stringify(save)); honest.stats.playSeconds += 30; honest.stats.totalKills += 40; honest.gems += 10;
   assert.equal((await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save: honest }) }, token), env)).status, 200);
+});
+
+
+test('sanitizeName: trims/collapses, strips control chars, masks profanity and staff titles, caps at 16, falls back', () => {
+  assert.equal(sanitizeName('  김  인턴 '), '김 인턴');
+  assert.equal(sanitizeName('a\u200bb\u0007c'), 'abc');
+  assert.equal(sanitizeName('씨발놈'), '익명 사원'); assert.equal(sanitizeName('Ad Min'), '익명 사원'); assert.equal(sanitizeName('운영자입니다'), '익명 사원');
+  assert.equal(sanitizeName('가나다라마바사아자차카타파하가나다라'), '가나다라마바사아자차카타파하가나');
+  assert.equal(sanitizeName(''), '익명 사원'); assert.equal(sanitizeName(null), '익명 사원');
+  assert.equal(boardEntry(createInitialState(), '병신').name, '익명 사원');
 });

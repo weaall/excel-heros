@@ -558,7 +558,7 @@ export class UIManager {
       const c = cardCanvas(v.def, {
         star: v.star, owned: e.owned,
         title: v.isMain ? `${v.def.title} · Lv ${e.level}` : (e.owned ? `${stars(e.star)} · Lv ${e.level}` : ''),
-        sub: e.enhance ? `+${e.enhance}` : '', awakened: !!e.awakened,
+        sub: e.enhance ? `+${e.enhance}` : '', awakened: !!e.awakened, bond: e.owned && v.affection.maxed,
       });
       const wrap = el('div', { class: `card ${v.inParty ? 'in-party' : ''} ${e.owned ? '' : 'locked'} ${e.owned && (v.def.grade === 'S' || v.def.grade === 'A' || e.awakened) ? 'holo' : ''}`, title: `${v.traitName}: ${v.traitDesc}`, onclick: () => this.openDetail(id), onmouseenter: (ev) => this.#showCardMemo(id, ev), onmousemove: (ev) => this.#moveCardMemo(ev), onmouseleave: () => this.#hideCardMemo() }, c);
       if (e.owned && (v.def.grade === 'S' || v.def.grade === 'A' || e.awakened)) wrap.append(el('span', { class: 'holo-sheen' }));
@@ -712,6 +712,7 @@ export class UIManager {
       p ? el('span', { class: 'dt-nick' }, `${p.nick} · ${p.dept}`) : null,
       p ? (() => { const d = DIVISIONS[divisionOf(v.isMain ? 'main' : id)]; return el('span', { class: 'dt-div', style: `border-color:${d.color}; color:${d.color}`, title: `부문 특성 (2명 이상): ${PERKS[d.id].desc}` }, `${d.name} 부문`); })() : null,
       el('span', { class: 'dt-role' }, `${ROLES[v.def.role].name}${v.isMain ? ` · ${MAIN_TIER_TITLES[v.def.tier]}` : ` · ${stars(v.star)}`}${v.awakened ? ' · ✦각성' : ''}`),
+      e.owned && v.affection.maxed ? el('span', { class: 'dt-bond', title: '호감도 Lv 10: 절친 칭호 · 카드 핑크 프레임' }, '♥ 절친') : null,
       e.owned ? sb(g.isFavorite(id) ? '♥' : '♡', () => g.toggleFavorite(id), g.isFavorite(id) ? 'fav on' : 'fav', false, '즐겨찾기') : null);
     // --- stat table
     const table = el('table', { class: 'dt-table' });
