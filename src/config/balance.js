@@ -103,6 +103,7 @@ export const BALANCE = Object.freeze({
     coffee:  { name: '커피 머신',     desc: '파티 공격 속도 +2% / Lv',        per: 0.02,  base: 400, growth: 1.28, max: 50 },
     payroll: { name: '성과급 제도',   desc: '처치 시 보석 드롭 확률 +0.1% / Lv', per: 0.001, base: 300, growth: 1.28, max: 50, unit: 'pct' },
     chairs:  { name: '인체공학 의자', desc: '파티 HP +5% / Lv',               per: 0.05,  base: 300, growth: 1.26, max: 100 },
+    sales:   { name: '매출 인센티브',   desc: '골드 획득 +1% / Lv',              per: 0.01,  base: 350, growth: 1.27, max: 50 }, // deliberately mild (+50% at max) so it stretches, not breaks, the curve
   },
   // 보석 드롭: every non-boss kill may drop a gem (elites drop more). Base chance + 성과급 제도 levels.
   GEM_DROP: { base: 0.005, amount: 1, eliteMult: 3 },

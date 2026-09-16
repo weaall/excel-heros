@@ -12,6 +12,7 @@ import { monsterHP, monsterATK, bossHP, bossATK } from '../config/balance.js';
 import { EntityManager } from './EntityManager.js';
 import * as Quests from './QuestManager.js';
 import * as Achievements from './AchievementManager.js';
+import { ACHIEVEMENTS } from '../data/achievements.js';
 import * as Milestones from './MilestoneManager.js';
 import { HEROES, ROLES } from '../data/heroes.js';
 import { DIVISIONS, SYNERGY, PERKS, divisionOf } from '../data/divisions.js';
@@ -48,7 +49,7 @@ export class GameManager extends Emitter {
 
   // ------------------------------------------------------------- derived --
   stageLabel() { return stageLabel(this.state.stage); }
-  goldMult() { return 1 + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus() + this.synergy().perks.gold; }
+  goldMult() { return 1 + teamUpgradeBonus('sales', this.state.team.sales ?? 0) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus() + this.synergy().perks.gold; }
   /** Permanent bonus from 지분 (prestige shares): +3% ATK and gold each. */
   prestigeBonus() { return (this.state.prestige?.shares ?? 0) * BALANCE.PRESTIGE.bonusPerShare; }
   prestigeInfo() {
@@ -415,15 +416,36 @@ export class GameManager extends Emitter {
   }
 
   /** Dismiss (퇴사) a benched card entirely for 강화 카드. */
+  /** Gold sunk into a hero's current levels (refunded on dismiss at LEVEL_REFUND, same rate as level-down). */
+  levelGold(id) { const L = this.state.heroes[id]?.level | 0; let g = 0; for (let l = 1; l < L; l++) g += upgradeCost(l); return Math.floor(g * BALANCE.LEVEL_REFUND); }
   dismiss(id) {
     const v = this.heroView(id);
     if (!v.canDismiss) return 0;
-    const cards = v.dismissCards;
-    Object.assign(v.entry, { owned: false, star: 0, shards: 0, level: 1, enhance: 0 });
-    this.state.cards += cards;
-    this.log(`${v.def.name} 카드 방출 → 강화 카드 ${cards}장`, 'info');
-    this.emit('cards'); this.emit('roster');
+    const cards = v.dismissCards, refund = this.levelGold(id);
+    Object.assign(v.entry, { owned: false, star: 0, shards: 0, level: 1, enhance: 0, skillLv: 0 });
+    this.state.cards += cards; this.state.gold += refund;
+    if (this.state.party.includes(id)) { this.state.party = this.state.party.filter((x) => x !== id); this.entities.rebuildParty(); }
+    this.log(`${v.def.name} 카드 방출 → 강화 카드 ${cards}장${refund ? `, 레벨 골드 ${refund} 환급` : ''}`, 'info');
+    this.emit('cards'); this.emit('gold'); this.emit('roster'); this.emit('party');
     return cards;
+  }
+  /** Everything claimable on the 검토 sheet in one click: done quests, all-clear bonus, achievements, a finished 출장. */
+  claimableSummary() {
+    const s = this.state; const quests = Quests.activeQuests(s).filter((q) => Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)).length;
+    const allClear = !s.daily.allClearClaimed && Quests.allQuestsClaimed(s) ? 1 : 0;
+    const ach = Achievements.claimableCount(s); const dispatch = this.dispatchInfo().done ? 1 : 0;
+    return { quests, allClear, ach, dispatch, total: quests + allClear + ach + dispatch };
+  }
+  claimAll() {
+    const s = this.state; const got = { gems: 0, gold: 0, cards: 0, count: 0 };
+    const add = (r) => { if (!r) return; got.gems += r.gems ?? 0; got.gold += r.gold ?? 0; got.cards += r.cards ?? 0; got.count++; };
+    for (const q of Quests.activeQuests(s)) if (Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)) add(this.claimQuest(q.id));
+    add(this.claimAllClear());
+    for (const a of ACHIEVEMENTS) while (Achievements.canClaim(s, a.id)) add(this.claimAchievement(a.id));
+    add(this.claimDispatch());
+    if (got.count) this.log(`한꺼번에 수령 ${got.count}건: 보석 +${got.gems}${got.gold ? `, 골드 +${got.gold}` : ''}${got.cards ? `, 카드 +${got.cards}` : ''}`, 'info');
+    this.emit('quests');
+    return got;
   }
 
   /** Promote the main hero to `jobId` (must be one of the current job's next options). */

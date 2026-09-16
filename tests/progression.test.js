@@ -117,3 +117,22 @@ test('야근 모드: once a day, 60 s of kills pay gems without touching stage p
   assert.equal(g.state.daily.overtimeDone, true); assert.equal(g.canOvertime(), false); assert.equal(g.startOvertime(), false);
   assert.equal(g.state.stats.overtimes, 1); assert.equal(g.state.stats.overtimeBest, ended.kills);
 });
+
+test('경제: 매출 인센티브 raises gold mildly, dismiss refunds level gold, claimAll collects everything claimable', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { BALANCE, teamUpgradeBonus, upgradeCost } = await import('../src/config/balance.js');
+  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+  const gold0 = g.goldMult(); g.state.team.sales = 50;
+  assert.ok(Math.abs(g.goldMult() - gold0 - teamUpgradeBonus('sales', 50)) < 1e-9); assert.ok(teamUpgradeBonus('sales', 50) <= 0.5, 'not dramatic');
+  // dismiss refund: a level-10 card gives back the 9 upgrade costs at LEVEL_REFUND
+  g.state.heroes.guard = { owned: true, star: 1, shards: 4, level: 10, enhance: 0, awakened: false, skillLv: 0 }; // bench card (party members cannot be dismissed)
+  const expected = Math.floor([1, 2, 3, 4, 5, 6, 7, 8, 9].reduce((a, l) => a + upgradeCost(l), 0) * BALANCE.LEVEL_REFUND);
+  const goldBefore = g.state.gold; assert.ok(g.dismiss('guard') > 0);
+  assert.equal(g.state.gold - goldBefore, expected); assert.equal(g.state.heroes.guard.owned, false);
+  // claimAll: a finished quest + a claimable achievement
+  const Q = await import('../src/core/QuestManager.js'); Q.addProgress(g.state, 'kills', 999); g.state.stats.totalKills = 150;
+  const sum = g.claimableSummary(); assert.ok(sum.quests >= 1); assert.ok(sum.ach >= 1); assert.equal(sum.total, sum.quests + sum.allClear + sum.ach + sum.dispatch);
+  const gems0 = g.state.gems; const r = g.claimAll();
+  assert.ok(r.count >= 2); assert.ok(g.state.gems > gems0); assert.equal(g.claimableSummary().total, 0);
+});

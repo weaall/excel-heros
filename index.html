@@ -247,41 +247,63 @@
           <span>업무일 <b id="daily-date"></b></span>
           <button id="btn-login" class="xl-btn primary">출근 도장 찍기</button>
           <span id="streak-text" class="small" title="어제에 이어 오늘도 출근하면 연속 일수가 올라가고, 2일째부터 하루당 보석 +20 (최대 7일치)"></span>
+          <span class="spacer"></span>
+          <button id="btn-claim-all" class="xl-btn primary" title="완료된 일일 업무 · 전체 완료 보너스 · 업적 · 복귀한 출장 보상을 한 번에">한꺼번에 수령 <b id="claim-all-count">0</b></button>
         </div>
-        <table class="xl-table" id="quest-table">
-          <thead><tr><th>업무</th><th>진행</th><th>보상</th><th>작업</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <div class="quest-footer">
-          <span id="allclear-text" class="muted small"></span>
-          <button id="btn-allclear" class="xl-btn">전체 완료 보너스</button>
+        <div class="qs-grid">
+          <div class="qs-col">
+            <div class="qs-block">
+              <div class="qs-title">일일 업무 <span class="muted">매일 자정 교체</span></div>
+              <table class="xl-table" id="quest-table">
+                <thead><tr><th>업무</th><th>진행</th><th>보상</th><th>작업</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <div class="quest-footer">
+                <span id="allclear-text" class="muted small"></span>
+                <button id="btn-allclear" class="xl-btn">전체 완료 보너스</button>
+              </div>
+            </div>
+            <div class="qs-block">
+              <div class="qs-title">업적 <span class="muted">누적 · 초기화되지 않음</span></div>
+              <table class="xl-table" id="ach-table">
+                <thead><tr><th>업적</th><th>진행</th><th>다음 보상</th><th>작업</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div class="qs-block">
+              <div class="qs-title">마일스톤 <span class="muted">도달 시 자동 지급 · <b id="ms-count">0</b></span></div>
+              <table class="xl-table" id="ms-table">
+                <thead><tr><th>목표</th><th>진행</th><th>보상</th><th></th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="qs-col">
+            <div class="qs-block act">
+              <div class="qs-title">출장 <span class="muted">대기 사원 최대 3명 · 4시간 · 하루 2회</span></div>
+              <div class="dispatch-box" id="dispatch-box">
+                <div class="dispatch-pick" id="dispatch-pick"></div>
+                <div class="dispatch-row"><span id="dispatch-text" class="small"></span><button id="btn-dispatch" class="xl-btn primary">출장 보내기</button><button id="btn-dispatch-claim" class="xl-btn" hidden>복귀 · 보상 받기</button></div>
+              </div>
+              <p class="muted small qs-note">보상: 보석 20 + 등급별(D3 C5 B8 A12 S20) · 강화 카드 · 출장자 호감도 +60. 출장 중인 카드는 파티에 넣을 수 없습니다.</p>
+            </div>
+            <div class="qs-block act">
+              <div class="qs-title">야근 모드 <span class="muted">1일 1회 · 60초 · 최고 스테이지 +3</span></div>
+              <div class="ad-box overtime-box">
+                <span id="overtime-text" class="small">처치 1건마다 보석 2, 엘리트는 6 (최대 400) · 스테이지 진행은 바뀌지 않음</span>
+                <button id="btn-overtime" class="xl-btn primary">야근 시작</button>
+              </div>
+            </div>
+            <div class="qs-block act">
+              <div class="qs-title">광고 보상 <span class="muted">임시 화면 · SDK 연동 전</span></div>
+              <div class="ad-box">
+                <span id="ad-left" class="small"></span>
+                <button id="btn-ad-instant" class="xl-btn">광고 보고 1시간 방치 보상 받기</button>
+              </div>
+              <p class="muted small qs-note">방치 보상: 켜두면 100%, 꺼두면 60% (최대 10시간). 복귀 시 광고를 보면 2배.</p>
+            </div>
+          </div>
         </div>
-        <h3 class="section-title">출장 <span class="muted">(대기 사원 최대 3명 · 4시간 · 하루 2회 · 등급별 보석 + 강화 카드 + 호감도)</span></h3>
-        <div class="dispatch-box" id="dispatch-box">
-          <div class="dispatch-pick" id="dispatch-pick"></div>
-          <div class="dispatch-row"><span id="dispatch-text" class="small"></span><button id="btn-dispatch" class="xl-btn primary">출장 보내기</button><button id="btn-dispatch-claim" class="xl-btn" hidden>복귀 · 보상 받기</button></div>
-        </div>
-        <h3 class="section-title">야근 모드 <span class="muted">(1일 1회 · 60초 · 최고 스테이지 +3 난이도)</span></h3>
-        <div class="ad-box overtime-box">
-          <span id="overtime-text" class="small">처치 1건마다 보석 2, 엘리트는 6 (최대 400) · 스테이지 진행은 바뀌지 않음</span>
-          <button id="btn-overtime" class="xl-btn primary">야근 시작</button>
-        </div>
-        <h3 class="section-title">마일스톤 <span class="muted">(도달 시 자동 지급 · <b id="ms-count">0</b>)</span></h3>
-        <table class="xl-table" id="ms-table">
-          <thead><tr><th>목표</th><th>진행</th><th>보상</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <h3 class="section-title">업적 <span class="muted">(누적 · 초기화되지 않음)</span></h3>
-        <table class="xl-table" id="ach-table">
-          <thead><tr><th>업적</th><th>진행</th><th>다음 보상</th><th>작업</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        <h3 class="section-title">광고 보상 <span class="muted">(임시 화면 · SDK 연동 전)</span></h3>
-        <div class="ad-box">
-          <span id="ad-left" class="small"></span>
-          <button id="btn-ad-instant" class="xl-btn">광고 보고 1시간 방치 보상 받기</button>
-        </div>
-        <p class="muted small">방치 보상: 켜두면 100%, 꺼두면 60% (최대 10시간). 복귀 시 광고를 보면 2배.</p>
       </section>
 
       <!-- Sheet: 사내_메신저 (story as an exported chat log) ---------------------->

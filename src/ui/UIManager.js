@@ -155,6 +155,7 @@ export class UIManager {
     this.game.on('auth', (user) => { this.#refreshCloud(); if (user) this.#afterLogin(user); });
     Ads.setupAds();
     $('#rank-refresh').addEventListener('click', () => this.#refreshBoard(true));
+    $('#btn-claim-all').addEventListener('click', () => { const r = this.game.claimAll(); this.toast(r.count ? `한꺼번에 수령 ${r.count}건: 보석 +${r.gems}${r.gold ? ` · 골드 +${fmt(r.gold)}` : ''}${r.cards ? ` · 카드 +${r.cards}` : ''}` : '수령할 보상이 없습니다'); this.#refreshQuests(); });
     $('#btn-overtime').addEventListener('click', () => { if (this.game.startOvertime()) { this.switchSheet('home'); this.toast('야근 모드 시작: 60초 동안 최대한 많이 처치하세요'); } else this.toast('야근 모드는 하루 한 번입니다'); this.#refreshQuests(); });
     this.game.on('overtime-end', (r) => { this.toast(`야근 종료: 처치 ${r.kills} · 보석 +${r.gems} · 카드 +${r.cards}`); this.openModal('야근 결과 보고서', `<table class="xl-table compact"><tbody><tr><th>난이도</th><td>${stageLabel(r.stage)}</td></tr><tr><th>처치</th><td>${r.kills} (엘리트 ${r.elites})</td></tr><tr><th>보석</th><td>+${r.gems}</td></tr><tr><th>강화 카드</th><td>+${r.cards}</td></tr><tr><th>개인 최고</th><td>${r.best} 처치</td></tr></tbody></table><p class="muted small">내일 다시 야근할 수 있습니다. 파티가 강해질수록 같은 60초에 더 많이 처치합니다.</p>`); });
     this.game.on('cloud', () => this.#refreshCloud()); this.game.on('board', () => this.#refreshBoard());
@@ -926,6 +927,7 @@ export class UIManager {
         el('td', { class: 'act' }, btn(claimed ? '완료' : '수령', () => { const rr = g.claimQuest(q.id); if (rr) this.toast(`보상: ${rewardText(rr)}`); }, done && !claimed ? 'primary' : '', !done || claimed))));
     }
     this.#refreshDispatch();
+    { const c = g.claimableSummary(); const b = $('#btn-claim-all'); if (b) { b.disabled = c.total === 0; $('#claim-all-count').textContent = c.total; b.title = c.total ? `업무 ${c.quests} · 전체 완료 ${c.allClear} · 업적 ${c.ach} · 출장 ${c.dispatch}` : '수령할 보상이 없습니다'; } }
     const ob = $('#btn-overtime'); if (ob) { ob.disabled = !this.game.canOvertime(); ob.textContent = this.game.overtime ? '야근 중…' : s.daily.overtimeDone ? '오늘 야근 완료 ✓' : '야근 시작'; const ot = $('#overtime-text'); if (s.daily.overtimeDone) ot.textContent = `오늘의 야근을 마쳤습니다 · 개인 최고 ${s.stats.overtimeBest ?? 0} 처치 · 누적 ${s.stats.overtimes ?? 0}회`; }
     const all = Quests.allQuestsClaimed(s);
     $('#btn-allclear').disabled = !all || s.daily.allClearClaimed;
