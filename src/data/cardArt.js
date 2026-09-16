@@ -29,6 +29,8 @@ const urls = new Map();
 /** URL of the original illustration file (for full-quality <img> display / lightbox). */
 export const cardArtUrl = (id) => urls.get(id) ?? null;
 export const hasCardArt = (id) => art.has(id);
+/** URL for a def with an equipped skin: skin illustration if present, else the base one. */
+export const cardArtUrlFor = (def) => (def?.skin ? urls.get(`${def.id}__${def.skin.id}`) : null) ?? urls.get(def?.id) ?? null;
 /** Draw an illustration covering a box (object-fit: cover, anchored to the top so faces stay visible). */
 export function drawArtCover(ctx, img, x, y, w, h, crop = null) {
   const [cx0, cy0, cx1, cy1] = crop ?? [0, 0, 1, 1];

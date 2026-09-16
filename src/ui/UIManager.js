@@ -12,8 +12,8 @@ import { profileOf, PROFILES } from '../data/profiles.js';
 import { extraOf } from '../data/profilesExtra.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
 import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
-import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite } from '../data/sprites.js';
-import { cardArtUrl } from '../data/cardArt.js';
+import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite, heroSprite } from '../data/sprites.js';
+import { cardArtUrl, cardArtUrlFor } from '../data/cardArt.js';
 import { GRID } from '../core/EntityManager.js';
 import * as Quests from '../core/QuestManager.js';
 import { fmt, fmtTime, pct, stars } from '../utils/format.js';
@@ -623,6 +623,13 @@ export class UIManager {
     step(); this.storyTimer = setInterval(step, 650);
   }
 
+  /** Small idle-sprite preview used by the skin chips. */
+  #skinPreview(def) {
+    const c = document.createElement('canvas'); c.width = 32; c.height = 56; c.className = 'skin-prev'; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    const img = heroSprite(def, 'idle', 0, 1); if (img) ctx.drawImage(img, 16, 4, 32, 56, 0, 0, 32, 56);
+    return c;
+  }
+
   /** S-grade splash: the full illustration slides in over the reveal dialog with the character's line. */
   #showSplash(r) {
     const url = cardArtUrl(r.heroId); if (!url || /\.svg$/i.test(url)) return;
@@ -672,7 +679,7 @@ export class UIManager {
     const p = profileOf(v.isMain ? 'main' : id);
     $('#modal-title').textContent = v.isMain ? `${v.def.name} · ${v.def.title} (메인 영웅)` : `${v.def.name} · ${v.grade.name}급 ${v.grade.label}`;
     const body = $('#modal-body'); body.innerHTML = '';
-    const artUrl = cardArtUrl(v.isMain ? v.def.id : id);
+    const artUrl = cardArtUrlFor(v.def) ?? cardArtUrl(v.isMain ? v.def.id : id);
     const portrait = artUrl && !/\.svg$/i.test(artUrl)
       ? el('img', { class: 'detail-art', src: artUrl, alt: v.def.name, title: '클릭하면 원본 크기로 봅니다', onclick: () => this.openLightbox(artUrl, `${v.def.name} · ${p?.nick ?? ''}`) })
       : portraitCanvas(v.def, 3);
@@ -714,12 +721,19 @@ export class UIManager {
         `ATK/HP +${Math.round(BALANCE.AWAKEN.atk * 100)}% · 특성 ×${BALANCE.AWAKEN.trait} · 스킬 ×${BALANCE.AWAKEN.skill} · 강화 한계 +${BALANCE.ENHANCE_CAP_AWAKEN}`));
     }
     // --- trait / skill / ★ ladder / profile
-    const sections = el('div', { class: 'dt-sections' },
+    const growth = el('div', { class: 'dt-sections pane-growth' },
       el('div', { class: 'dt-sec trait' }, el('b', {}, '특성'), el('span', { class: 'nm' }, v.traitName), el('span', { class: 'ds' }, v.traitDesc)),
-      el('div', { class: 'dt-sec skill' }, el('b', {}, '스킬'), el('span', { class: 'nm' }, v.skillName), el('span', { class: 'ds' }, v.skillDesc, v.skillUnlocked ? '' : el('span', { class: 'lock' }, ` 🔒 ${v.skillUnlockHint}`))),
+      (() => { const sl = g.skillLevelInfo(id); return el('div', { class: 'dt-sec skill' }, el('b', {}, '스킬'), el('span', { class: 'nm' }, `${v.skillName}${sl.level ? ` Lv ${sl.level}` : ''}`), el('span', { class: 'ds' }, v.skillDesc, v.skillUnlocked ? '' : el('span', { class: 'lock' }, ` 🔒 ${v.skillUnlockHint}`)),
+        e.owned && v.skillUnlocked ? el('span', { class: 'ds small' }, sl.cost === null ? ' · 스킬 Lv MAX' : sb(`스킬 강화 Lv ${sl.level + 1} (카드 ${sl.cost})`, () => { if (g.upgradeSkill(id)) { this.toast(`${v.def.name} 스킬 Lv ${sl.level + 1}: 위력 +${Math.round(BALANCE.SKILL_LEVEL.powerPerLevel * 100)}%, 대기 -${Math.round(BALANCE.SKILL_LEVEL.cooldownPerLevel * 100)}%`); this.#refreshDetail(); } else this.toast('강화 카드가 부족합니다'); }, sl.can ? 'primary' : '', !sl.can), ` 위력 ×${sl.power.toFixed(2)} · 대기 ×${sl.cooldown.toFixed(2)}`) : null); })(),
       v.isMain ? null : el('div', { class: 'dt-sec perks' }, el('b', {}, '★ 성장'), ...[
         [2, '스킬 해금'], [3, `특성 ×${BALANCE.STAR_TRAIT_BOOST.mult}`], [4, `스킬 ×${BALANCE.SKILL_BOOST_MULT}`], [5, '각성'],
       ].map(([st, label]) => el('span', { class: `perk ${v.star >= st ? 'on' : ''}` }, `★${st} ${label}`))),
+      e.owned ? el('div', { class: 'dt-sec skins' }, el('b', {}, '스킨'), el('div', { class: 'skin-list' },
+        el('button', { class: `skin-chip ${!v.def.skin ? 'active' : ''}`, onclick: () => { g.equipSkin(id, null); this.#refreshDetail(); } }, this.#skinPreview({ ...v.def, skin: undefined }), el('span', {}, '기본')),
+        ...g.skinsOf(id).map((sk) => el('button', { class: `skin-chip ${sk.active ? 'active' : ''} ${sk.owned ? '' : 'locked'}`, title: sk.desc, style: `--sc:${sk.frame}`,
+          onclick: () => { if (sk.owned) { g.equipSkin(id, sk.active ? null : sk.id); this.#refreshDetail(); } else if (sk.canUnlock) { if (g.unlockSkin(id, sk.id)) { g.equipSkin(id, sk.id); this.toast(`스킨 「${sk.name}」 해금 · 장착`); this.#refreshDetail(); } } else this.toast(sk.reason); } },
+          this.#skinPreview({ ...v.def, skin: sk }), el('span', {}, sk.name), el('small', {}, sk.owned ? (sk.active ? '장착 중' : '보유') : sk.reason))))) : null);
+    const profileSec = el('div', { class: 'dt-sections pane-profile' },
       p ? el('div', { class: 'dt-sec profile' }, el('div', { class: 'bio' }, p.bio), el('div', { class: 'quote' }, `"${p.line}"`)) : null,
       e.owned ? (() => { const a = v.affection, A = BALANCE.AFFECTION, x = extraOf(v.isMain ? 'main' : id);
         return el('div', { class: 'dt-sec affection' }, el('b', {}, '호감도'),
@@ -728,7 +742,13 @@ export class UIManager {
           el('div', { class: 'small' }, sb(a.gifted ? '오늘 간식 완료 ✓' : a.maxed ? '호감도 MAX' : `간식 사주기 (${fmt(g.giftCost())}g · +${A.giftXp})`, () => { if (g.giveGift(id)) { this.toast(`${v.def.name}: "${p?.line ?? '고마워요'}"`); this.#refreshDetail(); } else this.toast('골드가 부족하거나 오늘은 이미 사줬습니다'); }, a.gifted || a.maxed ? '' : 'primary', a.gifted || a.maxed || s.gold < g.giftCost()), el('span', { class: 'muted' }, ' 파티에 넣고 처치할수록 오른다 (일반 +1 · 보스 +15)')),
           x ? el('div', { class: `secret ${a.secretUnlocked ? '' : 'locked'}` }, a.secretUnlocked ? `사무실 비화: ${x.secret}` : `🔒 Lv ${A.unlockSecret}: 사무실 비화`) : null,
           x ? el('div', { class: `line2 ${a.lineUnlocked ? '' : 'locked'}` }, a.lineUnlocked ? `"${x.line2}"` : `🔒 Lv ${A.unlockLine}: 개인 메시지 (사내 메신저)`) : null); })() : null);
-    body.append(el('div', { class: 'dt' }, portrait, el('div', { class: 'dt-info' }, head, table, sections)));
+    // tabs: 정보(stats) · 성장(trait/skill/★/skin) · 프로필(bio/호감도) — remembered across refreshes
+    this.detailTab ??= 'info';
+    const panes = { info: table, growth, profile: profileSec };
+    const tabs = el('div', { class: 'dt-tabs' }, ...[['info', '정보'], ['growth', '스킬 · 스킨'], ['profile', '프로필 · 호감도']].map(([k, label]) =>
+      el('button', { class: `dt-tab ${this.detailTab === k ? 'active' : ''}`, onclick: () => { this.detailTab = k; this.#renderDetail(); } }, label)));
+    for (const [k, pane] of Object.entries(panes)) pane.hidden = k !== this.detailTab;
+    body.append(el('div', { class: 'dt' }, portrait, el('div', { class: 'dt-info' }, head, tabs, table, growth, profileSec)));
     // --- action bar
     if (e.owned) {
       body.append(el('div', { class: 'dt-actions' },

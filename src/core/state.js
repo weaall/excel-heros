@@ -10,7 +10,7 @@ export const localDateKey = (now = Date.now()) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0, awakened: false });
+export const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0, awakened: false, skillLv: 0 });
 
 export function createInitialState(now = Date.now()) {
   const heroes = {};
@@ -34,6 +34,7 @@ export function createInitialState(now = Date.now()) {
     pity: initialPity(),
     recruit: { points: 0 },
     affection: {},        // hero id -> { xp, gift: 'YYYY-MM-DD' of the last 간식 }
+    skins: {},            // hero id -> { owned: [skinId], active: skinId | null }
     storyRead: {},        // episode id -> true (first read rewarded) // 모집 포인트: +1 per row pulled, spend SPARK_COST on the current pickup card
     team: { coffee: 0, payroll: 0, chairs: 0 },
     settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true, safeAdvance: true, cloud: { url: '', name: '' } },
@@ -59,6 +60,7 @@ export function migrate(raw) {
   s.pity = { ...fresh.pity, ...(raw.pity ?? {}) };
   s.recruit = { ...fresh.recruit, ...(raw.recruit ?? {}) };
   s.affection = { ...(raw.affection ?? {}) };
+  s.skins = { ...(raw.skins ?? {}) };
   s.storyRead = { ...(raw.storyRead ?? {}) };
   s.team = { ...fresh.team, ...(raw.team ?? {}) };
   s.settings = { ...fresh.settings, ...(raw.settings ?? {}) };

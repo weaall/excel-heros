@@ -3,7 +3,7 @@ import { BALANCE } from '../config/balance.js';
 import { GRADES, GRADE_ORDER, heroesOfGrade, HERO_BY_ID } from '../data/heroes.js';
 import { PICKUP_RATE } from '../data/pickup.js';
 
-const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0 });
+const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0, awakened: false, skillLv: 0 });
 
 export const initialPity = () => ({ pulls: 0, sinceA: 0, sinceS: 0 });
 

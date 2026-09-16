@@ -84,6 +84,7 @@ function canvas(w, h) { const c = document.createElement('canvas'); c.width = w;
  * 64x64 (× scale) hero frame.
  * anim: idle (4 frames) | walk (4, run) | attack (3: raise → swing → idle) | hit (1)
  */
+const skinKey = (def) => (def.skin ? `@${def.skin.id}` : '');
 export function packHeroFrame(def, anim = 'idle', frame = 0, scale = 1) {
   if (!sheet) return null;
   const m = HERO_MAP[def.id]; if (!m) return null;
@@ -93,7 +94,7 @@ export function packHeroFrame(def, anim = 'idle', frame = 0, scale = 1) {
   else if (anim === 'hit') { fi = 8; swing = 0.9; }
   else if (anim === 'attack') { const k = frame % 3; fi = [0, 6, 0][k]; swing = [-1.1, 1.5, 0.35][k]; }
   else { fi = frame % 4; swing = 0.35; }
-  const key = `h:${def.id}:${anim}:${fi}:${swing}:${scale}`;
+  const key = `h:${def.id}${skinKey(def)}:${anim}:${fi}:${swing}:${scale}`;
   if (cache.has(key)) return cache.get(key);
   const [c, ctx] = canvas(64 * scale, 64 * scale);
   ctx.save(); ctx.scale(scale, scale);
@@ -106,7 +107,7 @@ export function packHeroFrame(def, anim = 'idle', frame = 0, scale = 1) {
 
 /** Cached 9-frame recoloured strip for a hero (see heroSkins.js). */
 function heroStrip(def, m) {
-  const key = `strip:${def.id}`; let s = cache.get(key);
+  const key = `strip:${def.id}${skinKey(def)}`; let s = cache.get(key);
   if (!s) { s = buildHeroStrip(sheet, def, m); cache.set(key, s); }
   return s;
 }
@@ -115,7 +116,7 @@ function heroStrip(def, m) {
 export function packHeroIcon(def) {
   if (!sheet) return null;
   const m = HERO_MAP[def.id]; if (!m) return null;
-  const key = `icon:${def.id}`;
+  const key = `icon:${def.id}${skinKey(def)}`;
   if (cache.has(key)) return cache.get(key);
   const [c, ctx] = canvas(22, 22);
   ctx.drawImage(heroStrip(def, m), 0, 4, 16, 16, 3, 3, 16, 16);

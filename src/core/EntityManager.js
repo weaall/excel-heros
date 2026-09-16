@@ -78,7 +78,7 @@ export class EntityManager {
       e.interval = v.interval / (e.trait === 'swift' ? 1 + tv(e, 'swift') : 1);
       e.range = (e.role === 'tank' ? TANK_REACH : e.role === 'melee' ? MELEE_REACH : v.range) * GRID.cellW;
       e.star = v.entry.star; e.level = v.entry.level;
-      e.skill = v.def.skill; e.skillUnlocked = v.skillUnlocked; e.skillPower = v.skillPower; e.skillName = v.skillName;
+      e.skill = v.def.skill; e.skillUnlocked = v.skillUnlocked; e.skillPower = v.skillPower; e.skillName = v.skillName; e.skillCdMult = v.skillCdMult ?? 1;
     }
   }
 
@@ -223,7 +223,7 @@ export class EntityManager {
         if (worth) {
           const skillTarget = type === 'strike' ? (monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? monsters.slice().sort((a, b) => b.hp - a.hp)[0] ?? target)
             : type === 'execute' ? (monsters.find((m) => m.isBoss && m.hp < m.maxHp * 0.3) ?? monsters.filter((m) => m.alive && m.hp < m.maxHp * 0.3).sort((a, b) => b.maxHp - a.maxHp)[0] ?? monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? target) : target;
-          this.castSkill(h, skillTarget, monsters, heroes); h.skillCd = (SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0));
+          this.castSkill(h, skillTarget, monsters, heroes); h.skillCd = (SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0)) * (h.skillCdMult ?? 1);
         } else h.skillCd = 0.5; // re-check soon instead of wasting the cast
       }
 

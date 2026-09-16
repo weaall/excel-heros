@@ -13,6 +13,8 @@ export const BALANCE = Object.freeze({
   // --- Idle / offline (user decision: open = 1.0x, closed = 0.6x up to 10h) --
   OFFLINE_CAP_SEC: 10 * 3600, OFFLINE_EFFICIENCY: 0.6, OFFLINE_MIN_SEC: 60,
   AD: { perDay: 3, offlineMultiplier: 2, instantHours: 1, durationSec: 5 }, // placeholder ad (no SDK)
+  // 스킬 강화: 강화 카드로 스킬 레벨 (★2 해금 후). 레벨당 위력 +10%, 재사용 대기 -3%. 비용 = cardCost[grade] × 다음 레벨
+  SKILL_LEVEL: { max: 5, powerPerLevel: 0.10, cooldownPerLevel: 0.03, cardCost: { D: 8, C: 12, B: 20, A: 32, S: 50 } },
   // 호감도: party members earn xp per kill; a daily 간식 (gold) adds a chunk. Each level = +1% ATK/HP for that hero.
   AFFECTION: { maxLevel: 10, xpBase: 60, xpGrowth: 1.45, xpPerKill: 1, xpPerBoss: 15, giftXp: 45, giftGoldKills: 40, bonusPerLevel: 0.01, unlockSecret: 3, unlockLine: 5 },
   // 사내 메신저: first read of an episode pays gems

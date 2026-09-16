@@ -20,6 +20,7 @@ import { createRng } from '../utils/rng.js';
 import { CloudSync } from './CloudSync.js';
 import { pickupFor, SPARK_COST, bannerDaysLeft } from '../data/pickup.js';
 import { EPISODE_BY_ID, episodeUnlocked } from '../data/story.js';
+import { skinsOf, skinById } from '../data/skins.js';
 import { PROFILES } from '../data/profiles.js';
 import { localDateKey } from './state.js';
 import { relativeGold } from '../config/balance.js';
@@ -119,7 +120,52 @@ export class GameManager extends Emitter {
   mainJob() { return MAIN_JOBS[this.state.main.job] ?? MAIN_JOBS.intern; }
 
   /** Definition for any hero id; the main hero's definition depends on the current job. */
-  heroDef(id) { return this.isMain(id) ? { ...this.mainJob(), id: this.mainJob().id, isMain: true } : HERO_BY_ID[id]; }
+  /** Definition + the equipped skin (sprite palette / card art variant) for any hero id. */
+  heroDef(id) {
+    const base = this.isMain(id) ? { ...this.mainJob(), id: this.mainJob().id, isMain: true } : HERO_BY_ID[id];
+    const active = this.state.skins?.[id]?.active; if (!base || !active) return base;
+    const skin = skinById(base.id, active); return skin ? { ...base, skin } : base;
+  }
+  // -------------------------------------------------------------- 스킨 --
+  skinsOf(id) {
+    const def = this.heroDef(id); const st = this.state.skins?.[id] ?? { owned: [], active: null }; const aff = this.affectionOf(id);
+    return skinsOf(def.id).map((sk) => {
+      const owned = st.owned.includes(sk.id);
+      const affOk = sk.unlock.affection ? aff.level >= sk.unlock.affection : true;
+      const canBuy = !owned && !!sk.unlock.gems && this.state.gems >= sk.unlock.gems;
+      const reason = owned ? '' : sk.unlock.affection ? (affOk ? '해금 가능' : `호감도 Lv ${sk.unlock.affection} 필요`) : sk.unlock.gems ? `보석 ${sk.unlock.gems}` : '';
+      return { ...sk, owned, active: st.active === sk.id, canUnlock: !owned && (sk.unlock.affection ? affOk : canBuy), reason };
+    });
+  }
+  /** Unlock a skin: affection skins are free once the level is reached; gem skins cost SKIN_GEM_COST. */
+  unlockSkin(id, skinId) {
+    const e = this.state.heroes[id]; if (!e?.owned) return false;
+    const sk = this.skinsOf(id).find((x) => x.id === skinId); if (!sk || sk.owned || !sk.canUnlock) return false;
+    if (sk.unlock.gems) { this.state.gems -= sk.unlock.gems; this.emit('gems'); }
+    const st = (this.state.skins[id] ??= { owned: [], active: null }); st.owned.push(skinId);
+    this.log(`${this.heroDef(id).name} 스킨 「${sk.name}」 해금`, 'info'); this.emit('skin', { id, skinId }); this.emit('roster');
+    return true;
+  }
+  /** Equip (or null to unequip) an owned skin; sprites and card art re-render. */
+  equipSkin(id, skinId) {
+    const st = (this.state.skins[id] ??= { owned: [], active: null });
+    if (skinId && !st.owned.includes(skinId)) return false;
+    st.active = skinId || null;
+    this.entities.rebuildParty(); this.emit('skin', { id, skinId: st.active }); this.emit('roster'); this.emit('party'); this.persist();
+    return true;
+  }
+  // ------------------------------------------------------------ 스킬 강화 --
+  skillLevelInfo(id) {
+    const def = this.heroDef(id), e = this.state.heroes[id]; const L = BALANCE.SKILL_LEVEL; const lv = e?.skillLv | 0;
+    const cost = lv >= L.max ? null : L.cardCost[def.grade] * (lv + 1);
+    return { level: lv, max: L.max, cost, power: 1 + lv * L.powerPerLevel, cooldown: 1 - lv * L.cooldownPerLevel, can: cost !== null && this.state.cards >= cost && this.heroView(id).skillUnlocked };
+  }
+  upgradeSkill(id) {
+    const info = this.skillLevelInfo(id); const e = this.state.heroes[id]; if (!e?.owned || !info.can) return false;
+    this.state.cards -= info.cost; e.skillLv = info.level + 1;
+    this.entities.refreshHeroStats(); this.log(`${this.heroDef(id).name} 스킬 Lv ${e.skillLv} (카드 -${info.cost})`, 'info');
+    this.emit('cards'); this.emit('roster'); return true;
+  }
 
   heroView(id) {
     const def = this.heroDef(id), entry = this.state.heroes[id];
@@ -135,7 +181,8 @@ export class GameManager extends Emitter {
     // 부문 시너지 only applies to heroes standing in the party (the roster preview shows base numbers for the bench)
     const syn = this.state.party.includes(id) ? this.synergy() : { atk: 0, hp: 0, perks: { skill: 0 } };
     const aff = this.affectionOf(id); const affMult = 1 + aff.level * BALANCE.AFFECTION.bonusPerLevel;
-    const skillPower = (boosted ? BALANCE.SKILL_BOOST_MULT : 1) * (awakened ? BALANCE.AWAKEN.skill : 1) * (1 + syn.perks.skill);
+    const skillLv = entry.skillLv | 0;
+    const skillPower = (boosted ? BALANCE.SKILL_BOOST_MULT : 1) * (awakened ? BALANCE.AWAKEN.skill : 1) * (1 + syn.perks.skill) * (1 + skillLv * BALANCE.SKILL_LEVEL.powerPerLevel);
     const view = {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
       atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus() + syn.atk) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1) * affMult),
@@ -145,7 +192,7 @@ export class GameManager extends Emitter {
       interval: base.interval, range: base.range,
       cost: upgradeCost(entry.level),
       inParty: this.state.party.includes(id),
-      skillUnlocked, skillPower,
+      skillUnlocked, skillPower, skillLv, skillCdMult: 1 - skillLv * BALANCE.SKILL_LEVEL.cooldownPerLevel,
       skillName: def.skill.name ?? SKILLS[def.skill.type].name,
       skillDesc: SKILLS[def.skill.type].desc.replace('{p}', +(def.skill.power * skillPower).toFixed(2)),
       traitName: TRAITS[def.trait].name, traitDesc: TRAITS[def.trait].desc,
@@ -549,7 +596,8 @@ export class GameManager extends Emitter {
     const e = (this.state.affection[id] ??= { xp: 0 }); const cap = Array.from({ length: A.maxLevel }, (_, i) => GameManager.affectionXpFor(i + 1)).reduce((a, b) => a + b, 0);
     e.xp = Math.min(cap, (e.xp | 0) + n);
     const after = this.affectionOf(id).level;
-    if (after > before) { this.emit('affection', { id, level: after }); this.log(`${this.heroDef(id).name} 호감도 Lv ${after}${after === A.unlockSecret ? ' · 사무실 비화 해금' : after === A.unlockLine ? ' · 개인 메시지 해금' : after === A.maxLevel ? ' · MAX' : ''}`, 'info'); this.emit('roster'); }
+    if (after > before) { if (after >= A.maxLevel) for (const sk of this.skinsOf(id)) if (sk.unlock.affection && !sk.owned) this.unlockSkin(id, sk.id);
+      this.emit('affection', { id, level: after }); this.log(`${this.heroDef(id).name} 호감도 Lv ${after}${after === A.unlockSecret ? ' · 사무실 비화 해금' : after === A.unlockLine ? ' · 개인 메시지 해금' : after === A.maxLevel ? ' · MAX' : ''}`, 'info'); this.emit('roster'); }
   }
   giftCost() { return relativeGold(this.state.maxStage, BALANCE.AFFECTION.giftGoldKills, this.goldMult()); }
   /** 간식 사주기: once per hero per day, costs gold relative to the best stage. */

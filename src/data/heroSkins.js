@@ -81,7 +81,7 @@ export function buildHeroStrip(sheet, def, entry) {
   if (!b) return c;
   const img = ctx.getImageData(0, 0, c.width, c.height); const px = img.data;
   // colours from the generated card art win over the hand-picked palette, so sprite and illustration match
-  const pal = { ...(def.palette ?? {}), ...(ART_PALETTES[def.id] ?? {}) }; const look = def.look ?? {};
+  const pal = { ...(def.palette ?? {}), ...(ART_PALETTES[def.id] ?? {}), ...(def.skin?.palette ?? {}) }; const look = def.look ?? {}; // an equipped skin recolours over the art palette
   const hairTarget = look.hair === 'bald' && b.skin ? b.skin : (pal.H ?? null);
   const map = new Map([...clusterMap(b.hair, hairTarget), ...clusterMap(b.cloth, pal.B ?? null), ...clusterMap(b.accent, pal.W ?? null)]);
   for (let i = 0; i < px.length; i += 4) {

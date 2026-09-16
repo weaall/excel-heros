@@ -256,12 +256,15 @@ const monsterPalette = (mon) => {
 };
 
 const HERO_POSES = { idle: ['idle', 'idle2'], walk: ['walkA', 'idle', 'walkB', 'idle'], attack: ['raise', 'strike', 'idle'] };
+/** Card art for a def: the equipped skin's illustration when the manifest has one, else the base art. */
+const artFor = (def) => (def.skin ? cardArt(`${def.id}__${def.skin.id}`) : null) ?? cardArt(def.id);
+const cropFor = (def) => (def.skin && cardArt(`${def.id}__${def.skin.id}`) ? cardCrop(`${def.id}__${def.skin.id}`) : cardCrop(def.id));
 export function heroSprite(def, anim = 'idle', frame = 0, scale = SCALE) {
   const sheet = sheetFrame(def.id, anim, frame, scale / SCALE); if (sheet) return sheet;
   const pack = packHeroFrame(def, anim, frame, scale / SCALE); if (pack) return pack;
   const poses = HERO_POSES[anim] ?? HERO_POSES.idle;
   const pose = poses[frame % poses.length];
-  const key = `h:${def.id}:${pose}:${scale}`;
+  const key = `h:${def.id}${def.skin ? '@' + def.skin.id : ''}:${pose}:${scale}`;
   if (cache.has(key)) return cache.get(key);
   return render(key, heroFrame(def, pose), heroPalette(def), scale);
 }
@@ -286,7 +289,7 @@ export function flashSprite(img) {
 
 export function heroIconDataURL(def) {
   const packIcon = packHeroIcon(def); if (packIcon) return packIcon;
-  const key = `icon:${def.id}`;
+  const key = `icon:${def.id}${def.skin ? '@' + def.skin.id : ''}`;
   if (cache.has(key)) return cache.get(key);
   const c = document.createElement('canvas'); c.width = 22; c.height = 22;
   const ctx = c.getContext('2d');
@@ -309,11 +312,11 @@ export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', 
   const ctx = c.getContext('2d'); ctx.scale(2, 2);
   ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, CARD_W, CARD_H);
   // --- art cell
-  const artImg = cardArt(def.id);
+  const artImg = artFor(def);
   ctx.fillStyle = owned ? g.bg : '#efefef'; ctx.fillRect(1, 1, CARD_W - 2, ART_H - 1);
   ctx.save(); ctx.beginPath(); ctx.rect(1, 1, CARD_W - 2, ART_H - 1); ctx.clip();
   if (!owned) { ctx.filter = 'grayscale(1)'; ctx.globalAlpha = 0.55; }
-  if (artImg) drawArtContain(ctx, artImg, 1, 1, CARD_W - 2, ART_H - 1, cardCrop(def.id));
+  if (artImg) drawArtContain(ctx, artImg, 1, 1, CARD_W - 2, ART_H - 1, cropFor(def));
   else {
     // pixel fallback on a faint cell grid
     ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 1; ctx.beginPath();
@@ -356,13 +359,13 @@ export function cardCanvas(def, { star = 1, owned = true, title = '', sub = '', 
 
 export function portraitCanvas(def, scale = 4) {
   const g = GRADES[def.grade]; const size = 64 * scale + 16;
-  const tallArt = cardArt(def.id);
+  const tallArt = artFor(def);
   if (tallArt && tallArt.height > tallArt.width * 1.1) { // full-figure illustration: tall portrait, whole image visible
     const w = size, h = Math.round(size * Math.min(1.5, tallArt.height / tallArt.width));
     const c = document.createElement('canvas'); c.width = w; c.height = h; c.dataset.art = '1';
     const ctx = c.getContext('2d');
     const grad = ctx.createLinearGradient(0, 0, 0, h); grad.addColorStop(0, '#ffffff'); grad.addColorStop(1, g.bg); ctx.fillStyle = grad; ctx.fillRect(0, 0, w, h);
-    drawArtContain(ctx, tallArt, 2, 2, w - 4, h - 4, cardCrop(def.id));
+    drawArtContain(ctx, tallArt, 2, 2, w - 4, h - 4, cropFor(def));
     ctx.strokeStyle = g.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, w - 2, h - 2);
     return c;
   }
@@ -373,8 +376,8 @@ export function portraitCanvas(def, scale = 4) {
   for (let i = 12; i < size; i += 16) { ctx.moveTo(i + 0.5, 0); ctx.lineTo(i + 0.5, size); ctx.moveTo(0, i + 0.5); ctx.lineTo(size, i + 0.5); }
   ctx.stroke();
   ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath(); ctx.ellipse(size / 2, size - 10, 6 * scale, 1.2 * scale, 0, 0, Math.PI * 2); ctx.fill();
-  const artImg = cardArt(def.id);
-  if (artImg) drawArtCover(ctx, artImg, 2, 2, size - 4, size - 4, cardCrop(def.id));
+  const artImg = artFor(def);
+  if (artImg) drawArtCover(ctx, artImg, 2, 2, size - 4, size - 4, cropFor(def));
   else { const img = heroSprite(def, 'idle', 0, 1); ctx.drawImage(img, 0, 0, img.width, img.height, 8, 8, 64 * scale, 64 * scale); }
   ctx.strokeStyle = g.color; ctx.lineWidth = 2; ctx.strokeRect(1, 1, size - 2, size - 2);
   return c;
