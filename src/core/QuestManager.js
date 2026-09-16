@@ -71,9 +71,12 @@ export function claimAllClear(state, goldMult = 1) {
 }
 
 export const adsLeft = (state) => Math.max(0, BALANCE.AD.perDay - (state.daily.adsUsed ?? 0));
-/** Consume one ad view. Returns false when the daily limit is reached. */
-export function useAd(state) {
-  if (adsLeft(state) <= 0) return false;
+/** Remaining views of one offer today (also bounded by the total cap). */
+export const adsLeftFor = (state, key) => { const o = BALANCE.AD_OFFERS[key]; if (!o) return 0; return Math.min(adsLeft(state), Math.max(0, o.perDay - (state.daily.ads?.[key] ?? 0))); };
+/** Consume one ad view of an offer. Returns false when its daily limit (or the total) is reached. */
+export function useAd(state, key = 'gold') {
+  if (adsLeftFor(state, key) <= 0) return false;
   state.daily.adsUsed = (state.daily.adsUsed ?? 0) + 1;
+  state.daily.ads = { ...(state.daily.ads ?? {}), [key]: (state.daily.ads?.[key] ?? 0) + 1 };
   return true;
 }

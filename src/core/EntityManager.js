@@ -34,7 +34,7 @@ export class EntityManager {
     this.game = game;
     this.heroes = []; this.monsters = []; this.projectiles = []; this.floaters = []; this.particles = []; this.effects = [];
     this.boss = null; this.bossTimer = 0;
-    this.atkBuff = { mult: 1, until: 0 }; this.hasteBuff = { mult: 1, until: 0 }; this.barrier = { hp: 0, max: 0, until: 0 };
+    this.atkBuff = { mult: 1, until: 0 }; this.hasteBuff = { mult: 1, until: 0 }; this.barrier = { hp: 0, max: 0, until: 0 }; this.slow = { mult: 1, until: 0 }; // slow: boss debuff on party attack speed
     this.time = 0; this.dmgLog = []; this.rallyMult = 1; this.shake = 0;
     this.scroll = 0;            // background scroll offset (px)
     this.traveling = false; this.travelT = 0;
@@ -145,7 +145,7 @@ export class EntityManager {
       range, standoff: range * 0.9 + (proj ? 0 : index * 34),
       speed: isBoss ? (def.speed ?? 40) : BALANCE.MONSTER_SPEED * (0.9 + Math.random() * 0.25) * (elite ? 0.9 : 1),
       alive: true, targetId: null, anim: 'walk', animT: Math.random(), stun: 0, shake: 0, lunge: 0, flash: 0, spawnT: 0,
-      w: isBoss ? 96 : 64, h: isBoss ? 80 : 64,
+      w: isBoss ? 128 : 64, h: isBoss ? 116 : 64,
     };
     if (def.affix) { const a = def.affix; if (a.hp) e.hp *= a.hp; if (a.speed) e.speed *= a.speed; if (a.interval) e.interval *= a.interval; }
     e.hp = Math.floor(e.hp); e.atk = Math.floor(e.atk); e.maxHp = e.hp;
@@ -166,7 +166,8 @@ export class EntityManager {
     if (this.atkBuff.until < this.time) this.atkBuff.mult = 1;
     if (this.hasteBuff.until < this.time) this.hasteBuff.mult = 1;
     if (this.barrier.until < this.time) this.barrier.hp = 0;
-    const speedMult = this.game.speedMult() * this.hasteBuff.mult;
+    if (this.slow.until < this.time) this.slow.mult = 1;
+    const speedMult = this.game.speedMult() * this.hasteBuff.mult * this.slow.mult;
 
     // --- travel between waves: scroll the dungeon, party runs in place
     if (!monsters.length && !this.boss) {
@@ -265,7 +266,7 @@ export class EntityManager {
       if (m.cd > 0) continue;
       if (m.def.mimic) m.openFrame = 2;              // the mimic shows its teeth once it starts biting
       m.cd = m.interval; m.lunge = 0.2; m.hits++;
-      if (m.isBoss) { const p = m.def.pattern; m.warn = (p === 'sweep' && (m.hits + 1) % 3 === 0) || (p === 'stomp' && (m.hits + 1) % 4 === 0); }
+      if (m.isBoss) m.warn = (m.def.specials ?? []).some((sp) => (m.hits + 1) % sp.every === 0); // telegraph one attack ahead
       if (m.isBoss && this.#bossPattern(m, heroes, frontX)) continue;
       if (m.proj || (m.isBoss && m.def.pattern === 'fire' && Math.random() < 0.35)) {
         // ranged monsters shoot a random party member so damage spreads across the line
@@ -321,23 +322,34 @@ export class EntityManager {
     return inField.sort((a, b) => (a.hp + (a.shield ?? 0)) / a.maxHp - (b.hp + (b.shield ?? 0)) / b.maxHp || a.x - b.x)[0];
   }
 
-  /** Boss special attacks by pattern. Returns true when a special fired this turn. */
+  /** Boss specials (data: BOSSES[].specials). Every Nth attack; when two coincide the rarer one fires. Returns true when one fired. */
   #bossPattern(m, heroes, frontX) {
-    const p = m.def.pattern;
-    if (p === 'sweep' && m.hits % 3 === 0) {
+    const sp = (m.def.specials ?? []).filter((x) => m.hits % x.every === 0).sort((a, b) => b.every - a.every)[0];
+    if (!sp) return false;
+    this.floaters.push({ x: m.x, y: m.y - 110, text: sp.name, color: m.def.palette?.M ?? '#e74c3c', t: 0, big: true });
+    this.game.emit('boss-special', { boss: m, special: sp });
+    if (sp.kind === 'sweep') {
       const front = heroes.slice().sort((a, b) => b.x - a.x).slice(0, 2);
       this.fx('slash', { x: frontX - 20, y: GROUND_Y - 14, color: '#e74c3c', angle: 0.25, life: 0.3, big: true }); this.shake = Math.max(this.shake, 8);
-      this.floaters.push({ x: m.x, y: m.y - 84, text: '야근 지시!', color: '#e74c3c', t: 0, big: true });
       for (const t of front) this.#monsterHit(m, t, 0.9);
-      return true;
-    }
-    if (p === 'stomp' && m.hits % 4 === 0) {
+    } else if (sp.kind === 'stomp') {
       this.fx('ring', { x: m.x, y: m.y, color: '#e67e22', radius: 520, life: 0.5 }); this.shake = Math.max(this.shake, 12);
-      this.floaters.push({ x: m.x, y: m.y - 84, text: '갑질 발구르기!', color: '#e67e22', t: 0, big: true });
       for (const t of heroes) { this.#monsterHit(m, t, 0.5); this.fx('puff', { x: t.x, y: t.y, color: '#e67e22', life: 0.3 }); }
-      return true;
+    } else if (sp.kind === 'volley') {
+      // three fireballs at three different heroes (fewer when the party is smaller)
+      const targets = heroes.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+      targets.forEach((t, i) => this.projectiles.push({ x: m.x - 20, y: m.y - 40 - i * 10, tx: t.x, ty: t.y - 8, t: -i * 0.12, dur: 0.55, color: '#ff7043', kind: 'drop', hostile: true, targetId: t.id, dmg: m.atk * 0.6 }));
+      this.shake = Math.max(this.shake, 6);
+    } else if (sp.kind === 'slow') {
+      this.slow = { mult: 0.7, until: this.time + 4 };
+      this.fx('ring', { x: m.x, y: m.y, color: '#27ae60', radius: 560, life: 0.6 });
+      for (const t of heroes) { this.fx('puff', { x: t.x, y: t.y - 20, color: '#27ae60', life: 0.35 }); this.floaters.push({ x: t.x, y: t.y - 70, text: '느려짐', color: '#27ae60', t: 0 }); }
+    } else if (sp.kind === 'throw') {
+      const back = heroes.slice().sort((a, b) => a.x - b.x)[0]; if (!back) return true;
+      this.projectiles.push({ x: m.x - 30, y: m.y - 70, tx: back.x, ty: back.y - 8, t: 0, dur: 0.7, color: '#935116', kind: 'drop', hostile: true, targetId: back.id, dmg: m.atk * 1.4, crate: true });
+      this.shake = Math.max(this.shake, 6);
     }
-    return false;
+    return true;
   }
 
   #monsterHit(m, target, mult = 1) {
@@ -463,7 +475,7 @@ export class EntityManager {
         break;
     }
     h.anim = 'attack'; h.animT = 0;
-    if (type !== 'ult' && !h.say) { const q = skillQuip(type, Math.random()); if (q) h.say = { text: q, t: 1.8 }; }
+    if (type !== 'ult') { if (!h.say) { const q = skillQuip(type, Math.random()); if (q) h.say = { text: q, t: 1.8 }; } this.game.emit('skill-cast', { hero: h, type }); }
     this.game.emit('sfx', type === 'ult' ? 'ult' : 'skill');
     this.floaters.push({ x: h.x, y: h.y - 58, text: h.skillName ?? type.toUpperCase(), color: '#8e44ad', t: 0, big: true });
     this.game.log(`${h.def.name}: ${h.skillName ?? type} 발동`, 'skill');

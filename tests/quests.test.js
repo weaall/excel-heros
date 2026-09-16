@@ -43,21 +43,31 @@ test('login bonus once per day; all-clear bonus after every quest is claimed', (
   assert.equal(Q.claimAllClear(s), null);
 });
 
-test('ads are limited per day and reward gold', () => {
+test('ad offers: flat rewards with per-offer daily caps; total cap is the sum', () => {
   const s = createInitialState(); s.maxStage = 5;
   const g = new GameManager({ state: s, save: memSave() });
+  const O = BALANCE.AD_OFFERS;
+  assert.equal(Object.values(O).reduce((a, o) => a + o.perDay, 0), BALANCE.AD.perDay, 'total cap = sum of offer caps');
   const before = g.state.gold;
-  for (let i = 0; i < BALANCE.AD.perDay; i++) assert.ok(g.adReward('instant'));
+  for (let i = 0; i < O.gold.perDay; i++) assert.ok(g.adReward('gold'));
   assert.ok(g.state.gold > before);
-  assert.equal(g.adReward('instant'), null, 'limit reached');
-  assert.equal(g.adsLeft(), 0);
+  assert.equal(g.adReward('gold'), null, 'gold offer exhausted'); assert.equal(g.adReward('instant'), null, 'legacy kind maps to gold');
+  assert.equal(g.adsLeft('gold'), 0); assert.equal(g.adsLeft('gems'), O.gems.perDay, 'other offers untouched');
+  const gems = g.state.gems, cards = g.state.cards;
+  assert.deepEqual(g.adReward('gems').gems, O.gems.amount); assert.equal(g.state.gems, gems + O.gems.amount);
+  assert.deepEqual(g.adReward('cards').cards, O.cards.amount); assert.equal(g.state.cards, cards + O.cards.amount);
+  assert.equal(g.adReward('dispatch'), null, 'no dispatch running → not applicable');
+  assert.equal(g.adReward('overtime'), null, 'overtime not used today yet → not applicable');
+  g.state.daily.overtimeDone = true; assert.ok(!g.canOvertime());
+  assert.ok(g.adReward('overtime').overtime); assert.ok(g.canOvertime(), 'ad buys one extra 야근');
+  assert.ok(g.adOffers().every((o) => typeof o.left === 'number' && o.name && o.value !== undefined));
 });
 
-test('offline report ad doubles the payout', () => {
-  const g = new GameManager({ state: createInitialState(), save: memSave() });
-  const report = { gold: 1000, seconds: 3600 };
-  const r = g.adReward('offline', report);
-  assert.equal(r.gold, 1000 * (BALANCE.AD.offlineMultiplier - 1));
+test('offline report ad pays the flat gold offer, never a multiple of the report', () => {
+  const s = createInitialState(); s.maxStage = 5; const g = new GameManager({ state: s, save: memSave() });
+  const r = g.adReward('offline', { gold: 1_000_000, seconds: 3600 });
+  assert.equal(r.gold, Math.floor(g.goldPerSecAt(g.state.stage) * BALANCE.AD_OFFERS.gold.hours * 3600));
+  assert.ok(r.gold < 1_000_000, 'not tied to the offline report');
 });
 
 test('game hooks feed quest progress (kills, upgrades, pulls)', () => {

@@ -647,3 +647,5 @@ body.stealth #roster-table { display: table; }
 .skin-grid .skin-chip .skin-name { font-weight: 700; }
 .skin-grid .skin-chip small { white-space: normal; text-align: center; line-height: 1.3; }
 .skin-grid .skin-chip.active .skin-name { color: var(--sc, var(--xl-green)); }
+
+.ad-table { margin-top: 4px; } .ad-table td.ctl { text-align: right; white-space: nowrap; } .ad-table tr.done td { color: #888; }

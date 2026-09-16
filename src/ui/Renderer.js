@@ -2,6 +2,8 @@
 // particles, hit flashes, screen shake, stage banners and the boss cut-in.
 import { CANVAS_W, CANVAS_H, GROUND_Y, GRID } from '../core/EntityManager.js';
 import { heroSprite, monsterSprite, flashSprite } from '../data/sprites.js';
+import { cardArt } from '../data/cardArt.js';
+import { SKILLS } from '../data/heroes.js';
 import { drawCity } from './cityBackdrop.js';
 import { GRADES } from '../data/heroes.js';
 import { stageLabel, BALANCE } from '../config/balance.js';
@@ -20,6 +22,8 @@ export class Renderer {
     this.ctx.imageSmoothingEnabled = false;
     this.t = 0;
     this.banner = null;
+    this.skillCard = null; // small illustration cut-in for regular skills (one at a time; a new cast replaces it)
+    game.on('skill-cast', ({ hero, type }) => { this.skillCard = { hero, type, t: 0, life: 1.4 }; });
     this.selected = null;   // { col, row } selected worksheet cell (Excel-style selection box)
     game.on('challengeStart', ({ stage, boss }) => {
       this.banner = boss
@@ -58,6 +62,7 @@ export class Renderer {
     ctx.restore();
     if (em.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${(em.flashT / 0.18) * 0.55})`; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H); }
     this.#drawSelection();
+    this.#drawSkillCard(dt);
     this.#drawBanner(dt);
   }
 
@@ -141,6 +146,7 @@ export class Renderer {
   #drawBuff(em) {
     const { ctx } = this; const lines = [];
     if (em.atkBuff.mult > 1 && em.atkBuff.until >= em.time) lines.push(['rgba(142,68,173,0.85)', `▲ 팀 싱크: ATK ×${em.atkBuff.mult.toFixed(2)} (${Math.max(0, em.atkBuff.until - em.time).toFixed(1)}s)`]);
+    if (em.slow?.mult < 1 && em.slow.until >= em.time) lines.push(['rgba(39,174,96,0.9)', `▼ 야근 강요: 공격 속도 ×${em.slow.mult.toFixed(2)} (${Math.max(0, em.slow.until - em.time).toFixed(1)}s)`]);
     if (em.hasteBuff?.mult > 1 && em.hasteBuff.until >= em.time) lines.push(['rgba(183,149,11,0.9)', `» 가속: 공격 속도 ×${em.hasteBuff.mult.toFixed(2)} (${Math.max(0, em.hasteBuff.until - em.time).toFixed(1)}s)`]);
     if (em.barrier?.hp > 0 && em.barrier.until >= em.time) lines.push(['rgba(41,128,185,0.9)', `◈ 보호막: ${Math.round(em.barrier.hp)} / ${em.barrier.max} (${Math.max(0, em.barrier.until - em.time).toFixed(1)}s)`]);
     lines.forEach(([bg, text], i) => {
@@ -153,6 +159,32 @@ export class Renderer {
 
   /** Fill text with a dark outline so white labels stay readable over bright sashes and backgrounds. */
   #txt(text, x, y, stroke = 'rgba(0,0,0,0.65)') { const { ctx } = this; ctx.save(); ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = stroke; ctx.strokeText(text, x, y); ctx.restore(); ctx.fillText(text, x, y); }
+  #artOf(def) { return (def.skin && cardArt(`${def.id}__${def.skin.id}`)) || cardArt(def.id) || null; }
+  /** Draw an illustration into a box: cover-fit, anchored to the top (faces live in the top half). */
+  #artBox(img, x, y, w, h, frame = '#fff') {
+    const { ctx } = this; const s = Math.max(w / img.width, h / img.height); const dw = img.width * s, dh = img.height * s;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.imageSmoothingEnabled = true; ctx.drawImage(img, x + (w - dw) / 2, y, dw, dh); ctx.restore();
+    ctx.strokeStyle = frame; ctx.lineWidth = 2; ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
+  }
+  /** Regular skill cut-in: a name-tag sized illustration card in the top-left (below the boss bar), out of the way of the line. */
+  #drawSkillCard(dt) {
+    const c = this.skillCard; if (!c) return;
+    c.t += dt; if (c.t >= c.life) { this.skillCard = null; return; }
+    const { ctx } = this; const k = c.t / c.life; const def = c.hero.def; const grade = GRADES[def.grade];
+    const fade = Math.min(1, k * 8, (1 - k) * 5); const slide = k < 0.1 ? (1 - k / 0.1) * -160 : 0;
+    const x = 10 + slide, y = 46, W = 236, H = 76;
+    ctx.save(); ctx.globalAlpha = fade;
+    ctx.fillStyle = 'rgba(20,22,30,0.82)'; ctx.fillRect(x, y, W, H);
+    ctx.fillStyle = grade?.color ?? '#6c3483'; ctx.fillRect(x, y, 4, H);
+    const img = this.#artOf(def);
+    if (img) this.#artBox(img, x + 12, y + 6, 64, 64, grade?.color ?? '#fff');
+    else { const sp = heroSprite(def, 'attack', 1); ctx.imageSmoothingEnabled = false; ctx.drawImage(sp, x + 12, y + 6, 64, 64); }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillText(def.name, x + 86, y + 20);
+    ctx.fillStyle = '#d7bde2'; ctx.font = 'bold 15px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillText(c.hero.skillName ?? SKILLS[c.type]?.name ?? '스킬', x + 86, y + 42);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '11px "Malgun Gothic", "Segoe UI", sans-serif'; if (c.hero.skillName && c.hero.skillName !== SKILLS[c.type]?.name) ctx.fillText(SKILLS[c.type]?.name ?? '', x + 86, y + 61);
+    ctx.restore();
+  }
   #drawBanner(dt) {
     const b = this.banner; if (!b) return;
     b.t += dt; if (b.t >= b.life) { this.banner = null; return; }
@@ -161,7 +193,7 @@ export class Renderer {
     const slide = k < 0.15 ? (1 - k / 0.15) * -300 : 0;
     ctx.save(); ctx.globalAlpha = fade;
     if (b.kind === 'boss') {
-      ctx.fillStyle = 'rgba(30,0,0,0.55)'; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      { const g = ctx.createLinearGradient(0, 0, 0, 280); g.addColorStop(0, 'rgba(30,0,0,0.6)'); g.addColorStop(0.8, 'rgba(30,0,0,0.5)'); g.addColorStop(1, 'rgba(30,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, CANVAS_W, 280); } // upper band only: the line below stays readable
       ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(-60 + slide, 150); ctx.lineTo(CANVAS_W + 60 + slide, 110); ctx.lineTo(CANVAS_W + 60 + slide, 210); ctx.lineTo(-60 + slide, 250); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 40px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       this.#txt(b.text, CANVAS_W / 2 - 60 + slide, 178);
@@ -172,7 +204,7 @@ export class Renderer {
       const boss = this.game.entities.boss;
       if (boss) {
         const img = monsterSprite(boss.def, 0); ctx.imageSmoothingEnabled = false;
-        const sx = CANVAS_W - 330 + slide * 0.5, sy = 62, sc = 3;
+        const sx = CANVAS_W - 300 + slide * 0.5, sy = 28, sc = 2; // boss frames are 3× already → 6× on the cut-in
         ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.ellipse(sx + img.width * sc / 2, sy + img.height * sc - 6, img.width * sc / 2, 14, 0, 0, Math.PI * 2); ctx.fill();
         ctx.drawImage(img, sx, sy, img.width * sc, img.height * sc);
         ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Consolas, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -180,13 +212,14 @@ export class Renderer {
       }
     } else if (b.kind === 'skill') {
       // ultimate cut-in: purple sash + the caster's sprite blown up on the left
-      ctx.fillStyle = 'rgba(40,0,60,0.35)'; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      { const g = ctx.createLinearGradient(0, 0, 0, 280); g.addColorStop(0, 'rgba(40,0,60,0.45)'); g.addColorStop(0.8, 'rgba(40,0,60,0.35)'); g.addColorStop(1, 'rgba(40,0,60,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, CANVAS_W, 280); }
       ctx.fillStyle = '#6c3483'; ctx.beginPath(); ctx.moveTo(-60 + slide, 130); ctx.lineTo(CANVAS_W + 60 + slide, 170); ctx.lineTo(CANVAS_W + 60 + slide, 250); ctx.lineTo(-60 + slide, 210); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 36px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       this.#txt(b.text, CANVAS_W / 2 + 70 + slide, 190);
       ctx.font = 'bold 14px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#e8daef'; this.#txt(b.sub, CANVAS_W / 2 + 70 + slide, 228);
-      const img = heroSprite(b.hero.def, 'attack', 1); ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(img, 60 + slide * 0.5, 80, img.width * 3, img.height * 3);
+      const art = this.#artOf(b.hero.def);
+      if (art) { ctx.save(); ctx.translate(120 + slide * 0.5, 160); ctx.rotate(-0.06); this.#artBox(art, -70, -98, 140, 196, GRADES[b.hero.def.grade]?.color ?? '#fff'); ctx.restore(); }
+      else { const img = heroSprite(b.hero.def, 'attack', 1); ctx.imageSmoothingEnabled = false; ctx.drawImage(img, 60 + slide * 0.5, 80, img.width * 3, img.height * 3); }
     } else {
       const col = b.kind === 'clear' ? '#217346' : b.kind === 'challenge' ? '#1f5fa8' : b.kind === 'milestone' ? '#b7950b' : '#5d6d7e';
       ctx.fillStyle = col; ctx.globalAlpha = fade * 0.9; ctx.fillRect(slide, 150, CANVAS_W, 64);
@@ -418,7 +451,7 @@ export class Renderer {
       ctx.font = '12px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       const text = h.say.text.length > 34 ? h.say.text.slice(0, 33) + '…' : h.say.text;
       const w = Math.ceil(ctx.measureText(text).width) + 16, hgt = 24;
-      let x = Math.round(h.x - w / 2), y = Math.round(h.y - (h.isBoss ? 118 : 96));
+      let x = Math.round(h.x - w / 2), y = Math.round(h.y - (h.isBoss ? 150 : 96));
       x = Math.max(6, Math.min(CANVAS_W - w - 6, x));
       ctx.fillStyle = h.isBoss ? '#fdecea' : '#fff'; ctx.fillRect(x, y, w, hgt); ctx.fillStyle = h.isBoss ? '#7b241c' : '#2c3e50'; ctx.fillRect(x - 2, y + 2, 2, hgt - 4); ctx.fillRect(x + w, y + 2, 2, hgt - 4); ctx.fillRect(x + 2, y - 2, w - 4, 2); ctx.fillRect(x + 2, y + hgt, w - 4, 2);
       const tx = Math.round(Math.max(x + 8, Math.min(x + w - 12, h.x - 4))); ctx.fillStyle = '#fff'; ctx.fillRect(tx, y + hgt, 8, 4); ctx.fillRect(tx + 2, y + hgt + 4, 4, 2); ctx.fillStyle = '#2c3e50'; ctx.fillRect(tx - 2, y + hgt + 2, 2, 2); ctx.fillRect(tx + 8, y + hgt + 2, 2, 2);

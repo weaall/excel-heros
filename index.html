@@ -97,7 +97,7 @@
         <div class="rb-row">
           <button id="qa-login" class="rb-btn"><span class="rb-icon">✎</span>출근 도장</button>
           <button class="rb-btn" data-sheet="quests"><span class="rb-icon">✓</span>일일 업무</button>
-          <button id="qa-ad" class="rb-btn" title="광고를 보고 1시간 방치 보상"><span class="rb-icon">▶</span>광고 보상</button>
+          <button id="qa-ad" class="rb-btn" title="광고 보상 메뉴: 골드 · 보석 · 강화 카드 · 출장 즉시 복귀 · 야근 추가"><span class="rb-icon">▶</span>광고 보상</button>
         </div>
         <div class="rb-group-label">업무 검토</div>
       </div>
@@ -297,12 +297,9 @@
               </div>
             </div>
             <div class="qs-block act">
-              <div class="qs-title">광고 보상 <span class="muted">임시 화면 · SDK 연동 전</span></div>
-              <div class="ad-box">
-                <span id="ad-left" class="small"></span>
-                <button id="btn-ad-instant" class="xl-btn">광고 보고 1시간 방치 보상 받기</button>
-              </div>
-              <p class="muted small qs-note">방치 보상: 켜두면 100%, 꺼두면 60% (최대 10시간). 복귀 시 광고를 보면 2배.</p>
+              <div class="qs-title">광고 보상 <span id="ad-left" class="muted"></span></div>
+              <div id="ad-offers"></div>
+              <p class="muted small qs-note">광고 1편 = 보상 1개, 모두 고정 지급. 방치 보상은 켜두면 100%, 꺼두면 60% (최대 10시간)이며 광고로 배율이 붙지 않습니다.</p>
             </div>
           </div>
         </div>

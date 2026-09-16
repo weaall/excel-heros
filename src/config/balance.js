@@ -12,7 +12,15 @@ export const BALANCE = Object.freeze({
 
   // --- Idle / offline (user decision: open = 1.0x, closed = 0.6x up to 10h) --
   OFFLINE_CAP_SEC: 10 * 3600, OFFLINE_EFFICIENCY: 0.6, OFFLINE_MIN_SEC: 60,
-  AD: { perDay: 3, offlineMultiplier: 2, instantHours: 1, durationSec: 5 }, // placeholder ad (no SDK)
+  AD: { perDay: 9, durationSec: 5 }, // total rewarded ads per day (sum of the offer caps); durationSec = placeholder ad length
+  /** Rewarded-ad menu. Every reward is flat (never a multiplier on offline earnings, so leaving the game closed is never the better play). */
+  AD_OFFERS: {
+    gold:     { perDay: 3, hours: 1,    name: '유휴 골드 1시간분',  desc: '현재 스테이지 골드 수익 1시간분을 즉시 지급' },
+    gems:     { perDay: 2, amount: 15,  name: '보석 +15',           desc: '뽑기 재화. 하루 2회' },
+    cards:    { perDay: 2, amount: 10,  name: '강화 카드 +10',      desc: '강화·한계 돌파 재화. 하루 2회' },
+    dispatch: { perDay: 1,              name: '출장 즉시 복귀',     desc: '진행 중인 출장을 바로 끝내고 보상 수령 가능' },
+    overtime: { perDay: 1,              name: '야근 모드 추가 1회', desc: '오늘 야근을 이미 했어도 한 번 더' },
+  },
   // 출장: send up to 3 bench heroes away for a few hours; gems by grade + cards by phase + affection for the travellers
   DISPATCH: { hours: 4, slots: 3, maxPerDay: 2, gemsBase: 20, gemsPerGrade: { D: 3, C: 5, B: 8, A: 12, S: 20 }, cardsPerPhase: 1, affectionXp: 60 },
   // 스킬 강화: 강화 카드로 스킬 레벨 (★2 해금 후). 레벨당 위력 +10%, 재사용 대기 -3%. 비용 = cardCost[grade] × 다음 레벨

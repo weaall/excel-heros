@@ -46,12 +46,14 @@ export const PALETTES = [
 ];
 
 const BOSS_PALETTE = { M: '#c0392b', D: '#7b241c', E: '#f9e79f', L: '#ffffff', K: '#ff9f9f' };
-/** Bosses rotate by phase. pattern: fire = 35% fireball at a random hero · sweep = every 3rd attack hits the front two ·
- *  stomp = every 4th attack hits the whole line for 50%. hp/atk/speed/interval scale the base boss numbers. */
+/** Bosses rotate by phase. pattern: fire = 35% fireball at a random hero. specials fire on every Nth attack (the '!' telegraph
+ *  shows one attack ahead; when two line up the rarer one wins): sweep = front two ×0.9 · stomp = whole line ×0.5 ·
+ *  volley = 3 fireballs ×0.6 at 3 different heroes · slow = party attack speed ×0.7 for 4 s · throw = crate at the back line ×1.4.
+ *  hp/atk/speed/interval scale the base boss numbers. Bosses draw at 3× (96×108 px) so they tower over the 2× monsters. */
 export const BOSSES = [
-  { id: 'boss',        name: '긴급 티켓',        shape: 'ticket', palette: BOSS_PALETTE, pattern: 'fire',  hp: 1,    atk: 1,    speed: 110, interval: 2.0, desc: '35% 확률로 무작위 영웅에게 불덩이' },
-  { id: 'boss_zombie', name: '야근 좀비 부장',   shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#27ae60', D: '#145a32' }, pattern: 'sweep', hp: 1.25, atk: 0.9, speed: 90, interval: 2.4, desc: '3번째 공격마다 앞 두 명을 휩쓸기' },
-  { id: 'boss_ogre',   name: '갑질 거래처 오우거', shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#e67e22', D: '#935116' }, pattern: 'stomp', hp: 1,    atk: 1.15, speed: 120, interval: 2.2, desc: '4번째 공격은 전원 발구르기(50%)' },
+  { id: 'boss',        name: '긴급 티켓',        shape: 'ticket', palette: BOSS_PALETTE, pattern: 'fire',  hp: 1,    atk: 1,    speed: 110, interval: 2.0, specials: [{ every: 5, kind: 'volley', name: '티켓 폭주!', desc: '5번째 공격: 불덩이 3연발 (각 60%)' }], desc: '35% 확률로 무작위 영웅에게 불덩이 · 5번째 공격마다 불덩이 3연발' },
+  { id: 'boss_zombie', name: '야근 좀비 부장',   shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#27ae60', D: '#145a32' }, pattern: 'sweep', hp: 1.25, atk: 0.9, speed: 90, interval: 2.4, specials: [{ every: 3, kind: 'sweep', name: '야근 지시!', desc: '3번째 공격: 앞 두 명 휩쓸기 (90%)' }, { every: 6, kind: 'slow', name: '야근 강요!', desc: '6번째 공격: 4초간 파티 공격 속도 -30%' }], desc: '3번째 공격마다 앞 두 명 휩쓸기 · 6번째 공격은 파티를 4초간 느리게' },
+  { id: 'boss_ogre',   name: '갑질 거래처 오우거', shape: 'ticket', palette: { ...BOSS_PALETTE, M: '#e67e22', D: '#935116' }, pattern: 'stomp', hp: 1,    atk: 1.15, speed: 120, interval: 2.2, specials: [{ every: 4, kind: 'stomp', name: '갑질 발구르기!', desc: '4번째 공격: 전원 50%' }, { every: 6, kind: 'throw', name: '서류 투척!', desc: '6번째 공격: 맨 뒤 영웅에게 140%' }], desc: '4번째 공격은 전원 발구르기(50%) · 6번째 공격은 맨 뒤 영웅에게 서류 투척(140%)' },
 ];
 /** Treasure chests join normal waves occasionally. The mimic looks the same until it bites. */
 export const CHEST = { id: 'chest', name: '보물 상자', shape: 'cube', chest: true, palette: { M: '#b9770e', D: '#7e5109', E: '#f9e79f' } };

@@ -116,7 +116,8 @@ export class UIManager {
     $('#qa-pull10').addEventListener('click', () => { this.switchSheet('gacha'); this.#pull(10); });
     $('#qa-auto-party').addEventListener('click', () => { const p = this.game.autoParty(); this.toast(`파티 자동 편성: ${p.length}명`); });
     $('#qa-login').addEventListener('click', () => { const r = this.game.claimLogin(); this.toast(r ? `출근 보상: ${rewardText(r)}` : '오늘은 이미 출근 도장을 찍었습니다'); });
-    $('#qa-ad').addEventListener('click', () => this.playAd(() => { const r = this.game.adReward('instant'); if (r) this.toast(`광고 보상 +${fmt(r.gold)} 골드`); }));
+    $('#qa-ad').addEventListener('click', () => this.openModal('광고 보상', this.#adMenu())); // (legacy handler below kept for reference)
+    if (false) $('#qa-ad').addEventListener('click', () => this.playAd(() => { const r = this.game.adReward('instant'); if (r) this.toast(`광고 보상 +${fmt(r.gold)} 골드`); }));
     $('#qa-gridlines').addEventListener('change', (e) => this.game.setGridlines(e.target.checked));
     $('#set-gridlines').addEventListener('change', (e) => this.game.setGridlines(e.target.checked));
     $('#set-safe').addEventListener('change', (e) => this.game.setSafeAdvance(e.target.checked));
@@ -182,7 +183,7 @@ export class UIManager {
 
     $('#btn-login').addEventListener('click', () => { const r = this.game.claimLogin(); if (r) this.toast(`출근 보상: ${rewardText(r)}`); });
     $('#btn-allclear').addEventListener('click', () => { const r = this.game.claimAllClear(); if (r) this.toast(`전체 완료 보너스: ${rewardText(r)}`); });
-    $('#btn-ad-instant').addEventListener('click', () => this.playAd(() => { const r = this.game.adReward('instant'); if (r) this.toast(`광고 보상 +${fmt(r.gold)} 골드`); }));
+    if ($('#btn-ad-instant')) $('#btn-ad-instant').addEventListener('click', () => this.playAd(() => { const r = this.game.adReward('instant'); if (r) this.toast(`광고 보상 +${fmt(r.gold)} 골드`); }));
 
     $('#btn-export').addEventListener('click', () => { $('#save-text').value = this.game.exportSave(); $('#save-text').select(); this.toast('저장 문자열을 내보냈습니다'); });
     $('#btn-import').addEventListener('click', () => {
@@ -1010,7 +1011,7 @@ export class UIManager {
     this.#refreshAchievements(); this.#refreshMilestones();
     const left = g.adsLeft();
     $('#ad-left').textContent = `오늘 남은 광고 ${left} / ${BALANCE.AD.perDay}회`;
-    $('#btn-ad-instant').disabled = left <= 0;
+    { const box = $('#ad-offers'); if (box) { box.innerHTML = ''; box.append(this.#adTable()); } }
   }
 
   /** 출장 box: bench pick list (checkbox chips) + status/timer + start/claim buttons. */
@@ -1095,12 +1096,37 @@ export class UIManager {
     }
   }
 
+  /** Rewarded-ad menu (일일 업무 block and the ribbon button share it): one row per offer with today's count and a button. */
+  #adTable() {
+    const g = this.game; const tb = el('tbody');
+    for (const o of g.adOffers()) {
+      tb.append(el('tr', { class: o.can ? '' : 'done' },
+        el('td', { class: 'name' }, o.name, el('div', { class: 'sub' }, o.desc)),
+        el('td', { class: 'small' }, o.value),
+        el('td', { class: 'num' }, `${o.left} / ${o.perDay}`),
+        el('td', { class: 'ctl' }, btn(o.can ? '광고 보기' : (o.reason || '불가'), () => this.watchAd(o.key), o.can ? 'primary small' : 'small', !o.can))));
+    }
+    return el('table', { class: 'xl-table compact ad-table' }, el('thead', {}, el('tr', {}, el('th', {}, '보상'), el('th', {}, '지급'), el('th', { class: 'num' }, '오늘'), el('th', {}, ''))), tb);
+  }
+  #adMenu() {
+    return el('div', {}, el('p', { class: 'small muted' }, `광고 1편 = 보상 1개 · 하루 총 ${BALANCE.AD.perDay}회 · 모든 보상은 고정 지급 (방치 배율 없음)`), this.#adTable());
+  }
+  /** Watch an ad for one offer, then grant it. */
+  watchAd(key) {
+    const o = this.game.adOffers().find((x) => x.key === key); if (!o?.can) { this.toast(o?.reason || '지금은 받을 수 없습니다'); return; }
+    this.playAd(() => {
+      const r = this.game.adReward(key); if (!r) { this.toast('보상을 지급할 수 없습니다'); return; }
+      this.toast(r.gold ? `광고 보상 +${fmt(r.gold)} 골드` : r.gems ? `광고 보상 +${r.gems} 보석` : r.cards ? `광고 보상 +${r.cards} 강화 카드` : r.dispatch ? '출장 복귀 완료 — 검토 시트에서 보상을 받으세요' : '야근 1회가 추가되었습니다');
+      if (!$('#modal').hidden && $('#modal-title').textContent === '광고 보상') this.openModal('광고 보상', this.#adMenu());
+      this.#refreshQuests(); this.#refreshDispatch?.();
+    }, key);
+  }
   /** Placeholder ad: full-screen countdown, then `onDone`. Replace with a rewarded-ad SDK later. */
-  playAd(onDone) {
-    if (this.game.adsLeft() <= 0) { this.toast('오늘 볼 수 있는 광고를 모두 시청했습니다'); return; }
-    if (Ads.available()) { // AdSense H5 Games Ads rewarded break; falls back to the placeholder when no ad is available
-      Ads.showRewarded('idle_bonus').then((r) => {
-        if (r.viewed) { onDone(); this.game.cloud?.recordAd('reward'); this.#refreshQuests(); }
+  playAd(onDone, key = 'gold') {
+    if (this.game.adsLeft(key) <= 0) { this.toast('오늘 볼 수 있는 광고를 모두 시청했습니다'); return; }
+    if (Ads.available()) { // rewarded break through the configured provider; falls back to the placeholder when no ad is available
+      Ads.showRewarded(key).then((r) => {
+        if (r.viewed) { onDone(); this.game.cloud?.recordAd(key); this.#refreshQuests(); }
         else if (r.reason === 'dismissed') this.toast('광고를 끝까지 봐야 보상을 받을 수 있습니다');
         else this.#placeholderAd(onDone);
       });
@@ -1266,12 +1292,8 @@ export class UIManager {
         <tr><td>자리 비운 시간</td><td class="num">${fmtTime(rep.elapsed)}${rep.capped ? ' (최대 10시간 적용)' : ''}</td></tr>
         <tr><td>방치 수익률</td><td class="num">${rep.goldPerSec.toFixed(2)} gold/s × 60%</td></tr>
         <tr><td><b>정산 골드</b></td><td class="num"><b>+${fmt(rep.gold)}</b></td></tr></tbody>` }));
-    if (this.game.adsLeft() > 0 && rep.gold > 0) {
-      body.append(el('div', { class: 'ad-box' }, btn(`광고 보고 2배 받기 (+${fmt(rep.gold)} 추가)`, () => {
-        this.closeModal();
-        this.playAd(() => { const r = this.game.adReward('offline', rep); if (r) this.toast(`광고 보상 +${fmt(r.gold)} 골드`); });
-      }, 'primary')));
-    }
+    const goldOffer = this.game.adOffers().find((o) => o.key === 'gold');
+    if (goldOffer?.can) body.append(el('div', { class: 'ad-box' }, btn(`광고 보고 유휴 골드 1시간분 받기 (${goldOffer.value})`, () => { this.closeModal(); this.watchAd('gold'); }, 'primary'), el('span', { class: 'muted small' }, ' 고정 지급 · 방치 배율 없음')));
     this.openModal('백그라운드 계산 완료', body);
   }
   /** First-run guide: 4 Excel-style help balloons that point at the things a new player needs (skippable, once). */

@@ -136,3 +136,17 @@ test('경제: 매출 인센티브 raises gold mildly, dismiss refunds level gold
   const gems0 = g.state.gems; const r = g.claimAll();
   assert.ok(r.count >= 2); assert.ok(g.state.gems > gems0); assert.equal(g.claimableSummary().total, 0);
 });
+
+test('boss specials: every boss has named Nth-attack specials, distinct sprites and a matching codex line', async () => {
+  const { BOSSES } = await import('../src/data/monsters.js');
+  const { MONSTER_MAP } = await import('../src/data/packSprites.js');
+  assert.equal(BOSSES.length, 3);
+  const kinds = new Set();
+  for (const b of BOSSES) {
+    assert.ok(Array.isArray(b.specials) && b.specials.length >= 1, b.id);
+    for (const sp of b.specials) { assert.ok(sp.every >= 3 && sp.name && sp.desc, `${b.id} ${sp.kind}`); kinds.add(sp.kind); }
+    assert.ok(b.desc.length > 10);
+  }
+  assert.ok(kinds.size >= 5, 'five different special kinds across the three bosses');
+  assert.equal(new Set(BOSSES.map((b) => MONSTER_MAP[b.id])).size, 3, 'each boss uses its own creature');
+});

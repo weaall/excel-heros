@@ -188,11 +188,12 @@ export function packMonsterFrame(mon, frame = 0, hueShift = 0) {
     const small = SMALL[spec], big = BIG[spec];
     if (!small && !big) return null;
     const sw = big ? 32 : 16, sh = (big ?? small)[1], sx = big ? 16 + 32 * fi : 368 + 16 * fi, sy = (big ?? small)[0];
-    const W = big ? 96 : 64, H = big ? 80 : 64;
+    const k = big ? 3 : 2; // bosses at 3× so they tower over the 2× line monsters (whole-number scale keeps pixels even)
+    const W = big ? 128 : 64, H = big ? 116 : 64;
     [c, ctx] = canvas(W, H);
     ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1);
     ctx.filter = hueShift ? `hue-rotate(${hueShift}deg)` : 'none';
-    ctx.drawImage(sheet, sx, sy, sw, sh, (W - sw * 2) / 2, H - 4 - sh * 2, sw * 2, sh * 2);
+    ctx.drawImage(sheet, sx, sy, sw, sh, (W - sw * k) / 2, H - 4 - sh * k, sw * k, sh * k);
     ctx.restore();
   }
   if (mon.elite) { const cx = c.width / 2; ctx.fillStyle = '#f1c40f'; ctx.fillRect(cx - 9, 2, 18, 4); for (const x of [cx - 9, cx - 2, cx + 5]) ctx.fillRect(x, 0, 4, 3); ctx.fillStyle = '#fff'; ctx.fillRect(cx - 5, 3, 2, 2); ctx.fillRect(cx + 3, 3, 2, 2); }

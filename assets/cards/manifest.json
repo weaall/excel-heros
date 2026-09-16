@@ -243,6 +243,406 @@
     "admin": {
       "file": "admin.png",
       "thumb": "thumb/admin.webp"
+    },
+    "staff_park__casual": {
+      "file": "staff_park__casual.png",
+      "thumb": "thumb/staff_park__casual.webp"
+    },
+    "staff_park__formal": {
+      "file": "staff_park__formal.png",
+      "thumb": "thumb/staff_park__formal.webp"
+    },
+    "parttime__casual": {
+      "file": "parttime__casual.png",
+      "thumb": "thumb/parttime__casual.webp"
+    },
+    "parttime__formal": {
+      "file": "parttime__formal.png",
+      "thumb": "thumb/parttime__formal.webp"
+    },
+    "guard__casual": {
+      "file": "guard__casual.png",
+      "thumb": "thumb/guard__casual.webp"
+    },
+    "guard__formal": {
+      "file": "guard__formal.png",
+      "thumb": "thumb/guard__formal.webp"
+    },
+    "barista__casual": {
+      "file": "barista__casual.png",
+      "thumb": "thumb/barista__casual.webp"
+    },
+    "barista__formal": {
+      "file": "barista__formal.png",
+      "thumb": "thumb/barista__formal.webp"
+    },
+    "courier__casual": {
+      "file": "courier__casual.png",
+      "thumb": "thumb/courier__casual.webp"
+    },
+    "courier__formal": {
+      "file": "courier__formal.png",
+      "thumb": "thumb/courier__formal.webp"
+    },
+    "contract__casual": {
+      "file": "contract__casual.png",
+      "thumb": "thumb/contract__casual.webp"
+    },
+    "contract__formal": {
+      "file": "contract__formal.png",
+      "thumb": "thumb/contract__formal.webp"
+    },
+    "vlookup__casual": {
+      "file": "vlookup__casual.png",
+      "thumb": "thumb/vlookup__casual.webp"
+    },
+    "vlookup__formal": {
+      "file": "vlookup__formal.png",
+      "thumb": "thumb/vlookup__formal.webp"
+    },
+    "pivot__casual": {
+      "file": "pivot__casual.png",
+      "thumb": "thumb/pivot__casual.webp"
+    },
+    "pivot__formal": {
+      "file": "pivot__formal.png",
+      "thumb": "thumb/pivot__formal.webp"
+    },
+    "macro__casual": {
+      "file": "macro__casual.png",
+      "thumb": "thumb/macro__casual.webp"
+    },
+    "macro__formal": {
+      "file": "macro__formal.png",
+      "thumb": "thumb/macro__formal.webp"
+    },
+    "hr_jung__casual": {
+      "file": "hr_jung__casual.png",
+      "thumb": "thumb/hr_jung__casual.webp"
+    },
+    "hr_jung__formal": {
+      "file": "hr_jung__formal.png",
+      "thumb": "thumb/hr_jung__formal.webp"
+    },
+    "audit_han__casual": {
+      "file": "audit_han__casual.png",
+      "thumb": "thumb/audit_han__casual.webp"
+    },
+    "audit_han__formal": {
+      "file": "audit_han__formal.png",
+      "thumb": "thumb/audit_han__formal.webp"
+    },
+    "acct_lead__casual": {
+      "file": "acct_lead__casual.png",
+      "thumb": "thumb/acct_lead__casual.webp"
+    },
+    "acct_lead__formal": {
+      "file": "acct_lead__formal.png",
+      "thumb": "thumb/acct_lead__formal.webp"
+    },
+    "dev_lead__casual": {
+      "file": "dev_lead__casual.png",
+      "thumb": "thumb/dev_lead__casual.webp"
+    },
+    "dev_lead__formal": {
+      "file": "dev_lead__formal.png",
+      "thumb": "thumb/dev_lead__formal.webp"
+    },
+    "ga_lead__casual": {
+      "file": "ga_lead__casual.png",
+      "thumb": "thumb/ga_lead__casual.webp"
+    },
+    "ga_lead__formal": {
+      "file": "ga_lead__formal.png",
+      "thumb": "thumb/ga_lead__formal.webp"
+    },
+    "welfare__casual": {
+      "file": "welfare__casual.png",
+      "thumb": "thumb/welfare__casual.webp"
+    },
+    "welfare__formal": {
+      "file": "welfare__formal.png",
+      "thumb": "thumb/welfare__formal.webp"
+    },
+    "cfo__casual": {
+      "file": "cfo__casual.png",
+      "thumb": "thumb/cfo__casual.webp"
+    },
+    "cfo__formal": {
+      "file": "cfo__formal.png",
+      "thumb": "thumb/cfo__formal.webp"
+    },
+    "cto__casual": {
+      "file": "cto__casual.png",
+      "thumb": "thumb/cto__casual.webp"
+    },
+    "cto__formal": {
+      "file": "cto__formal.png",
+      "thumb": "thumb/cto__formal.webp"
+    },
+    "coo__casual": {
+      "file": "coo__casual.png",
+      "thumb": "thumb/coo__casual.webp"
+    },
+    "coo__formal": {
+      "file": "coo__formal.png",
+      "thumb": "thumb/coo__formal.webp"
+    },
+    "ceo__casual": {
+      "file": "ceo__casual.png",
+      "thumb": "thumb/ceo__casual.webp"
+    },
+    "ceo__formal": {
+      "file": "ceo__formal.png",
+      "thumb": "thumb/ceo__formal.webp"
+    },
+    "chairman__casual": {
+      "file": "chairman__casual.png",
+      "thumb": "thumb/chairman__casual.webp"
+    },
+    "chairman__formal": {
+      "file": "chairman__formal.png",
+      "thumb": "thumb/chairman__formal.webp"
+    },
+    "helpdesk__casual": {
+      "file": "helpdesk__casual.png",
+      "thumb": "thumb/helpdesk__casual.webp"
+    },
+    "helpdesk__formal": {
+      "file": "helpdesk__formal.png",
+      "thumb": "thumb/helpdesk__formal.webp"
+    },
+    "cleaner__casual": {
+      "file": "cleaner__casual.png",
+      "thumb": "thumb/cleaner__casual.webp"
+    },
+    "cleaner__formal": {
+      "file": "cleaner__formal.png",
+      "thumb": "thumb/cleaner__formal.webp"
+    },
+    "sales_kang__casual": {
+      "file": "sales_kang__casual.png",
+      "thumb": "thumb/sales_kang__casual.webp"
+    },
+    "sales_kang__formal": {
+      "file": "sales_kang__formal.png",
+      "thumb": "thumb/sales_kang__formal.webp"
+    },
+    "legal_yoon__casual": {
+      "file": "legal_yoon__casual.png",
+      "thumb": "thumb/legal_yoon__casual.webp"
+    },
+    "legal_yoon__formal": {
+      "file": "legal_yoon__formal.png",
+      "thumb": "thumb/legal_yoon__formal.webp"
+    },
+    "pm_lead__casual": {
+      "file": "pm_lead__casual.png",
+      "thumb": "thumb/pm_lead__casual.webp"
+    },
+    "pm_lead__formal": {
+      "file": "pm_lead__formal.png",
+      "thumb": "thumb/pm_lead__formal.webp"
+    },
+    "design_lead__casual": {
+      "file": "design_lead__casual.png",
+      "thumb": "thumb/design_lead__casual.webp"
+    },
+    "design_lead__formal": {
+      "file": "design_lead__formal.png",
+      "thumb": "thumb/design_lead__formal.webp"
+    },
+    "cmo__casual": {
+      "file": "cmo__casual.png",
+      "thumb": "thumb/cmo__casual.webp"
+    },
+    "cmo__formal": {
+      "file": "cmo__formal.png",
+      "thumb": "thumb/cmo__formal.webp"
+    },
+    "founder__casual": {
+      "file": "founder__casual.png",
+      "thumb": "thumb/founder__casual.webp"
+    },
+    "founder__formal": {
+      "file": "founder__formal.png",
+      "thumb": "thumb/founder__formal.webp"
+    },
+    "intern_seo__casual": {
+      "file": "intern_seo__casual.png",
+      "thumb": "thumb/intern_seo__casual.webp"
+    },
+    "intern_seo__formal": {
+      "file": "intern_seo__formal.png",
+      "thumb": "thumb/intern_seo__formal.webp"
+    },
+    "pr_yoo__casual": {
+      "file": "pr_yoo__casual.png",
+      "thumb": "thumb/pr_yoo__casual.webp"
+    },
+    "pr_yoo__formal": {
+      "file": "pr_yoo__formal.png",
+      "thumb": "thumb/pr_yoo__formal.webp"
+    },
+    "nurse_han__casual": {
+      "file": "nurse_han__casual.png",
+      "thumb": "thumb/nurse_han__casual.webp"
+    },
+    "nurse_han__formal": {
+      "file": "nurse_han__formal.png",
+      "thumb": "thumb/nurse_han__formal.webp"
+    },
+    "lab_park__casual": {
+      "file": "lab_park__casual.png",
+      "thumb": "thumb/lab_park__casual.webp"
+    },
+    "lab_park__formal": {
+      "file": "lab_park__formal.png",
+      "thumb": "thumb/lab_park__formal.webp"
+    },
+    "chro__casual": {
+      "file": "chro__casual.png",
+      "thumb": "thumb/chro__casual.webp"
+    },
+    "chro__formal": {
+      "file": "chro__formal.png",
+      "thumb": "thumb/chro__formal.webp"
+    },
+    "cso__casual": {
+      "file": "cso__casual.png",
+      "thumb": "thumb/cso__casual.webp"
+    },
+    "cso__formal": {
+      "file": "cso__formal.png",
+      "thumb": "thumb/cso__formal.webp"
+    },
+    "ai_lead__casual": {
+      "file": "ai_lead__casual.png",
+      "thumb": "thumb/ai_lead__casual.webp"
+    },
+    "ai_lead__formal": {
+      "file": "ai_lead__formal.png",
+      "thumb": "thumb/ai_lead__formal.webp"
+    },
+    "union_chief__casual": {
+      "file": "union_chief__casual.png",
+      "thumb": "thumb/union_chief__casual.webp"
+    },
+    "union_chief__formal": {
+      "file": "union_chief__formal.png",
+      "thumb": "thumb/union_chief__formal.webp"
+    },
+    "hacker__casual": {
+      "file": "hacker__casual.png",
+      "thumb": "thumb/hacker__casual.webp"
+    },
+    "hacker__formal": {
+      "file": "hacker__formal.png",
+      "thumb": "thumb/hacker__formal.webp"
+    },
+    "intern_min__casual": {
+      "file": "intern_min__casual.png",
+      "thumb": "thumb/intern_min__casual.webp"
+    },
+    "intern_min__formal": {
+      "file": "intern_min__formal.png",
+      "thumb": "thumb/intern_min__formal.webp"
+    },
+    "security_yang__casual": {
+      "file": "security_yang__casual.png",
+      "thumb": "thumb/security_yang__casual.webp"
+    },
+    "security_yang__formal": {
+      "file": "security_yang__formal.png",
+      "thumb": "thumb/security_yang__formal.webp"
+    },
+    "mail_cho__casual": {
+      "file": "mail_cho__casual.png",
+      "thumb": "thumb/mail_cho__casual.webp"
+    },
+    "mail_cho__formal": {
+      "file": "mail_cho__formal.png",
+      "thumb": "thumb/mail_cho__formal.webp"
+    },
+    "qa_lee__casual": {
+      "file": "qa_lee__casual.png",
+      "thumb": "thumb/qa_lee__casual.webp"
+    },
+    "qa_lee__formal": {
+      "file": "qa_lee__formal.png",
+      "thumb": "thumb/qa_lee__formal.webp"
+    },
+    "reception_go__casual": {
+      "file": "reception_go__casual.png",
+      "thumb": "thumb/reception_go__casual.webp"
+    },
+    "reception_go__formal": {
+      "file": "reception_go__formal.png",
+      "thumb": "thumb/reception_go__formal.webp"
+    },
+    "trainer_seok__casual": {
+      "file": "trainer_seok__casual.png",
+      "thumb": "thumb/trainer_seok__casual.webp"
+    },
+    "trainer_seok__formal": {
+      "file": "trainer_seok__formal.png",
+      "thumb": "thumb/trainer_seok__formal.webp"
+    },
+    "translator_ji__casual": {
+      "file": "translator_ji__casual.png",
+      "thumb": "thumb/translator_ji__casual.webp"
+    },
+    "translator_ji__formal": {
+      "file": "translator_ji__formal.png",
+      "thumb": "thumb/translator_ji__formal.webp"
+    },
+    "secretary_yun__casual": {
+      "file": "secretary_yun__casual.png",
+      "thumb": "thumb/secretary_yun__casual.webp"
+    },
+    "secretary_yun__formal": {
+      "file": "secretary_yun__formal.png",
+      "thumb": "thumb/secretary_yun__formal.webp"
+    },
+    "logistics_bae__casual": {
+      "file": "logistics_bae__casual.png",
+      "thumb": "thumb/logistics_bae__casual.webp"
+    },
+    "logistics_bae__formal": {
+      "file": "logistics_bae__formal.png",
+      "thumb": "thumb/logistics_bae__formal.webp"
+    },
+    "cdo__casual": {
+      "file": "cdo__casual.png",
+      "thumb": "thumb/cdo__casual.webp"
+    },
+    "cdo__formal": {
+      "file": "cdo__formal.png",
+      "thumb": "thumb/cdo__formal.webp"
+    },
+    "cco__casual": {
+      "file": "cco__casual.png",
+      "thumb": "thumb/cco__casual.webp"
+    },
+    "cco__formal": {
+      "file": "cco__formal.png",
+      "thumb": "thumb/cco__formal.webp"
+    },
+    "chief_of_staff__casual": {
+      "file": "chief_of_staff__casual.png",
+      "thumb": "thumb/chief_of_staff__casual.webp"
+    },
+    "chief_of_staff__formal": {
+      "file": "chief_of_staff__formal.png",
+      "thumb": "thumb/chief_of_staff__formal.webp"
+    },
+    "chairwoman__casual": {
+      "file": "chairwoman__casual.png",
+      "thumb": "thumb/chairwoman__casual.webp"
+    },
+    "chairwoman__formal": {
+      "file": "chairwoman__formal.png",
+      "thumb": "thumb/chairwoman__formal.webp"
     }
   }
 }

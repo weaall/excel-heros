@@ -532,11 +532,12 @@ export class GameManager extends Emitter {
   bossActive() { return !this.overtime && this.isChallenging() && isBossStage(this.state.stage); }
   /** Stage whose monsters are being spawned right now (야근 모드 borrows a harder stage without changing progress). */
   combatStage() { return this.overtime ? this.overtime.stage : this.state.stage; }
-  canOvertime() { return !this.overtime && !this.state.daily.overtimeDone; }
+  canOvertime() { return !this.overtime && (!this.state.daily.overtimeDone || (this.state.daily.overtimeExtra ?? 0) > 0); }
   /** 야근 모드: start the once-a-day 60 s survival run. Returns false when already used today. */
   startOvertime() {
     if (!this.canOvertime()) return false;
     const O = BALANCE.OVERTIME;
+    if (this.state.daily.overtimeDone) this.state.daily.overtimeExtra = Math.max(0, (this.state.daily.overtimeExtra ?? 0) - 1); // extra run bought with an ad
     this.overtime = { t: O.duration, kills: 0, elites: 0, stage: Math.max(1, this.state.maxStage + O.stageOffset), gold: 0 };
     this.entities.startStage(); this.entities.travelT = O.travel;
     this.log(`야근 모드 시작: ${stageLabel(this.overtime.stage)} 난이도, ${O.duration}초 동안 처치 수만큼 보석`, 'boss');
@@ -622,21 +623,40 @@ export class GameManager extends Emitter {
   claimQuest(id) { const r = Quests.claimQuest(this.state, id, this.goldMult()); if (r) this.#afterReward(r); return r; }
   claimLogin() { const r = Quests.claimLogin(this.state, this.goldMult()); if (r) { this.log(`출근 도장 (연속 ${this.state.login.streak}일${r.streakGems ? `, 보석 +${r.streakGems} 추가` : ''})`, 'info'); this.#afterReward(r); } return r; }
   claimAllClear() { const r = Quests.claimAllClear(this.state, this.goldMult()); if (r) this.#afterReward(r); return r; }
-  adsLeft() { return Quests.adsLeft(this.state); }
+  adsLeft(key = null) { return key ? Quests.adsLeftFor(this.state, key) : Quests.adsLeft(this.state); }
 
+  /** Rewarded-ad menu: what each ad pays right now, how many are left today and whether it applies. */
+  adOffers() {
+    const O = BALANCE.AD_OFFERS; const s = this.state; const di = this.dispatchInfo();
+    return Object.entries(O).map(([key, o]) => {
+      const left = this.adsLeft(key);
+      let value = '', can = left > 0, reason = left > 0 ? '' : '오늘 소진';
+      if (key === 'gold') value = `+${Math.floor(this.goldPerSecAt(s.stage) * o.hours * 3600).toLocaleString()} 골드`;
+      else if (key === 'gems') value = `+${o.amount} 보석`;
+      else if (key === 'cards') value = `+${o.amount} 강화 카드`;
+      else if (key === 'dispatch') { value = di.active && !di.done ? `남은 ${Math.ceil(di.remaining / 60)}분 → 즉시 복귀` : '출장 중일 때만'; if (!(di.active && !di.done)) { can = false; reason = reason || '진행 중인 출장이 없음'; } }
+      else if (key === 'overtime') { value = '야근 1회 추가'; if (this.overtime) { can = false; reason = reason || '야근 진행 중'; } else if (!s.daily.overtimeDone) { can = false; reason = reason || '오늘 야근을 먼저 하세요'; } }
+      return { key, name: o.name, desc: o.desc, value, left, perDay: o.perDay, can, reason };
+    });
+  }
   /**
-   * Ad reward (placeholder: the UI plays a fake 5s ad).
-   * kind 'offline' doubles an offline report; kind 'instant' grants 1h of idle gold at full rate.
+   * Grant an ad reward (after the ad was watched). Flat rewards only — see BALANCE.AD_OFFERS.
+   * Legacy kinds 'instant'/'offline' map to the gold offer (the old 2× offline bonus is gone on purpose).
    */
-  adReward(kind, report = null) {
-    if (!Quests.useAd(this.state)) return null;
-    let gold = 0;
-    if (kind === 'offline' && report) gold = Math.floor(report.gold * (BALANCE.AD.offlineMultiplier - 1));
-    else gold = Math.floor(this.goldPerSecAt(this.state.stage) * BALANCE.AD.instantHours * 3600);
-    this.state.gold += gold; this.state.stats.totalGold += gold;
-    this.log(`광고 시청 보상 +${gold}g`, 'info');
-    this.emit('gold'); this.emit('quests');
-    return { gold };
+  adReward(kind = 'gold') {
+    const key = kind === 'instant' || kind === 'offline' ? 'gold' : kind;
+    const o = BALANCE.AD_OFFERS[key]; if (!o) return null;
+    const offer = this.adOffers().find((x) => x.key === key); if (!offer?.can) return null;
+    if (!Quests.useAd(this.state, key)) return null;
+    const s = this.state; const r = { key };
+    if (key === 'gold') { r.gold = Math.floor(this.goldPerSecAt(s.stage) * o.hours * 3600); s.gold += r.gold; s.stats.totalGold += r.gold; }
+    else if (key === 'gems') { r.gems = o.amount; s.gems += o.amount; }
+    else if (key === 'cards') { r.cards = o.amount; s.cards += o.amount; }
+    else if (key === 'dispatch') { s.dispatch.endsAt = Date.now(); r.dispatch = true; this.emit('dispatch'); }
+    else if (key === 'overtime') { s.daily.overtimeExtra = (s.daily.overtimeExtra ?? 0) + 1; r.overtime = true; this.emit('overtime'); }
+    this.log(`광고 시청 보상: ${o.name}`, 'info');
+    this.emit('gold'); this.emit('gems'); this.emit('cards'); this.emit('quests');
+    return r;
   }
 
   #afterReward(r) {
