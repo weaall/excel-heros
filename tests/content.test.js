@@ -52,3 +52,14 @@ test('history samples every 5 seconds and keeps a bounded window', () => {
   assert.equal(g.history.t.length, GameManager.HISTORY_LEN);
   assert.ok(BALANCE.PARTY_SIZE === 5);
 });
+
+test('paper dolls: every hero and main job has a doll spec that renders 9 frames with an outline', async () => {
+  const { DOLLS, dollPixels } = await import('../src/data/dollSprites.js');
+  const { HEROES: HS, MAIN_JOBS: MJ } = await import('../src/data/heroes.js');
+  for (const id of [...HS.map((h) => h.id), ...Object.values(MJ).map((j) => j.id)]) {
+    assert.ok(DOLLS[id], `doll for ${id}`);
+    for (let f = 0; f < 9; f++) { const d = dollPixels(id, f); let n = 0; for (let i = 3; i < d.data.length; i += 4) if (d.data[i]) n++; assert.ok(n > 120 && n < 16 * 28, `${id} frame ${f} has a body (${n}px)`); }
+    // walk frames differ from idle (legs move)
+    assert.notDeepEqual(Array.from(dollPixels(id, 5).data), Array.from(dollPixels(id, 0).data), `${id} walks`);
+  }
+});

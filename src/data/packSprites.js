@@ -7,6 +7,7 @@
 // Everything on the 0x72 sheet faces right; monsters are mirrored to face the party.
 
 import { buildHeroStrip } from './heroSkins.js';
+import { buildDollStrip, hasDoll } from './dollSprites.js';
 
 const SHEET_URL = 'assets/sprites/0x72/sheet.png';
 const TINY_URL = 'assets/sprites/tiny-creatures/tilemap_packed.png';
@@ -108,7 +109,8 @@ export function packHeroFrame(def, anim = 'idle', frame = 0, scale = 1) {
 /** Cached 9-frame recoloured strip for a hero (see heroSkins.js). */
 function heroStrip(def, m) {
   const key = `strip:${def.id}${skinKey(def)}`; let s = cache.get(key);
-  if (!s) { s = buildHeroStrip(sheet, def, m); cache.set(key, s); }
+  // hand-designed paper dolls (dollSprites.js) win over the recoloured 0x72 base; skins pass their palette through
+  if (!s) { s = (hasDoll(def.id) && buildDollStrip(def.id, def.skin?.palette ?? null)) || buildHeroStrip(sheet, def, m); cache.set(key, s); }
   return s;
 }
 
