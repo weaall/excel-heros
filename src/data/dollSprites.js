@@ -72,73 +72,76 @@ class Px {
 }
 
 function drawDoll(p, s, { legPhase = 0, bob = 0, hit = false } = {}) {
-  // Chibi proportions (user feedback: "머리 크고 몸 작게"): head 10×10 at y 6..15, torso 6 rows, legs 4 rows, feet 2 rows.
+  // Chibi, 3/4 view facing RIGHT (user feedback): head 10×10 at y 9..18, torso 4 rows, legs 3 rows, feet 2 rows.
+  // Facial features sit on the right half of the head; the back of the head / back hair sits on the left.
   const skin = SKIN[s.skin] ?? SKIN.light, hair = s.hairColor, hairDark = shade(hair, 0.72), top = s.top, topDark = shade(top, 0.75), shirt = s.shirt;
   const acc = Object.fromEntries((s.acc ?? []).map((a) => { const [k, v] = a.split(':'); return [k, v ?? true]; }));
   const skirt = s.bottom === 'skirt';
-  const HT = 6, HB = 15, TT = 16, TB = 21, LT = 22, LB = 25, FT = 26; // head top/bottom, torso, legs, feet rows
-  // --- back hair (behind the body) for long styles
+  const HT = 9, HB = 18, TT = 19, TB = 22, LT = 23, FT = 26; // head top/bottom, torso top/bottom, legs top, feet
+  // --- back hair (behind the body): the back of the head is on the LEFT
   p.dy = bob;
-  if (s.hair === 'long' || s.hair === 'side') { p.rect(1, HT + 3, 2, 14, hair); p.rect(13, HT + 3, 2, 13, hair); p.rect(1, HT + 16, 1, 2, hairDark); }
-  if (s.hair === 'twin') { p.rect(0, HT + 5, 2, 10, hair); p.rect(14, HT + 5, 2, 10, hair); p.set(0, HT + 15, hairDark); p.set(15, HT + 15, hairDark); }
-  if (s.hair === 'ponytail') { p.rect(0, HT + 2, 2, 10, hair); }
+  if (s.hair === 'long' || s.hair === 'side') { p.rect(1, HT + 2, 2, 13, hair); p.rect(13, HT + 3, 1, 6, hair); p.set(1, HT + 15, hairDark); }
+  if (s.hair === 'twin') { p.rect(0, HT + 4, 2, 9, hair); p.rect(14, HT + 5, 2, 7, hair); p.set(0, HT + 13, hairDark); p.set(15, HT + 12, hairDark); }
+  if (s.hair === 'ponytail') { p.rect(0, HT + 1, 2, 9, hair); p.set(0, HT + 10, hairDark); }
   // --- legs + feet (walk: alternate feet by one pixel)
   p.dy = 0;
-  const lift = legPhase === 1 ? 1 : legPhase === 3 ? -1 : 0;
-  const lA = Math.max(0, lift), lB = Math.max(0, -lift);
+  const lift = legPhase === 1 ? 1 : legPhase === 3 ? -1 : 0; const lA = Math.max(0, lift), lB = Math.max(0, -lift);
   if (skirt) {
-    p.rect(3, TB + bob, 10, 2, s.bottomColor); p.rect(2, TB + 2 + bob, 12, 1, shade(s.bottomColor, 0.8));
-    p.rect(5, LT + 2, 2, 2 - lA, skin); p.rect(9, LT + 2, 2, 2 - lB, skin);
+    p.rect(3, TB + 1 + bob, 10, 1, s.bottomColor); p.rect(2, TB + 2 + bob, 12, 1, shade(s.bottomColor, 0.8));
+    p.rect(5, LT + 2, 2, 1 - lA, skin); p.rect(9, LT + 2, 2, 1 - lB, skin);
     p.rect(4, FT - lA, 4, 2, SHOE); p.rect(8, FT - lB, 4, 2, SHOE);
   } else {
-    p.rect(4, LT + bob, 4, 4 - lA - bob, s.bottomColor); p.rect(8, LT + bob, 4, 4 - lB - bob, s.bottomColor);
+    p.rect(4, LT + bob, 4, 3 - lA - bob, s.bottomColor); p.rect(8, LT + bob, 4, 3 - lB - bob, s.bottomColor);
     p.rect(4, FT - lA, 4, 2, SHOE); p.rect(8, FT - lB, 4, 2, SHOE);
   }
   p.dy = bob;
-  // --- torso (y 16..21, x 3..12) + arms (x 2 / x 13)
-  const bodyCol = s.outfit === 'shirt' ? shirt : top; const sleeve = bodyCol;
-  p.rect(3, TT, 10, 6, bodyCol);
-  p.rect(2, TT + 1, 1, 4, sleeve); p.rect(13, TT + 1, 1, 4, sleeve); p.set(2, TT + 5, skin); p.set(13, TT + 5, skin);
+  // --- torso (y 19..22, x 3..12) + arms (back arm x 2, front arm x 13)
+  const bodyCol = s.outfit === 'shirt' ? shirt : top;
+  p.rect(3, TT, 10, 4, bodyCol);
+  p.rect(2, TT + 1, 1, 2, bodyCol); p.rect(13, TT + 1, 1, 2, bodyCol); p.set(2, TT + 3, skin); p.set(13, TT + 3, skin);
   switch (s.outfit) {
-    case 'suit': case 'cardigan': p.rect(7, TT, 2, 6, shirt); p.set(6, TT, topDark); p.set(9, TT, topDark); p.set(6, TT + 1, topDark); p.set(9, TT + 1, topDark); break;
-    case 'vest': p.rect(4, TT, 8, 6, shirt); p.rect(3, TT, 1, 6, top); p.rect(12, TT, 1, 6, top); p.rect(4, TT + 1, 2, 5, top); p.rect(10, TT + 1, 2, 5, top); p.rect(7, TT, 2, 6, shirt); break;
-    case 'hoodie': p.rect(4, TT, 8, 1, topDark); p.rect(3, TT + 1, 10, 1, topDark); p.rect(5, TT + 4, 6, 1, topDark); if (s.shirt !== top) p.rect(7, TT + 1, 2, 2, s.shirt); break;
-    case 'apron': p.rect(3, TT, 10, 6, shirt); p.rect(4, TT + 1, 8, 5, top); p.set(5, TT, top); p.set(10, TT, top); if (skirt) { p.dy = 0; p.rect(4, TB + bob, 8, 3, top); p.dy = bob; } break;
-    case 'labcoat': case 'coat': p.rect(7, TT, 2, 6, shirt); p.set(6, TT, shade(top, 0.85)); p.set(9, TT, shade(top, 0.85)); p.dy = 0; p.rect(3, TB + bob, 10, 3, top); p.rect(7, TB + bob, 2, 3, shade(top, 0.8)); p.dy = bob; break;
-    case 'shirt': p.rect(5, TT, 6, 1, shade(shirt, 0.8)); p.rect(7, TT + 1, 2, 4, shade(shirt, 0.92)); break;
+    case 'suit': case 'cardigan': p.rect(8, TT, 2, 4, shirt); p.set(7, TT, topDark); p.set(10, TT, topDark); p.set(7, TT + 1, topDark); p.set(10, TT + 1, topDark); break;
+    case 'vest': p.rect(4, TT, 8, 4, shirt); p.rect(3, TT, 1, 4, top); p.rect(12, TT, 1, 4, top); p.rect(4, TT + 1, 2, 3, top); p.rect(10, TT + 1, 2, 3, top); p.rect(8, TT, 2, 4, shirt); break;
+    case 'hoodie': p.rect(4, TT, 8, 1, topDark); p.rect(3, TT + 1, 10, 1, topDark); p.rect(6, TT + 3, 5, 1, topDark); if (s.shirt !== top) p.rect(8, TT + 1, 2, 2, s.shirt); break;
+    case 'apron': p.rect(3, TT, 10, 4, shirt); p.rect(4, TT + 1, 8, 3, top); p.set(6, TT, top); p.set(10, TT, top); if (skirt) { p.dy = 0; p.rect(4, TB + 1 + bob, 8, 2, top); p.dy = bob; } break;
+    case 'labcoat': case 'coat': p.rect(8, TT, 2, 4, shirt); p.set(7, TT, shade(top, 0.85)); p.set(10, TT, shade(top, 0.85)); p.dy = 0; p.rect(3, TB + 1 + bob, 10, 2, top); p.rect(8, TB + 1 + bob, 2, 2, shade(top, 0.8)); p.dy = bob; break;
+    case 'shirt': p.rect(6, TT, 6, 1, shade(shirt, 0.8)); p.rect(8, TT + 1, 2, 3, shade(shirt, 0.92)); break;
     case 'dress': break;
   }
   if (acc.trim) { p.set(3, TT, acc.trim); p.set(12, TT, acc.trim); p.set(3, TB, acc.trim); p.set(12, TB, acc.trim); }
-  if (acc.tie) { p.rect(7, TT, 2, 1, acc.tie); p.rect(7, TT + 1, 2, 3, acc.tie); }
-  if (acc.suspenders) { p.rect(5, TT, 1, 6, '#333333'); p.rect(10, TT, 1, 6, '#333333'); }
-  if (acc.lanyard) { p.rect(6, TT, 1, 3, acc.lanyard); p.rect(9, TT, 1, 3, acc.lanyard); p.rect(7, TT + 3, 2, 2, '#f4f4f4'); }
-  if (acc.badge) p.rect(11, TT + 1, 1, 1, '#f4f4f4');
-  if (acc.scarf) { p.rect(3, TT, 10, 2, acc.scarf); p.rect(4, TT + 2, 1, 2, acc.scarf); }
-  // --- head: big 10×10 (x 3..12, y 6..15) with rounded corners
+  if (acc.tie) { p.rect(8, TT, 2, 3, acc.tie); }
+  if (acc.suspenders) { p.rect(6, TT, 1, 4, '#333333'); p.rect(11, TT, 1, 4, '#333333'); }
+  if (acc.lanyard) { p.rect(7, TT, 1, 2, acc.lanyard); p.rect(10, TT, 1, 2, acc.lanyard); p.rect(8, TT + 2, 2, 1, '#f4f4f4'); }
+  if (acc.badge) p.set(11, TT + 1, '#f4f4f4');
+  if (acc.scarf) { p.rect(3, TT, 10, 1, acc.scarf); p.rect(4, TT + 1, 1, 2, acc.scarf); }
+  // --- head: 10×10 (x 3..12, y 9..18), rounded; a 1px nose bump on the right edge
   p.rect(4, HT, 8, 1, skin); p.rect(3, HT + 1, 10, 8, skin); p.rect(4, HB, 8, 1, skin);
-  p.rect(6, HB + 1, 4, 1, shade(skin, 0.85)); // neck (over the torso top row)
-  // --- hair (front): cap y 4..6 (+ side locks)
+  p.set(13, HT + 5, skin); // nose (profile hint)
+  p.set(3, HT + 5, shade(skin, 0.85)); // ear shadow on the back side
+  p.rect(7, HB + 1, 4, 1, shade(skin, 0.85)); // neck
+  // --- hair (front): cap y 7..9; more volume on the back (left) side
   const H = hair;
+  const cap = () => { p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.rect(2, HT, 1, 1, H); };
   switch (s.hair) {
     case 'bald': p.rect(4, HT - 1, 8, 1, shade(skin, 0.96)); break;
-    case 'short': p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.rect(2, HT + 1, 2, 3, H); p.rect(12, HT + 1, 2, 2, H); p.rect(5, HT + 1, 2, 1, H); p.rect(8, HT + 1, 2, 1, H); p.set(11, HT + 1, H); break;
-    case 'spiky': p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.set(3, HT - 3, H); p.set(6, HT - 3, H); p.set(9, HT - 3, H); p.set(12, HT - 3, H); p.set(5, HT - 4, H); p.set(10, HT - 4, H); p.rect(2, HT + 1, 2, 3, H); p.rect(12, HT + 1, 2, 2, H); p.rect(5, HT + 1, 3, 1, H); break;
-    case 'curly': p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.rect(1, HT, 2, 5, H); p.rect(13, HT, 2, 4, H); p.rect(2, HT + 1, 2, 4, H); p.rect(12, HT + 1, 2, 3, H); p.rect(5, HT + 1, 2, 1, H); p.set(4, HT - 3, H); p.set(8, HT - 3, H); p.set(11, HT - 3, H); break;
-    case 'bob': p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.rect(1, HT, 2, 10, H); p.rect(13, HT, 2, 9, H); p.rect(3, HT + 1, 1, 8, H); p.rect(12, HT + 1, 1, 7, H); p.rect(5, HT + 1, 2, 2, H); p.rect(8, HT + 1, 2, 1, H); p.set(11, HT + 1, H); break;
-    case 'long': case 'side': p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.rect(1, HT, 2, 5, H); p.rect(13, HT, 2, 5, H); p.rect(3, HT + 1, 1, 3, H); p.rect(12, HT + 1, 1, 3, H); p.rect(5, HT + 1, 2, 2, H); p.rect(8, HT + 1, 3, 1, H); break;
-    case 'twin': p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.rect(1, HT, 2, 5, H); p.rect(13, HT, 2, 5, H); p.rect(5, HT + 1, 3, 1, H); p.set(9, HT + 1, H); p.set(11, HT + 1, H); break;
-    case 'ponytail': p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.rect(1, HT, 2, 5, H); p.rect(13, HT, 1, 3, H); p.rect(5, HT + 1, 2, 2, H); p.rect(8, HT + 1, 3, 1, H); break;
-    case 'bun': p.rect(4, HT - 2, 8, 1, H); p.rect(3, HT - 1, 10, 2, H); p.rect(1, HT, 2, 5, H); p.rect(13, HT, 1, 3, H); p.rect(5, HT + 1, 2, 1, H); p.rect(8, HT + 1, 3, 1, H); p.rect(5, HT - 4, 6, 2, H); p.set(4, HT - 3, hairDark); p.set(11, HT - 3, hairDark); break;
+    case 'short': cap(); p.rect(2, HT + 1, 2, 3, H); p.rect(12, HT + 1, 1, 2, H); p.rect(4, HT + 1, 3, 1, H); p.rect(8, HT + 1, 2, 1, H); p.set(11, HT + 1, H); break;
+    case 'spiky': cap(); p.set(3, HT - 3, H); p.set(6, HT - 3, H); p.set(9, HT - 3, H); p.set(12, HT - 3, H); p.set(4, HT - 4, H); p.set(10, HT - 4, H); p.rect(2, HT + 1, 2, 3, H); p.rect(12, HT + 1, 1, 2, H); p.rect(4, HT + 1, 4, 1, H); break;
+    case 'curly': cap(); p.rect(1, HT, 2, 5, H); p.rect(13, HT + 1, 1, 3, H); p.rect(2, HT + 1, 2, 4, H); p.rect(12, HT + 1, 1, 3, H); p.rect(4, HT + 1, 3, 1, H); p.set(3, HT - 3, H); p.set(7, HT - 3, H); p.set(11, HT - 3, H); break;
+    case 'bob': cap(); p.rect(1, HT, 2, 10, H); p.rect(3, HT + 1, 1, 8, H); p.rect(13, HT + 1, 1, 7, H); p.rect(12, HT + 1, 1, 3, H); p.rect(4, HT + 1, 3, 2, H); p.rect(8, HT + 1, 2, 1, H); p.set(11, HT + 1, H); break;
+    case 'long': case 'side': cap(); p.rect(1, HT, 2, 5, H); p.rect(3, HT + 1, 1, 3, H); p.rect(13, HT + 1, 1, 4, H); p.rect(12, HT + 1, 1, 2, H); p.rect(4, HT + 1, 3, 2, H); p.rect(8, HT + 1, 3, 1, H); break;
+    case 'twin': cap(); p.rect(1, HT, 2, 5, H); p.rect(13, HT + 1, 1, 4, H); p.rect(4, HT + 1, 4, 1, H); p.set(9, HT + 1, H); p.set(11, HT + 1, H); break;
+    case 'ponytail': cap(); p.rect(1, HT, 2, 5, H); p.rect(12, HT + 1, 1, 2, H); p.rect(4, HT + 1, 3, 2, H); p.rect(8, HT + 1, 3, 1, H); break;
+    case 'bun': cap(); p.rect(1, HT, 2, 5, H); p.rect(12, HT + 1, 1, 2, H); p.rect(4, HT + 1, 3, 1, H); p.rect(8, HT + 1, 3, 1, H); p.rect(3, HT - 4, 5, 2, H); p.set(2, HT - 3, hairDark); p.set(8, HT - 3, hairDark); break;
   }
-  // --- face: big 2×2 anime eyes (highlight top-left), mouth, blush
+  // --- face (right half): two 2×2 eyes at x 6..7 and x 10..11, mouth right, blush
   const eye = hit ? shade(skin, 0.6) : '#222222', hi = hit ? eye : '#ffffff';
-  p.rect(5, HT + 4, 2, 2, eye); p.rect(9, HT + 4, 2, 2, eye); p.set(5, HT + 4, hi); p.set(9, HT + 4, hi);
-  p.set(8, HT + 7, shade(skin, 0.72));
-  p.set(4, HT + 6, '#f7b7c3'); p.set(11, HT + 6, '#f7b7c3');
-  if (acc.mustache) p.rect(6, HT + 7, 4, 1, hair);
-  if (acc.beard) { p.rect(4, HT + 8, 8, 2, hair); p.rect(5, HT + 10, 6, 1, hair); }
-  if (acc.glasses) { const G = '#8a94a3'; p.rect(4, HT + 4, 1, 2, G); p.rect(7, HT + 4, 1, 2, G); p.rect(8, HT + 4, 1, 2, G); p.rect(11, HT + 4, 1, 2, G); p.rect(4, HT + 6, 4, 1, G); p.rect(8, HT + 6, 4, 1, G); p.set(5, HT + 4, '#dff1ff'); p.set(9, HT + 4, '#dff1ff'); } // light frame, eyes stay visible
-  if (acc.sunglasses) { p.rect(4, HT + 4, 8, 2, '#1a1a1a'); p.set(3, HT + 4, '#1a1a1a'); p.set(12, HT + 4, '#1a1a1a'); p.set(5, HT + 4, '#4a4a55'); p.set(9, HT + 4, '#4a4a55'); }
+  p.rect(6, HT + 4, 2, 2, eye); p.rect(10, HT + 4, 2, 2, eye); p.set(6, HT + 4, hi); p.set(10, HT + 4, hi);
+  p.set(11, HT + 7, shade(skin, 0.72));
+  p.set(5, HT + 6, '#f7b7c3'); p.set(12, HT + 6, '#f7b7c3');
+  if (acc.mustache) p.rect(8, HT + 7, 4, 1, hair);
+  if (acc.beard) { p.rect(5, HT + 8, 8, 2, hair); p.rect(6, HT + 10, 6, 1, hair); }
+  if (acc.glasses) { const G = '#8a94a3'; p.rect(5, HT + 4, 1, 2, G); p.rect(8, HT + 4, 1, 2, G); p.rect(9, HT + 4, 1, 2, G); p.rect(12, HT + 4, 1, 2, G); p.rect(5, HT + 6, 4, 1, G); p.rect(9, HT + 6, 4, 1, G); p.set(6, HT + 4, '#dff1ff'); p.set(10, HT + 4, '#dff1ff'); }
+  if (acc.sunglasses) { p.rect(5, HT + 4, 8, 2, '#1a1a1a'); p.set(4, HT + 4, '#1a1a1a'); p.set(6, HT + 4, '#4a4a55'); p.set(10, HT + 4, '#4a4a55'); }
   if (acc.headset) { const C = '#2d3436'; p.rect(3, HT - 2, 10, 1, C); p.rect(2, HT + 3, 1, 3, C); p.rect(13, HT + 3, 1, 3, C); p.rect(13, HT + 6, 2, 1, C); }
   if (acc.headphones) { const c = acc.headphones; p.rect(3, HT - 3, 10, 1, c); p.rect(1, HT + 2, 2, 4, c); p.rect(13, HT + 2, 2, 4, c); }
   if (acc.cap) { const c = acc.cap; p.rect(3, HT - 3, 10, 3, c); p.rect(4, HT - 4, 8, 1, c); p.rect(12, HT - 1, 3, 1, shade(c, 0.8)); }
