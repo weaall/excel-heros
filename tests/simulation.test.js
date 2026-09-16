@@ -123,7 +123,10 @@ test('main hero job promotion: needs cards + stage, branches at 과장 → 부�
   g.state.maxCleared = 100;
   assert.ok(g.promoteMain('staff')); assert.equal(g.heroDef(MAIN_ID).grade, 'C');
   assert.ok(g.heroView(MAIN_ID).skillUnlocked, 'skill unlocks at 사원');
-  assert.ok(g.promoteMain('senior')); assert.ok(g.promoteMain('manager'));
+  assert.ok(!g.promoteMain('sales'), 'cannot skip a tier');
+  assert.ok(g.promoteMain('finance_senior'), 'track chosen right after 사원');
+  assert.ok(!g.promoteMain('sales_manager'), 'other tracks are closed once chosen');
+  assert.ok(g.promoteMain('finance_manager'));
   assert.ok(!g.promoteMain('intern'), 'invalid branch');
   assert.ok(g.promoteMain('finance'));
   assert.equal(g.heroDef(MAIN_ID).grade, 'S');

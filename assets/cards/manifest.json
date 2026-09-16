@@ -160,7 +160,10 @@
       "file": "mail_cho.png",
       "thumb": "thumb/mail_cho.webp"
     },
-    "qa_lee": "qa_lee.png",
+    "qa_lee": {
+      "file": "qa_lee.png",
+      "thumb": "thumb/qa_lee.webp"
+    },
     "reception_go": {
       "file": "reception_go.png",
       "thumb": "thumb/reception_go.webp"
@@ -169,7 +172,10 @@
       "file": "trainer_seok.png",
       "thumb": "thumb/trainer_seok.webp"
     },
-    "translator_ji": "translator_ji.png",
+    "translator_ji": {
+      "file": "translator_ji.png",
+      "thumb": "thumb/translator_ji.webp"
+    },
     "secretary_yun": {
       "file": "secretary_yun.png",
       "thumb": "thumb/secretary_yun.webp"
@@ -202,21 +208,37 @@
       "file": "staff.png",
       "thumb": "thumb/staff.webp"
     },
-    "senior": {
-      "file": "senior.png",
-      "thumb": "thumb/senior.webp"
+    "sales_senior": {
+      "file": "sales_senior.png",
+      "thumb": "thumb/sales_senior.webp"
     },
-    "manager": {
-      "file": "manager.png",
-      "thumb": "thumb/manager.webp"
+    "sales_manager": {
+      "file": "sales_manager.png",
+      "thumb": "thumb/sales_manager.webp"
     },
     "sales": {
       "file": "sales.png",
       "thumb": "thumb/sales.webp"
     },
+    "finance_senior": {
+      "file": "finance_senior.png",
+      "thumb": "thumb/finance_senior.webp"
+    },
+    "finance_manager": {
+      "file": "finance_manager.png",
+      "thumb": "thumb/finance_manager.webp"
+    },
     "finance": {
       "file": "finance.png",
       "thumb": "thumb/finance.webp"
+    },
+    "admin_senior": {
+      "file": "admin_senior.png",
+      "thumb": "thumb/admin_senior.webp"
+    },
+    "admin_manager": {
+      "file": "admin_manager.png",
+      "thumb": "thumb/admin_manager.webp"
     },
     "admin": {
       "file": "admin.png",

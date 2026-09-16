@@ -45,7 +45,7 @@ const WEAPONS = {
 const ROLE_WEAPON = { melee: 'knight_sword', tank: 'mace', ranged: 'bow', healer: 'green_staff' };
 /** hero id → { base, hue, weapon? } */
 export const HERO_MAP = {
-  intern: { base: 'elf_m', hue: 0, weapon: 'regular_sword' }, staff: { base: 'elf_m', hue: 200 }, senior: { base: 'knight_m', hue: 0 }, manager: { base: 'knight_m', hue: 150, weapon: 'katana' },
+  intern: { base: 'elf_m', hue: 0, weapon: 'regular_sword' }, staff: { base: 'elf_m', hue: 200 }, sales_senior: { base: 'knight_m', hue: 0 }, sales_manager: { base: 'knight_m', hue: 150, weapon: 'katana' }, finance_senior: { base: 'wizzard_m', hue: 160 }, finance_manager: { base: 'wizzard_m', hue: 180, weapon: 'red_staff' }, admin_senior: { base: 'knight_m', hue: 40 }, admin_manager: { base: 'knight_m', hue: 30, weapon: 'mace' },
   sales: { base: 'dwarf_m', hue: 0, weapon: 'lavish_sword' }, finance: { base: 'wizzard_m', hue: 0, weapon: 'red_staff' }, admin: { base: 'knight_m', hue: 40, weapon: 'big_hammer' },
   staff_park: { base: 'elf_m', hue: 160 }, parttime: { base: 'elf_f', hue: 0 }, guard: { base: 'knight_m', hue: 200 }, barista: { base: 'wizzard_f', hue: 120 },
   courier: { base: 'dwarf_m', hue: 40, weapon: 'axe' }, contract: { base: 'elf_f', hue: 200 }, vlookup: { base: 'wizzard_m', hue: 160, weapon: 'red_staff' }, pivot: { base: 'knight_m', hue: 90 },

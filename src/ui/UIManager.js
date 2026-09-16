@@ -1,6 +1,6 @@
 // DOM layer: ribbon, formula bar, sheets, task pane, card grid, quests, boss-key view, dialogs.
 import { BALANCE, teamUpgradeCost, isBossStage, stageLabel } from '../config/balance.js';
-import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, MAIN_ID, MAIN_TIER_TITLES } from '../data/heroes.js';
+import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, MAIN_ID, MAIN_TIER_TITLES, MAIN_TRACKS } from '../data/heroes.js';
 import { stagePool, eliteChance, bossForStage, MONSTER_TYPES, BOSSES, PALETTES, phaseOf } from '../data/monsters.js';
 import { DIVISIONS, PERKS, divisionOf, divisionName } from '../data/divisions.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
@@ -837,9 +837,11 @@ export class UIManager {
     box.append(el('p', { class: 'small' },
       el('span', { class: info.hasCards ? 'ok' : 'bad' }, `강화 카드 ${info.cards}장`), ' · ',
       el('span', { class: info.hasStage ? 'ok' : 'bad' }, `${stageLabel(info.stage)} 클리어`)));
+    if (info.options.length > 1) box.append(el('p', { class: 'small muted' }, '트랙을 고르면 이후 승진은 그 트랙 안에서만 진행됩니다 (변경 불가).'));
     const opts = el('div', { class: 'promo-options' });
     for (const job of info.options) {
-      opts.append(el('div', { class: 'promo-opt' }, cardCanvas(job, { title: `${job.title} · ${job.grade}급` }),
+      const tr = job.track ? MAIN_TRACKS[job.track] : null;
+      opts.append(el('div', { class: 'promo-opt', style: tr ? `--tc:${tr.color}` : '' }, tr ? el('div', { class: 'promo-track', title: tr.desc }, tr.name) : null, cardCanvas(job, { title: `${job.title} · ${job.grade}급` }),
         el('div', { class: 'small muted' }, job.desc ?? `${ROLES[job.role].name} · ${job.grade}급`),
         el('div', { class: 'small', style: 'color:#1f5fa8' }, `특성: ${TRAITS[job.trait].name}`),
         btn(`${job.title}으로 승진`, () => { if (!this.game.promoteMain(job.id)) this.toast('승진 조건이 충족되지 않았습니다'); }, 'primary', !info.ok)));

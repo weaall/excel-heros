@@ -63,3 +63,22 @@ test('paper dolls: every hero and main job has a doll spec that renders 9 frames
     assert.notDeepEqual(Array.from(dollPixels(id, 5).data), Array.from(dollPixels(id, 0).data), `${id} walks`);
   }
 });
+
+test('main hero job tree: 인턴→사원, then three tracks that each climb 대리→과장→부장 without crossing', async () => {
+  const { MAIN_JOBS, MAIN_TRACKS } = await import('../src/data/heroes.js');
+  const { migrate } = await import('../src/core/state.js');
+  assert.deepEqual(MAIN_JOBS.staff.next.map((j) => MAIN_JOBS[j].track), Object.keys(MAIN_TRACKS));
+  for (const t of Object.keys(MAIN_TRACKS)) {
+    const chain = Object.values(MAIN_JOBS).filter((j) => j.track === t).sort((a, b) => a.tier - b.tier);
+    assert.deepEqual(chain.map((j) => j.tier), [2, 3, 4], t);
+    assert.deepEqual(chain.map((j) => j.grade), ['B', 'A', 'S'], t);
+    for (let i = 0; i < chain.length - 1; i++) assert.deepEqual(chain[i].next, [chain[i + 1].id], `${t} stays in its lane`);
+    assert.deepEqual(chain.at(-1).next, [], `${t} ends at 부장`);
+    assert.equal(new Set(chain.map((j) => j.role)).size, 1, `${t} keeps one role`);
+  }
+  assert.equal(new Set(Object.values(MAIN_JOBS).filter((j) => j.tier === 4).map((j) => j.role)).size, 3, 'three 부장 = three roles');
+  // legacy saves (pre-track 대리/과장) migrate into the 영업 track at the same tier
+  assert.equal(migrate({ version: 2, main: { job: 'senior' } }).main.job, 'sales_senior');
+  assert.equal(migrate({ version: 2, main: { job: 'manager' } }).main.job, 'sales_manager');
+  assert.equal(migrate({ version: 2, main: { job: 'finance' } }).main.job, 'finance');
+});

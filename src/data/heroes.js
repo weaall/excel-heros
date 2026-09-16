@@ -112,15 +112,30 @@ export const heroesOfGrade = (grade) => HEROES.filter((h) => h.grade === grade);
 // --- Main hero -------------------------------------------------------------
 export const MAIN_ID = 'main';
 const MAIN_PAL = { H: '#2b2b2b', P: '#2f3d5c' };
-/** Job tree: 인턴(D) → 사원(C) → 대리(B) → 과장(A) → 부장 3종(S, branch). */
+/** Job tree: 인턴(D) → 사원(C) → 트랙 선택 → 대리(B) → 과장(A) → 부장(S). 세 트랙은 사원 직후 갈라지며 되돌릴 수 없다.
+ *  영업 트랙 = 근접 단일 딜(치명·팀 리더십), 재무 트랙 = 원거리 광역(영업 마인드·보고서 특화), 총무 트랙 = 탱커(철벽·방패·전체 기절).
+ *  주인공은 어느 트랙에서도 같은 인물(젊은 남성, 검은 단발)이며 직급이 오를수록 복장만 격이 오른다. */
 export const MAIN_JOBS = Object.freeze({
-  intern:  { id: 'intern',  tier: 0, grade: 'D', name: '김인턴', title: '인턴',     role: 'melee',  trait: 'swift',     skill: { type: 'strike', power: 3 },   next: ['staff'],   look: { hair: 'short', acc: 'lanyard' , prop: 'files' },          palette: { ...MAIN_PAL, B: '#ffffff', W: '#9aa5b1' } },
-  staff:   { id: 'staff',   tier: 1, grade: 'C', name: '김사원', title: '사원',     role: 'melee',  trait: 'swift',     skill: { type: 'strike', power: 3.5 }, next: ['senior'],  look: { hair: 'short', acc: 'tie' , prop: 'phone' },              palette: { ...MAIN_PAL, B: '#dff9fb', W: '#95afc0' } },
-  senior:  { id: 'senior',  tier: 2, grade: 'B', name: '김대리', title: '대리',     role: 'melee',  trait: 'crit',      skill: { type: 'strike', power: 4 },   next: ['manager'], look: { hair: 'side', acc: 'tie', acc2: 'coffee' }, palette: { ...MAIN_PAL, B: '#c7ecee', W: '#7ed6df' } },
-  manager: { id: 'manager', tier: 3, grade: 'A', name: '김과장', title: '과장',     role: 'melee',  trait: 'rally',     skill: { type: 'strike', power: 5 },   next: ['sales', 'finance', 'admin'], look: { hair: 'side', acc: 'glasses', acc2: 'tie' , prop: 'briefcase' }, palette: { ...MAIN_PAL, B: '#535c68', W: '#f9ca24' } },
-  sales:   { id: 'sales',   tier: 4, grade: 'S', name: '김부장', title: '영업부장', role: 'melee',  trait: 'crit',      skill: { type: 'strike', power: 6.5 }, next: [], look: { hair: 'spiky', acc: 'sunglasses', acc2: 'tie' , prop: 'briefcase' }, palette: { ...MAIN_PAL, B: '#eb4d4b', W: '#f9ca24' }, desc: '단일 딜 특화. 보스전에 강함' },
-  finance: { id: 'finance', tier: 4, grade: 'S', name: '김부장', title: '재무부장', role: 'ranged', trait: 'greedy',    skill: { type: 'sweep',  power: 2.5 }, next: [], look: { hair: 'side', acc: 'glasses', acc2: 'badge' , prop: 'calculator' }, palette: { ...MAIN_PAL, B: '#22a6b3', W: '#f9ca24' }, desc: '원거리 광역 딜. 사냥 속도 특화' },
-  admin:   { id: 'admin',   tier: 4, grade: 'S', name: '김부장', title: '총무부장', role: 'tank',   trait: 'sturdy',    skill: { type: 'ult',    power: 3 },   next: [], look: { hair: 'grey', acc: 'beard', acc2: 'hardhat' , prop: 'radio' }, palette: { ...MAIN_PAL, B: '#f0932b', W: '#f9ca24' }, desc: '탱커 + 전체 기절. 생존 특화' },
+  intern:  { id: 'intern',  tier: 0, grade: 'D', name: '김인턴', title: '인턴',     track: null,      role: 'melee',  trait: 'swift',  skill: { type: 'strike', power: 3 },   next: ['staff'], look: { hair: 'short', acc: 'lanyard', prop: 'files' }, palette: { ...MAIN_PAL, B: '#ffffff', W: '#9aa5b1' } },
+  staff:   { id: 'staff',   tier: 1, grade: 'C', name: '김사원', title: '사원',     track: null,      role: 'melee',  trait: 'swift',  skill: { type: 'strike', power: 3.5 }, next: ['sales_senior', 'finance_senior', 'admin_senior'], look: { hair: 'short', acc: 'tie', prop: 'phone' }, palette: { ...MAIN_PAL, B: '#dff9fb', W: '#95afc0' } },
+  // 영업 트랙 — 근접 단일 딜. 보스전에 강함
+  sales_senior:   { id: 'sales_senior',   tier: 2, grade: 'B', name: '김대리', title: '영업대리', track: 'sales',   role: 'melee', trait: 'crit',  skill: { type: 'strike', power: 4 },   next: ['sales_manager'], look: { hair: 'short', acc: 'tie', prop: 'phone' },                 palette: { ...MAIN_PAL, B: '#f5b7b1', W: '#c0392b' }, desc: '영업 트랙 · 근접 단일 딜 · 치명타' },
+  sales_manager:  { id: 'sales_manager',  tier: 3, grade: 'A', name: '김과장', title: '영업과장', track: 'sales',   role: 'melee', trait: 'rally', skill: { type: 'strike', power: 5 },   next: ['sales'],         look: { hair: 'short', acc: 'tie', prop: 'briefcase' },             palette: { ...MAIN_PAL, B: '#c0392b', W: '#f9ca24' }, desc: '영업 트랙 · 강타 ×5 · 팀 리더십' },
+  sales:          { id: 'sales',          tier: 4, grade: 'S', name: '김부장', title: '영업부장', track: 'sales',   role: 'melee', trait: 'crit',  skill: { type: 'strike', power: 6.5 }, next: [],                look: { hair: 'spiky', acc: 'sunglasses', acc2: 'tie', prop: 'briefcase' }, palette: { ...MAIN_PAL, B: '#eb4d4b', W: '#f9ca24' }, desc: '영업 트랙 완성 · 단일 딜 특화. 보스전에 강함' },
+  // 재무 트랙 — 원거리 광역. 사냥 속도·골드
+  finance_senior: { id: 'finance_senior', tier: 2, grade: 'B', name: '김대리', title: '재무대리', track: 'finance', role: 'ranged', trait: 'greedy', skill: { type: 'sweep', power: 1.6 }, next: ['finance_manager'], look: { hair: 'short', acc: 'glasses', prop: 'calculator' },     palette: { ...MAIN_PAL, B: '#a3e4d7', W: '#16a085' }, desc: '재무 트랙 · 원거리 광역 · 골드 +8%' },
+  finance_manager:{ id: 'finance_manager',tier: 3, grade: 'A', name: '김과장', title: '재무과장', track: 'finance', role: 'ranged', trait: 'focus',  skill: { type: 'sweep', power: 2 },   next: ['finance'],         look: { hair: 'short', acc: 'glasses', prop: 'tablet' },          palette: { ...MAIN_PAL, B: '#1abc9c', W: '#f9ca24' }, desc: '재무 트랙 · 광역 ×2 · 보스 피해 +30%' },
+  finance:        { id: 'finance',        tier: 4, grade: 'S', name: '김부장', title: '재무부장', track: 'finance', role: 'ranged', trait: 'greedy', skill: { type: 'sweep', power: 2.5 }, next: [],                  look: { hair: 'side', acc: 'glasses', acc2: 'badge', prop: 'calculator' }, palette: { ...MAIN_PAL, B: '#22a6b3', W: '#f9ca24' }, desc: '재무 트랙 완성 · 원거리 광역 딜. 사냥 속도 특화' },
+  // 총무 트랙 — 탱커. 생존·방패
+  admin_senior:   { id: 'admin_senior',   tier: 2, grade: 'B', name: '김대리', title: '총무대리', track: 'admin',   role: 'tank',  trait: 'sturdy', skill: { type: 'barrier', power: 3 }, next: ['admin_manager'], look: { hair: 'short', acc: 'clipboard', prop: 'radio' },            palette: { ...MAIN_PAL, B: '#f8c471', W: '#e67e22' }, desc: '총무 트랙 · 탱커 · 파티 방패' },
+  admin_manager:  { id: 'admin_manager',  tier: 3, grade: 'A', name: '김과장', title: '총무과장', track: 'admin',   role: 'tank',  trait: 'sturdy', skill: { type: 'ult', power: 2.2 },   next: ['admin'],         look: { hair: 'short', acc: 'hardhat', prop: 'radio' },              palette: { ...MAIN_PAL, B: '#e67e22', W: '#f9ca24' }, desc: '총무 트랙 · 전체 기절 · 받는 피해 -20%' },
+  admin:          { id: 'admin',          tier: 4, grade: 'S', name: '김부장', title: '총무부장', track: 'admin',   role: 'tank',  trait: 'sturdy', skill: { type: 'ult', power: 3 },     next: [],                look: { hair: 'short', acc: 'hardhat', acc2: 'badge', prop: 'radio' }, palette: { ...MAIN_PAL, B: '#f0932b', W: '#f9ca24' }, desc: '총무 트랙 완성 · 탱커 + 전체 기절. 생존 특화' },
+});
+/** 사원 이후 세 갈래. 저장된 job id로 트랙을 찾는다 (구버전 senior/manager는 영업 트랙으로 이관됨 — state.migrate). */
+export const MAIN_TRACKS = Object.freeze({
+  sales:   { id: 'sales',   name: '영업 트랙', color: '#c0392b', desc: '근접 단일 딜. 치명타와 팀 리더십으로 보스를 빠르게 잡는다.' },
+  finance: { id: 'finance', name: '재무 트랙', color: '#16a085', desc: '원거리 광역 딜. 골드 보너스와 보스 피해로 사냥 효율을 올린다.' },
+  admin:   { id: 'admin',   name: '총무 트랙', color: '#e67e22', desc: '탱커. 방패와 전체 기절로 파티를 지킨다.' },
 });
 export const MAIN_TIER_TITLES = ['인턴', '사원', '대리', '과장', '부장'];
 

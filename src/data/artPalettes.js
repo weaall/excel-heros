@@ -158,9 +158,9 @@ export const ART_PALETTES = {
     "B": "#f95634"
   },
   "hacker": {
-    "H": "#1b2943",
-    "B": "#6981e4",
-    "W": "#262c4c"
+    "H": "#21effc",
+    "B": "#2b2950",
+    "W": "#2c2951"
   },
   "intern_min": {
     "B": "#f7eaf1",
@@ -177,9 +177,9 @@ export const ART_PALETTES = {
     "W": "#1b77cb"
   },
   "qa_lee": {
-    "H": "#ea988d",
-    "B": "#4e3c9b",
-    "W": "#4d3d9a"
+    "H": "#43538d",
+    "B": "#9271dc",
+    "W": "#9372dc"
   },
   "reception_go": {
     "H": "#3e2e2b",
@@ -192,9 +192,8 @@ export const ART_PALETTES = {
     "W": "#b77773"
   },
   "translator_ji": {
-    "H": "#91a5c8",
-    "B": "#8a7569",
-    "W": "#8c776a"
+    "B": "#fdede8",
+    "W": "#f3f8fa"
   },
   "secretary_yun": {
     "H": "#393a50",
@@ -202,14 +201,14 @@ export const ART_PALETTES = {
     "W": "#f9efe9"
   },
   "logistics_bae": {
-    "H": "#7a5449",
-    "B": "#fbe8dd",
-    "W": "#7b5245"
+    "H": "#907a72",
+    "B": "#a1a6a4",
+    "W": "#9f8e80"
   },
   "cdo": {
-    "H": "#1e3049",
-    "B": "#304471",
-    "W": "#314673"
+    "H": "#5b6070",
+    "B": "#2a3248",
+    "W": "#293248"
   },
   "cco": {
     "H": "#825063",
@@ -234,25 +233,46 @@ export const ART_PALETTES = {
   "staff": {
     "B": "#57ece0"
   },
-  "senior": {
-    "B": "#043857"
+  "sales_senior": {
+    "B": "#a5c0e0",
+    "W": "#a9c3e2"
   },
-  "manager": {
-    "B": "#4369b4",
-    "W": "#436fc5"
+  "sales_manager": {
+    "H": "#cf3d41",
+    "B": "#433b3e",
+    "W": "#443d3f"
   },
   "sales": {
     "H": "#343849",
     "B": "#a2152e",
     "W": "#292d43"
   },
+  "finance_senior": {
+    "B": "#fdddc8"
+  },
+  "finance_manager": {
+    "H": "#68728b",
+    "B": "#3e7094",
+    "W": "#b48981"
+  },
   "finance": {
     "H": "#fcbb6e",
     "B": "#05adbe",
     "W": "#05acbe"
   },
+  "admin_senior": {
+    "H": "#3c4256",
+    "B": "#9c5e3d",
+    "W": "#faece2"
+  },
+  "admin_manager": {
+    "H": "#f2e880",
+    "B": "#f7a560",
+    "W": "#3e4249"
+  },
   "admin": {
-    "B": "#fbcd74",
-    "W": "#486188"
+    "H": "#202d44",
+    "B": "#9b98aa",
+    "W": "#1e2739"
   }
 };

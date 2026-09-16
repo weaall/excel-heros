@@ -51,6 +51,7 @@ export function createInitialState(now = Date.now()) {
 }
 
 /** Migrate older saves & fill in missing keys defensively. Saves older than v2 are discarded (pre-release). */
+const LEGACY_MAIN_JOB = { senior: 'sales_senior', manager: 'sales_manager' };
 export function migrate(raw) {
   const fresh = createInitialState();
   if (!raw || typeof raw !== 'object' || (raw.version | 0) < 2) return fresh;
@@ -58,6 +59,7 @@ export function migrate(raw) {
   s.heroes = { ...fresh.heroes, ...(raw.heroes ?? {}) };
   for (const id of Object.keys(s.heroes)) s.heroes[id] = { ...emptyHero(), ...s.heroes[id] };
   s.main = { ...fresh.main, ...(raw.main ?? {}) };
+  if (LEGACY_MAIN_JOB[s.main.job]) s.main.job = LEGACY_MAIN_JOB[s.main.job]; // pre-track saves: 대리/과장 were melee strike → 영업 트랙
   s.pity = { ...fresh.pity, ...(raw.pity ?? {}) };
   s.recruit = { ...fresh.recruit, ...(raw.recruit ?? {}) };
   s.affection = { ...(raw.affection ?? {}) };

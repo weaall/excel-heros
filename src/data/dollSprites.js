@@ -64,14 +64,18 @@ export const DOLLS = {
   union_chief:{ hair: 'spiky', hairColor: '#e8c65a', skin: 'tan', outfit: 'suit', top: '#d84a2a', shirt: '#f5f6fa', bottom: 'pants', bottomColor: '#1f2330', acc: ['tie:#f5f6fa', 'trim:#f5c542'], halo: '#d9ffb0' }, // art: blond spikes, red-orange jacket, white armband
   hacker:     { hair: 'bob', hairColor: '#1e272e', skin: 'fair', outfit: 'hoodie', top: '#2b2f4a', shirt: '#d4a017', bottom: 'skirt', bottomColor: '#2b2f4a', acc: ['headset', 'trim:#d4a017'], halo: '#ff9fd6' }, // art: navy hoodie dress with gold stripes, cyan headset, pink halo
   chairwoman: { hair: 'long', hairColor: '#f3e6b8', skin: 'fair', outfit: 'suit', top: '#111111', shirt: '#111111', bottom: 'pants', bottomColor: '#111111', acc: ['tiara', 'trim:#d4a017'], halo: '#ffd76a' },
-  // main hero jobs
-  intern:     { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'shirt', top: '#2ec4b6', shirt: '#2ec4b6', bottom: 'pants', bottomColor: '#2c3e50', acc: ['lanyard:#3b5bd6'], halo: '#e6f7ff' },
-  staff:      { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'shirt', top: '#2ec4b6', shirt: '#2ec4b6', bottom: 'pants', bottomColor: '#2c3e50', acc: ['tie:#1f2a44'], halo: '#e6f7ff' },
-  senior:     { hair: 'bob', hairColor: '#151515', skin: 'light', outfit: 'suit', top: '#26b8b0', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#2c3e50', acc: ['lanyard:#f39c12'], halo: '#e6f7ff' },
-  manager:    { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'suit', top: '#2a5fc7', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#2a5fc7', acc: ['glasses', 'tie:#1f2a44'], halo: '#e6f7ff' },
-  sales:      { hair: 'spiky', hairColor: '#151515', skin: 'light', outfit: 'suit', top: '#c0392b', shirt: '#1a1a1a', bottom: 'pants', bottomColor: '#1f1f2a', acc: ['sunglasses', 'trim:#d4a017'], halo: '#ffd76a' },
-  finance:    { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'vest', top: '#26b8b0', shirt: '#1a1a2a', bottom: 'pants', bottomColor: '#1f2a44', acc: ['glasses', 'tie:#d4a017', 'trim:#d4a017'], halo: '#ffd76a' },
-  admin:      { hair: 'short', hairColor: '#d8d8d8', skin: 'light', outfit: 'coat', top: '#e67e22', shirt: '#1a1a1a', bottom: 'pants', bottomColor: '#1f1f1f', acc: ['beard', 'trim:#d4a017'], halo: '#ffd76a' },
+  // main hero jobs — same person (short black hair, light skin) in every job; the track colour climbs with the tier
+  intern:          { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'shirt', top: '#2ec4b6', shirt: '#2ec4b6', bottom: 'pants', bottomColor: '#2c3e50', acc: ['lanyard:#3b5bd6'], halo: '#e6f7ff' },
+  staff:           { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'shirt', top: '#2ec4b6', shirt: '#2ec4b6', bottom: 'pants', bottomColor: '#2c3e50', acc: ['tie:#1f2a44'], halo: '#e6f7ff' },
+  sales_senior:    { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'shirt', top: '#f4f4f4', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#2c3e50', acc: ['tie:#c0392b', 'lanyard:#c0392b'], halo: '#ffd9d4' },
+  sales_manager:   { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'suit', top: '#2a2a32', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#1f1f2a', acc: ['tie:#c0392b'], halo: '#ffd9d4' },
+  sales:           { hair: 'spiky', hairColor: '#151515', skin: 'light', outfit: 'suit', top: '#c0392b', shirt: '#1a1a1a', bottom: 'pants', bottomColor: '#1f1f2a', acc: ['sunglasses', 'trim:#d4a017'], halo: '#ffd76a' },
+  finance_senior:  { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'vest', top: '#1f2a44', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#1f2a44', acc: ['glasses', 'tie:#16a085'], halo: '#d5f5ec' },
+  finance_manager: { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'suit', top: '#16a085', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#1f2a44', acc: ['glasses', 'tie:#1f2a44'], halo: '#d5f5ec' },
+  finance:         { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'vest', top: '#26b8b0', shirt: '#1a1a2a', bottom: 'pants', bottomColor: '#1f2a44', acc: ['glasses', 'tie:#d4a017', 'trim:#d4a017'], halo: '#ffd76a' },
+  admin_senior:    { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'vest', top: '#e67e22', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#2c3e50', acc: ['badge'], halo: '#ffe3c2' },
+  admin_manager:   { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'coat', top: '#e67e22', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#2c3e50', acc: ['hardhat:#f1c40f', 'badge'], halo: '#ffe3c2' },
+  admin:           { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'coat', top: '#f2c14e', shirt: '#1a1a1a', bottom: 'pants', bottomColor: '#1f1f1f', acc: ['badge', 'trim:#d4a017'], halo: '#ffd76a' }, // art: pale gold coat, no hardhat
 };
 
 // ------------------------------------------------------------ painting --

@@ -8,7 +8,7 @@
 //     "anims": { "idle": [[0,0],[1,0]], "walk": [[0,1],[1,1],[2,1],[3,1]], "attack": [[0,2],[1,2],[2,2]] } },
 //   { "id": "m:circ", "file": "circ.png", "frameW": 64, "frameH": 64, "anims": { "idle": [[0,0],[1,0]] } }
 // ] }
-// Hero ids match data/heroes.js (main-hero jobs: intern, staff, senior, manager, sales, finance, admin).
+// Hero ids match data/heroes.js (main-hero jobs: intern, staff, {sales,finance,admin}_senior/_manager, sales, finance, admin).
 // Monster ids are "m:" + MONSTER_TYPES id (palette variants share one sheet); the boss is "m:boss".
 
 const sheets = new Map();
