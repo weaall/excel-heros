@@ -32,6 +32,15 @@ if (loaded) {
   ui.showWelcome();
 }
 game.persist();
+// Logged-in players: the account is the source of truth. If the server copy is newer or further along than this
+// browser's save, load it (the browser copy stays as an offline cache). Failures fall back to local silently.
+if (game.cloud.enabled()) {
+  try {
+    const r = await game.cloud.pull(); // server copy wins
+    const local = game.state; const srv = r?.save;
+    if (srv && ((r.updatedAt ?? 0) > (local.lastSaved ?? 0) + 5000 || (srv.stats?.playSeconds ?? 0) > local.stats.playSeconds + 30)) { game.loadCloudSave(srv); ui.toast('계정 저장본을 불러왔습니다'); }
+  } catch { /* offline or server down: keep local */ }
+}
 
 // --- Simulation loop -------------------------------------------------------
 // setInterval keeps ticking (≥1 Hz) in throttled/background tabs; the elapsed

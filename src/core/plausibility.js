@@ -61,3 +61,23 @@ export function boardEntry(state, name, dps = 0) {
 }
 /** Sort key: prestige shares carry over stages (a reset player is still "further"), then stage, then dps. */
 export const boardScore = (e) => (e.shares ?? 0) * 1000 + (e.maxCleared ?? 0) + Math.min(0.999, (e.dps ?? 0) / 1e9);
+
+/**
+ * Compare a new save with the previously stored one for the same account. Catches what a single snapshot cannot:
+ * gems/kills appearing faster than time allows, or progress rolling back (a stale/edited copy overwriting the account).
+ * `force` is set when the player explicitly chose to overwrite the account with this browser's progress.
+ */
+export function checkDelta(prev, next, prevAt, now = Date.now(), force = false) {
+  const reasons = [];
+  if (!prev) return { ok: true, reasons };
+  const hours = Math.max(0, (now - prevAt) / 3600000);
+  const ps = next.stats?.playSeconds ?? 0, pps = prev.stats?.playSeconds ?? 0;
+  if (!force && ps + 60 < pps) reasons.push('play time rolled back');
+  if (ps - pps > hours * 3600 * 1.1 + 900) reasons.push('play time grew faster than wall-clock time');
+  const gemsNow = (next.gems | 0) + (next.stats?.totalPulls ?? 0) * 90, gemsPrev = (prev.gems | 0) + (prev.stats?.totalPulls ?? 0) * 90;
+  const clears = Math.max(0, (next.maxCleared | 0) - (prev.maxCleared | 0));
+  if (gemsNow - gemsPrev > 1200 + hours * 1500 + clears * 150 + (force ? 3000 : 0)) reasons.push('gems grew faster than any income allows');
+  const kills = (next.stats?.totalKills ?? 0) - (prev.stats?.totalKills ?? 0);
+  if (kills > (Math.max(0, ps - pps) + 120) * 6 + 2000) reasons.push('kills exceed the play time added');
+  return { ok: reasons.length === 0, reasons };
+}

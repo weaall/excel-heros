@@ -42,13 +42,13 @@ export class CloudSync {
   async me() { if (!this.enabled()) return null; return this.#call('/v1/me'); }
 
   /** Upload the current save (after a local plausibility check so a rejected save is explained client-side). */
-  async push() {
+  async push(force = false) {
     if (!this.enabled() || this.busy) return null;
     const check = checkSave(this.game.state, Date.now());
     if (!check.ok) { this.status = 'rejected'; this.lastError = `업로드 보류: ${check.reasons.join(', ')}`; this.game.emit('cloud', this); return null; }
     this.busy = true;
     try {
-      const r = await this.#call('/v1/save', { method: 'PUT', body: JSON.stringify({ save: this.game.state, name: this.cfg().name || this.auth.user?.name, dps: this.game.partyDPS() }) });
+      const r = await this.#call('/v1/save', { method: 'PUT', body: JSON.stringify({ save: this.game.state, name: this.cfg().name || this.auth.user?.name, dps: this.game.partyDPS(), force }) });
       this.status = 'ok'; this.lastError = null; this.lastPush = r.updatedAt ?? Date.now(); this.game.emit('cloud', this); return r;
     } catch (e) { this.status = 'error'; this.lastError = e.status === 422 ? `서버가 저장을 거부: ${(e.body?.check?.reasons ?? []).join(', ')}` : e.message; this.game.emit('cloud', this); throw e; }
     finally { this.busy = false; }

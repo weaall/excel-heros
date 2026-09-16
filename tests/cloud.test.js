@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createInitialState } from '../src/core/state.js';
 import { GameManager } from '../src/core/GameManager.js';
-import { checkSave, goldInLevels, boardEntry, boardScore } from '../src/core/plausibility.js';
+import { checkSave, checkDelta, goldInLevels, boardEntry, boardScore } from '../src/core/plausibility.js';
 import { CloudSync } from '../src/core/CloudSync.js';
 import { Auth } from '../src/core/Auth.js';
 import worker, { verifyGoogleToken } from '../backend/worker.js';
@@ -162,4 +162,29 @@ test('Auth + CloudSync: login stores a session, requests carry Bearer, 401 inval
   assert.equal(auth.loggedIn(), false); assert.equal(storage.has('excel-heroes:session'), false);
   assert.ok(calls.some((c) => c.url.endsWith('/v1/logout')));
   delete globalThis.EXCEL_HEROES_CLOUD;
+});
+
+
+test('delta plausibility: normal progress passes; gem spikes, rollbacks and kill bursts are rejected; force allows an explicit overwrite', () => {
+  const now = Date.now(); const prev = legitSave(now - 2 * 3600000); const at = now - 2 * 3600000;
+  const next = JSON.parse(JSON.stringify(prev)); next.stats.playSeconds += 7000; next.stats.totalKills += 7000 * 2; next.gems += 900; next.maxCleared += 3; next.maxStage += 3;
+  assert.deepEqual(checkDelta(prev, next, at, now).reasons, []);
+  assert.equal(checkDelta(null, next, 0, now).ok, true, 'first upload has nothing to compare');
+  const spike = JSON.parse(JSON.stringify(next)); spike.gems += 50000; assert.ok(checkDelta(prev, spike, at, now).reasons.includes('gems grew faster than any income allows'));
+  const back = JSON.parse(JSON.stringify(prev)); back.stats.playSeconds -= 3600; assert.ok(checkDelta(prev, back, at, now).reasons.includes('play time rolled back'));
+  assert.equal(checkDelta(prev, back, at, now, true).ok, true, 'explicit overwrite may roll back');
+  const burst = JSON.parse(JSON.stringify(next)); burst.stats.totalKills += 500000; assert.ok(checkDelta(prev, burst, at, now).reasons.includes('kills exceed the play time added'));
+  const fast = JSON.parse(JSON.stringify(prev)); fast.stats.playSeconds += 20 * 3600; assert.ok(checkDelta(prev, fast, at, now).reasons.includes('play time grew faster than wall-clock time'));
+});
+
+test('worker: a second PUT with an implausible jump is rejected (422) while honest progress is stored', async () => {
+  const env = { DB: fakeDB(), ALLOW_ORIGIN: '*', GOOGLE_CLIENT_ID: CLIENT_ID, fetchFn: tokeninfo(goodClaims()) };
+  const { token } = await (await worker.fetch(req('/v1/auth/google', { method: 'POST', body: JSON.stringify({ credential: 'x'.repeat(40) }) }), env)).json();
+  const now = Date.now(); const save = legitSave(now);
+  assert.equal((await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save }) }, token), env)).status, 200);
+  const cheat = JSON.parse(JSON.stringify(save)); cheat.gems += 5000; // inside the snapshot budget, impossible as a jump since the last save
+  const r = await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save: cheat }) }, token), env);
+  assert.equal(r.status, 422); assert.match((await r.json()).error, /change since/);
+  const honest = JSON.parse(JSON.stringify(save)); honest.stats.playSeconds += 30; honest.stats.totalKills += 40; honest.gems += 10;
+  assert.equal((await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save: honest }) }, token), env)).status, 200);
 });

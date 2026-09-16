@@ -1083,7 +1083,7 @@ export class UIManager {
         el('div', { class: 'opt' }, el('b', {}, '계정 저장본'), el('div', { class: 'small' }, `최고 ${stageLabel(Math.max(1, s.maxStage | 0))} · 플레이 ${fmtTime(s.stats?.playSeconds ?? 0)} · 보석 ${fmt(s.gems | 0)}`), el('div', { class: 'small muted' }, `저장 ${when}`),
           btn('이 저장본 불러오기', () => { this.game.loadCloudSave(s); this.closeModal(); this.toast('계정 저장본을 불러왔습니다'); }, 'primary')),
         el('div', { class: 'opt' }, el('b', {}, '이 브라우저 진행'), el('div', { class: 'small' }, `최고 ${stageLabel(Math.max(1, local.maxStage | 0))} · 플레이 ${fmtTime(local.stats.playSeconds)} · 보석 ${fmt(local.gems | 0)}`), el('div', { class: 'small muted' }, '계정 저장본을 이 진행으로 덮어씁니다'),
-          btn('이 진행 유지 · 계정에 저장', async () => { this.closeModal(); try { await this.game.cloud.push(); this.toast('현재 진행을 계정에 저장했습니다'); } catch (e) { this.toast(`저장 실패: ${e.message}`); } }))));
+          btn('이 진행 유지 · 계정에 저장', async () => { this.closeModal(); try { await this.game.cloud.push(true); this.toast('현재 진행을 계정에 저장했습니다'); } catch (e) { this.toast(`저장 실패: ${e.message}`); } }))));
     this.openModal('저장본 선택', body);
   }
   #refreshBoard(fetch = false) {
