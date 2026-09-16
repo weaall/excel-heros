@@ -13,7 +13,7 @@ compatibility_date = "2025-01-01"
 ALLOW_ORIGIN = "*"
 # Google OAuth 2.0 *Web application* client ID from console.cloud.google.com › APIs & Services › Credentials.
 # Authorized JavaScript origins must include the game origin (https://excel-heros.qugo.kr) and http://localhost:8080.
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "555871048582-jfcopkcrj6nomp1o5dvd6fm4mkfslai4.apps.googleusercontent.com"
 
 [[d1_databases]]
 binding = "DB"
