@@ -70,7 +70,17 @@ const tokenFile = new URL('../.hf_token', import.meta.url);
 const HF_TOKEN = process.env.HF_TOKEN ?? (fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : '');
 const AUTH = HF_TOKEN ? { authorization: `Bearer ${HF_TOKEN}` } : {};
 
+/** Alternative to the Space: HF serverless Inference Providers (needs a token with the "Inference Providers" permission;
+ *  free accounts get a small monthly credit). Set HF_MODE=api to route callGenerate here. */
+export async function callInference(text, seed, { width = 832, height = 1216, neg = NEG, steps = 28, model = process.env.HF_MODEL ?? 'cagliostrolab/animagine-xl-4.0' } = {}) {
+  if (!HF_TOKEN) throw new Error('HF_MODE=api needs a token (.hf_token) with Inference Providers permission');
+  const r = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, { method: 'POST', headers: { 'content-type': 'application/json', ...AUTH }, body: JSON.stringify({ inputs: text, parameters: { negative_prompt: neg, width, height, num_inference_steps: steps, guidance_scale: 5, seed } }), signal: AbortSignal.timeout(300000) });
+  if (!r.ok) throw new Error(`inference ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const ct = r.headers.get('content-type') ?? ''; if (!ct.startsWith('image/')) throw new Error('inference returned ' + ct);
+  return Buffer.from(await r.arrayBuffer());
+}
 export async function callGenerate(text, seed, { width = 832, height = 1216, style = 'Anim4gine', neg = NEG, steps = 28 } = {}) {
+  if (process.env.HF_MODE === 'api') return callInference(style === 'Pixel art' ? `pixel art, ${text}` : text, seed, { width, height, neg, steps });
   const data = [text, neg, seed, width, height, 5, steps, 'Euler a', `${width} x ${height}`, style, false, 0.55, 1.5, true];
   const r = await fetch(`${BASE}/call/generate`, { method: 'POST', headers: { 'content-type': 'application/json', ...AUTH }, body: JSON.stringify({ data }) });
   if (!r.ok) throw new Error(`call ${r.status}: ${(await r.text()).slice(0, 200)}`);
