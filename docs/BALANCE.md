@@ -345,3 +345,9 @@
 - **구버전 저장 이관**: `senior`/`manager`(근접 강타)는 `state.migrate`에서 `sales_senior`/`sales_manager`로 자동 매핑(같은 티어).
 - **주인공은 남성 고정**: 기존 김대리 일러가 여성으로, 총무부장이 백발 노인으로 나와 인물 연속성이 깨져 있었음. 모든 직급 프롬프트에 'young man, short black hair'를 명시하고 도트 스펙도 검은 단발·같은 피부색으로 통일. 신규 6장(각 트랙 대리·과장) + 총무부장 재생성.
 - 테스트: 트랙별 사슬(2→3→4, B→A→S, 역할 1종, 다른 트랙으로 못 넘어감) + 이관 검증. 시뮬레이션 테스트는 재무 트랙으로 끝까지 승진.
+
+## 6-39. 57차: 일러 얼굴 규칙 — 크게, 밝게
+
+- 사용자 원칙: 선글라스 같은 소품은 괜찮지만 **얼굴이 음영에 묻히거나 작게 보이는 일러는 매력이 없다**. 61장을 컨택트 시트로 전수 점검해 18장(barista, courier, pivot, cto, coo, ceo, legal_yoon, cmo, founder, union_chief, security_yang, secretary_yun, logistics_bae, cdo, cco, chief_of_staff, chairwoman, finance_manager)을 재생성.
+- 프롬프트 공통 규칙(`scripts/genCardsHF.mjs`): `cowboy shot` → `medium shot, upper body, waist up, face focus, soft even front lighting, bright face`. 네거티브에 `shadowed face, low key lighting, full body, wide shot, distant, small face` 추가. S 등급 기본 배경의 `dramatic lighting` 제거, 야경/역광 배경(cto, union_chief, security_yang, chairman)을 밝은 배경으로 교체.
+- 검수 방법: `IDS=a,b node scripts/artSheet.mjs out.png 8 180`으로 시트를 만들고 눈으로 확인 → 문제 카드만 `SEED=<n> --force`로 재생성 → `python scripts/thumbs.py --force` → `--manifest` → `extractPalettes`.

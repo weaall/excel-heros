@@ -15,9 +15,8 @@ export const ART_PALETTES = {
     "W": "#b9f2fd"
   },
   "barista": {
-    "H": "#fb7b0d",
-    "B": "#222f2e",
-    "W": "#232f2e"
+    "B": "#8ba5b5",
+    "W": "#e7c4be"
   },
   "courier": {
     "H": "#2a4987",
@@ -154,8 +153,7 @@ export const ART_PALETTES = {
     "W": "#f7bcb3"
   },
   "union_chief": {
-    "H": "#4bb2c9",
-    "B": "#f95634"
+    "B": "#4f576e"
   },
   "hacker": {
     "H": "#21effc",
@@ -167,9 +165,9 @@ export const ART_PALETTES = {
     "W": "#539daf"
   },
   "security_yang": {
-    "H": "#3b9fe1",
-    "B": "#e2dab0",
-    "W": "#f9b796"
+    "H": "#3a4555",
+    "B": "#a9d3f8",
+    "W": "#fbeee6"
   },
   "mail_cho": {
     "H": "#1c77cc",
@@ -196,14 +194,13 @@ export const ART_PALETTES = {
     "W": "#f3f8fa"
   },
   "secretary_yun": {
-    "H": "#393a50",
-    "B": "#303d53",
-    "W": "#f9efe9"
+    "H": "#34425b",
+    "B": "#69697d",
+    "W": "#68687b"
   },
   "logistics_bae": {
-    "H": "#907a72",
-    "B": "#a1a6a4",
-    "W": "#9f8e80"
+    "B": "#75aad1",
+    "W": "#eb9764"
   },
   "cdo": {
     "H": "#5b6070",
@@ -211,9 +208,9 @@ export const ART_PALETTES = {
     "W": "#293248"
   },
   "cco": {
-    "H": "#825063",
-    "B": "#222c42",
-    "W": "#957a85"
+    "H": "#ec99a4",
+    "B": "#e2adab",
+    "W": "#b77873"
   },
   "chief_of_staff": {
     "H": "#7d614d",
