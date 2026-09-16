@@ -358,3 +358,8 @@
 - **정보**: 기존 스탯 표 + 특성 행. **스킬**: 스킬명(계열/고유 명칭) · 효과 · 위력(기본 × 스킬 Lv × ★4 × 각성 분해) · 대기 시간 · 지속 · 스킬 Lv(강화 버튼) · ★ 성장 사다리(메인은 승진 효과). **스킨**: 장착 중(기본으로 되돌리기) · 해금 n/2와 조건 · 적용 범위 + 6× 도트 미리보기 그리드(96×168). **프로필**: 인사 기록 카드(이름/별명/부서+부문 특성/직무/소개/한마디). **호감도**: 하트·Lv·경험치 바·보너스·간식 행 + 해금 사다리(Lv 3 비화 · Lv 5 개인 메시지 · Lv 10 절친/사복/핑크 프레임).
 - 탭 버튼에 배지: 스킬 `Lv n`, 스킨 `장착 스킨명`, 호감도 `♥n`. 저장된 탭 키 `growth`는 `skill`로 이관.
 - (57차 후속) 남은 12장 재생성 완료. HF `/call` API가 숨기던 오류를 queue 프로토콜로 읽어 진짜 원인(요청당 GPU 90초 vs 잔여 쿼터 부족) 확인. 스크립트에 쿼터 풀 로테이션 추가: `.hf_token` + `.hf_tokens`(한 줄에 하나, git-ignored) + 익명(IP) 풀을 순서대로 시도하고, 모두 소진되면 Space가 알려 준 "Try again in H:MM:SS"만큼 대기. `HF_ANON=1`은 익명만 사용.
+
+## 6-41. 59차: 광고 공급자 추상화 (AdSense · AppLixir · custom)
+
+- 사용자 질문: 애드센스 승인 전에 Monetag / Adsterra / AdinPlay / AppLixir 중 먼저 붙일 것이 있는지. 결론: **보상형 전용인 AppLixir만 후보**. Monetag·Adsterra의 팝언더/전면은 엑셀 위장 UX를 깨고, 같은 도메인에서 애드센스 심사 중 침습적 광고가 돌면 승인에 불리. AdinPlay는 웹게임 검수·트래픽 조건이 있어 지금 단계엔 이르다.
+- `src/ui/Ads.js`를 공급자 추상화로 재작성: `window.EXCEL_HEROES_ADS`가 `{ publisherId }`면 AdSense H5, `{ provider: 'applixir', applixir: { zoneId, devId, gameId } }`면 AppLixir SDK(`invokeApplixirVideoUnit`, 상태 `ad-watched`/`ad-rewarded`=시청, `ad-interrupted`/`sys-closing`=취소, 그 외=불가), `{ provider: 'custom', custom: { load, showRewarded } }`면 임의 네트워크. 호출부(`showRewarded`)와 일일 상한(BALANCE.AD.perDay)은 그대로. AppLixir 상태명은 대시보드 스니펫과 대조 필요.
