@@ -19,7 +19,8 @@ const DEPT_DIVISION = {
   '회계팀': 'finance', '재무본부': 'finance', '감사팀': 'finance', '법무팀': 'finance',
   '개발팀': 'tech', '기술본부': 'tech', 'IT 지원팀': 'tech', '데이터팀': 'tech', '연구소': 'tech',
   '마케팅팀': 'market', '마케팅본부': 'market', '영업팀': 'market', '홍보팀': 'market', '기획팀': 'market', '디자인팀': 'market',
-  '대표이사실': 'exec', '회장실': 'exec', '이사회': 'exec',
+  '대표이사실': 'exec', '회장실': 'exec', '이사회': 'exec', '전략기획실': 'exec',
+  'AI연구소': 'tech', '보안연구소': 'tech', '노동조합': 'people',
 };
 
 /** Division id for a hero id ('main' for the main hero). Unknown departments fall back to 경영지원. */

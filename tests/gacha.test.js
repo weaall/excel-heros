@@ -5,15 +5,16 @@ import { rollGrade, rollGradeRaw, pullOnce, initialPity, promoteCost } from '../
 import { GRADES, GRADE_ORDER, HEROES, MAIN_ID } from '../src/data/heroes.js';
 import { BALANCE } from '../src/config/balance.js';
 
-test('grade rates sum to 1 and rollGradeRaw maps boundaries (D45/C30/B17/A7/S1)', () => {
+test('grade rates sum to 1 and rollGradeRaw maps boundaries (D48.5/C30/B16/A5/S0.5)', () => {
   const sum = GRADE_ORDER.reduce((a, g) => a + GRADES[g].rate, 0);
   assert.ok(Math.abs(sum - 1) < 1e-9);
   assert.equal(rollGradeRaw(0), 'D');
-  assert.equal(rollGradeRaw(0.449), 'D');
-  assert.equal(rollGradeRaw(0.45), 'C');
-  assert.equal(rollGradeRaw(0.75), 'B');
-  assert.equal(rollGradeRaw(0.92), 'A');
-  assert.equal(rollGradeRaw(0.99), 'S');
+  assert.equal(rollGradeRaw(0.484), 'D');
+  assert.equal(rollGradeRaw(0.485), 'C');
+  assert.equal(rollGradeRaw(0.79), 'B');
+  assert.equal(rollGradeRaw(0.92), 'B');
+  assert.equal(rollGradeRaw(0.96), 'A');
+  assert.equal(rollGradeRaw(0.996), 'S');
   assert.equal(rollGradeRaw(0.999999), 'S');
 });
 
@@ -38,25 +39,25 @@ test('pity: never more than 50 pulls without A+, never more than 100 without S',
 test('pity: forced results on exact thresholds with an always-D RNG', () => {
   const rng = { next: () => 0, int: () => 5, pick: (a) => a[0] };
   let pity = initialPity();
-  for (let i = 1; i <= 100; i++) {
+  for (let i = 1; i <= BALANCE.PITY_S; i++) {
     const r = rollGrade(pity, rng); pity = r.pity;
-    if (i === 50) assert.equal(r.grade, 'A');
-    else if (i === 100) assert.equal(r.grade, 'S');
+    if (i === BALANCE.PITY_S) assert.equal(r.grade, 'S');
+    else if (i % BALANCE.PITY_A === 0) assert.equal(r.grade, 'A');
     else assert.equal(r.grade, 'D');
   }
   assert.equal(pity.sinceS, 0);
 });
 
-test('observed rates roughly match 45/30/17/7/1 with pity nudging up', () => {
+test('observed rates roughly match 48.5/30/16/5/0.5 with pity nudging up', () => {
   const rng = createRng(7);
   let pity = initialPity(); const counts = { D: 0, C: 0, B: 0, A: 0, S: 0 };
   const N = 100000;
   for (let i = 0; i < N; i++) { const r = rollGrade(pity, rng); pity = r.pity; counts[r.grade]++; }
-  assert.ok(Math.abs(counts.D / N - 0.45) < 0.02);
+  assert.ok(Math.abs(counts.D / N - 0.485) < 0.02);
   assert.ok(Math.abs(counts.C / N - 0.30) < 0.02);
-  assert.ok(Math.abs(counts.B / N - 0.17) < 0.02);
-  assert.ok(counts.A / N > 0.065 && counts.A / N < 0.11);
-  assert.ok(counts.S / N >= 0.01 && counts.S / N < 0.02);
+  assert.ok(Math.abs(counts.B / N - 0.16) < 0.02);
+  assert.ok(counts.A / N > 0.045 && counts.A / N < 0.09);
+  assert.ok(counts.S / N >= 0.005 && counts.S / N < 0.013);
 });
 
 test('pullOnce unlocks new heroes at 1 star and gives 5-10 shards on duplicates', () => {
@@ -64,7 +65,7 @@ test('pullOnce unlocks new heroes at 1 star and gives 5-10 shards on duplicates'
   const roster = {};
   let pity = initialPity();
   let news = 0, dupes = 0;
-  for (let i = 0; i < 800; i++) {
+  for (let i = 0; i < 4000; i++) { // S is 0.5% and there are 8 S cards, so it takes a while to see them all
     const r = pullOnce(pity, roster, rng); pity = r.pity;
     if (r.isNew) { news++; assert.equal(roster[r.heroId].star, 1); assert.equal(r.shards, BALANCE.UNLOCK_SHARDS); }
     else { dupes++; assert.ok(r.shards >= 5 && r.shards <= 10); }

@@ -1,11 +1,11 @@
 // Hero roster (D ~ S grade cards) + main hero job tree. Every card has its own look
 // (hair / accessory / colours) and a passive trait.
 export const GRADES = Object.freeze({
-  D: { id: 'D', name: 'D', label: '일반',  rate: 0.45, promote: [10, 20, 40, 80],   color: '#7f8c8d', bg: '#ecf0f1', base: { atk: 6,  hp: 100 } },
+  D: { id: 'D', name: 'D', label: '일반',  rate: 0.485, promote: [10, 20, 40, 80],   color: '#7f8c8d', bg: '#ecf0f1', base: { atk: 6,  hp: 100 } },
   C: { id: 'C', name: 'C', label: '희귀',  rate: 0.30, promote: [15, 30, 60, 120],  color: '#27ae60', bg: '#e9f7ef', base: { atk: 8,  hp: 130 } },
-  B: { id: 'B', name: 'B', label: '고급',  rate: 0.17, promote: [20, 40, 80, 160],  color: '#2b7cd3', bg: '#e8f1fb', base: { atk: 11, hp: 160 } },
-  A: { id: 'A', name: 'A', label: '영웅',  rate: 0.07, promote: [25, 50, 100, 200], color: '#8e44ad', bg: '#f4ecf7', base: { atk: 15, hp: 200 } },
-  S: { id: 'S', name: 'S', label: '전설',  rate: 0.01, promote: [30, 60, 120, 240], color: '#d4a017', bg: '#fdf6e3', base: { atk: 20, hp: 250 } },
+  B: { id: 'B', name: 'B', label: '고급',  rate: 0.16, promote: [20, 40, 80, 160],  color: '#2b7cd3', bg: '#e8f1fb', base: { atk: 11, hp: 160 } },
+  A: { id: 'A', name: 'A', label: '영웅',  rate: 0.05, promote: [25, 50, 100, 200], color: '#8e44ad', bg: '#f4ecf7', base: { atk: 15, hp: 200 } },
+  S: { id: 'S', name: 'S', label: '전설',  rate: 0.005, promote: [30, 60, 120, 240], color: '#d4a017', bg: '#fdf6e3', base: { atk: 20, hp: 250 } },
 });
 export const GRADE_ORDER = ['D', 'C', 'B', 'A', 'S'];
 
@@ -86,6 +86,10 @@ export const HEROES = [
   { id: 'nurse_han',  name: '사내 간호사',   grade: 'C', role: 'healer', trait: 'regen',     skill: { type: 'heal',   power: 28 },  look: { hair: 'bun', acc: 'badge', prop: 'clipboard' },           palette: { H: '#6c5ce7', B: '#dfe6e9', P: '#2d3436', W: '#00cec9' } },
   { id: 'lab_park',   name: '연구소 박박사', grade: 'B', role: 'ranged', trait: 'crit',      skill: { type: 'burn',    power: 1.0, name: '가설 검증' }, look: { hair: 'long', acc: 'glasses', prop: 'laptop' },            palette: { H: '#b2bec3', B: '#f5f6fa', P: '#2d3436', W: '#0984e3' } },
   { id: 'chro',       name: 'CHRO',          grade: 'A', role: 'healer', trait: 'rally',     skill: { type: 'heal',   power: 40 },  look: { hair: 'side', acc: 'earring', acc2: 'badge', prop: 'files' }, palette: { H: '#2d3436', B: '#e84393', P: '#2d3436', W: '#ffeaa7' } },
+  { id: 'cso',        name: '전략실장 서하늘', grade: 'S', role: 'ranged', trait: 'rally',   skill: { type: 'ult',     power: 3.6, name: '전략 브리핑' }, look: { hair: 'long', acc: 'earring', prop: 'tablet' },        palette: { H: '#c8b6ff', B: '#f5f6fa', P: '#2f3640', W: '#8c7ae6' } },
+  { id: 'ai_lead',    name: 'AI연구소장 루나', grade: 'S', role: 'healer', trait: 'regen',   skill: { type: 'heal',    power: 45,  name: '시스템 복구' },   look: { hair: 'long', acc: 'glasses', prop: 'laptop' },         palette: { H: '#9ff3e6', B: '#ffffff', P: '#1e272e', W: '#00cec9' } },
+  { id: 'union_chief', name: '노조위원장 강철', grade: 'S', role: 'tank',  trait: 'sturdy',  skill: { type: 'barrier', power: 14,  name: '단체 협약' },     look: { hair: 'spiky', acc: 'headband', prop: 'megaphone' },   palette: { H: '#1e272e', B: '#c23616', P: '#2f3640', W: '#f5f6fa' } },
+  { id: 'hacker',     name: '화이트해커 제로', grade: 'S', role: 'melee',  trait: 'crit',    skill: { type: 'execute', power: 6,   name: '제로데이' },       look: { hair: 'bob', acc: 'headset', prop: 'laptop' },          palette: { H: '#1e272e', B: '#2d3436', P: '#1e272e', W: '#00d2ff' } },
   { id: 'chairwoman', name: '이사장',        grade: 'S', role: 'tank',   trait: 'sturdy',    skill: { type: 'ult', power: 3.2 },    look: { hair: 'long', acc: 'crown', acc2: 'earring', prop: 'cane' }, palette: { H: '#f5f6fa', B: '#2d3436', P: '#2d3436', W: '#d4a017' } },
 ];
 

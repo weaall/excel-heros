@@ -78,7 +78,7 @@ export const BALANCE = Object.freeze({
   GACHA_SINGLE_COST: 100,
   GACHA_TEN_COST: 900,
   PITY_A: 50,               // 50 pulls without A+ -> guaranteed A or better
-  PITY_S: 100,              // 100 pulls without S -> guaranteed S
+  PITY_S: 120,              // 120 pulls without S -> guaranteed S (S is 0.5%: rarer, so the floor moved out a little)
   DUPLICATE_SHARDS_MIN: 5,
   DUPLICATE_SHARDS_MAX: 10,
   UNLOCK_SHARDS: 10,

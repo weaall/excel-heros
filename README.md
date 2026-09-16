@@ -51,7 +51,7 @@ npm test         # node:test — 공식, 천장, 퀘스트, 세이브, 헤드리
 index.html / styles.css        Excel 스킨 (리본, 수식 바, 시트 탭, 상태 바, 카드 그리드, 다이얼로그)
 src/main.js                    부트스트랩 + 루프 (setInterval 고정 스텝 시뮬레이션, rAF 렌더)
 src/config/balance.js          모든 상수·공식 (GDD + 확정 수치)
-src/data/heroes.js             D~S 로스터 20장, 역할/스킬, 메인 영웅 직급 트리
+src/data/heroes.js             D~S 로스터 38장, 역할/스킬, 메인 영웅 직급 트리
 src/data/monsters.js           스테이지별 몬스터, 보스
 src/data/quests.js             일일 업무 정의, 출근/전체 완료 보너스, 연속 출근
 src/core/plausibility.js       세이브 타당성 검사 (클라이언트·Worker 공용), 순위표 점수

@@ -46,6 +46,10 @@ export const DOLLS = {
   nurse_han:  { hair: 'bun', hairColor: '#e9eef2', skin: 'fair', outfit: 'labcoat', top: '#ffffff', shirt: '#dfe9f3', bottom: 'skirt', bottomColor: '#f0f0f0', acc: ['badge'], halo: '#d6f0ff' },
   lab_park:   { hair: 'long', hairColor: '#eaeaea', skin: 'fair', outfit: 'labcoat', top: '#ffffff', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#4a90e2', acc: ['glasses', 'lanyard:#3b5bd6'], halo: '#ffe6ea' },
   chro:       { hair: 'long', hairColor: '#151515', skin: 'fair', outfit: 'suit', top: '#f2a6c6', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#f2a6c6', acc: [], halo: '#ffe0f0' },
+  cso:        { hair: 'long', hairColor: '#c8b6ff', skin: 'fair', outfit: 'suit', top: '#f5f6fa', shirt: '#2f3640', bottom: 'skirt', bottomColor: '#2f3640', acc: ['trim:#8c7ae6', 'badge'], halo: '#d9c8ff' },
+  ai_lead:    { hair: 'long', hairColor: '#9ff3e6', skin: 'fair', outfit: 'labcoat', top: '#ffffff', shirt: '#00cec9', bottom: 'skirt', bottomColor: '#1e272e', acc: ['glasses', 'trim:#00cec9'], halo: '#b9fff4' },
+  union_chief:{ hair: 'spiky', hairColor: '#1e272e', skin: 'tan', outfit: 'suit', top: '#c23616', shirt: '#f5f6fa', bottom: 'pants', bottomColor: '#2f3640', acc: ['scarf:#f5f6fa', 'trim:#f5c542'], halo: '#ffd6c9' },
+  hacker:     { hair: 'bob', hairColor: '#1e272e', skin: 'fair', outfit: 'hoodie', top: '#2d3436', shirt: '#00d2ff', bottom: 'pants', bottomColor: '#1e272e', acc: ['headset', 'trim:#00d2ff'], halo: '#9fe9ff' },
   chairwoman: { hair: 'long', hairColor: '#f3e6b8', skin: 'fair', outfit: 'suit', top: '#111111', shirt: '#111111', bottom: 'pants', bottomColor: '#111111', acc: ['tiara', 'trim:#d4a017'], halo: '#ffd76a' },
   // main hero jobs
   intern:     { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'shirt', top: '#2ec4b6', shirt: '#2ec4b6', bottom: 'pants', bottomColor: '#2c3e50', acc: ['lanyard:#3b5bd6'], halo: '#e6f7ff' },
