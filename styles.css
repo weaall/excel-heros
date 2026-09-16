@@ -253,7 +253,7 @@ tr.g-S td { background: #fdf6e3; } tr.g-A td { background: #f4ecf7; }
 
 /* ------------------------------------------------------------ stealth -- */
 /* Only the play area changes: canvas → text rows. Everything else stays put. */
-body.stealth .stage-monster, body.stealth #status-gold, body.stealth #status-gems, body.stealth #status-dps, body.stealth .rb-stat b, body.stealth .bestiary { visibility: hidden; }
+body.stealth .stage-monster, body.stealth #status-gold, body.stealth #status-gems, body.stealth #status-dps, body.stealth .rb-stat, body.stealth .bestiary { visibility: hidden; } /* ribbon 골드·보석·카드·DPS·지분: label and value both hidden, layout kept */
 body.stealth .xl-table .icon, body.stealth .card-grid, body.stealth #quest-dot { display: none; }
 body.stealth #roster-table { display: table; }
 .xl-table.stealth td { font-family: Consolas, "Courier New", monospace; font-size: 12px; color: #333; }
