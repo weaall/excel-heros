@@ -37,6 +37,13 @@ wrangler deploy --config backend/wrangler.toml
 배포 후 게임의 제목 표시줄 계정 버튼 또는 `파일 › 옵션 › 계정`에 Google 로그인 버튼이 나타납니다.
 마지막으로 `wrangler.toml`의 `ALLOW_ORIGIN`을 `"https://excel-heros.qugo.kr"`로 바꿔 다시 배포하세요.
 
+## 현재 배포 상태 (2026-09-16)
+
+- Worker: https://excel-heroes-api.excel-heroes.workers.dev (계정 excel-heroes, D1 `excel-heroes` APAC)
+- CORS 허용 원본: https://excel-heros.qugo.kr, http://localhost:8080 (wrangler.toml ALLOW_ORIGIN, 쉼표 구분)
+- Google 클라이언트 ID: index.html EXCEL_HEROES_CLOUD + wrangler.toml GOOGLE_CLIENT_ID에 설정됨
+- 재배포: `npx wrangler deploy --config backend/wrangler.toml` · 스키마 변경: `npx wrangler d1 execute excel-heroes --remote --file=backend/schema.sql --config backend/wrangler.toml`
+
 ## 동작 방식
 
 - 로그인: Google Identity Services 버튼 → ID 토큰 → `POST /v1/auth/google` → Worker가 Google tokeninfo로 검증(aud = GOOGLE_CLIENT_ID) → 사용자 upsert → **30일 세션 토큰** 발급. 이후 요청은 `Authorization: Bearer <세션>`.
