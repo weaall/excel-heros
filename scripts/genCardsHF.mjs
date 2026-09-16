@@ -106,7 +106,7 @@ export async function callGenerate(text, seed, { width = 832, height = 1216, sty
 export function rebuildManifest() {
   const outDir = new URL('../assets/cards/', import.meta.url); const cards = {};
   for (const id of [...HEROES.map((h) => h.id), ...Object.values(MAIN_JOBS).map((j) => j.id)]) {
-    if (fs.existsSync(new URL(`${id}.png`, outDir))) cards[id] = `${id}.png`;
+    if (fs.existsSync(new URL(`${id}.png`, outDir))) cards[id] = fs.existsSync(new URL(`thumb/${id}.webp`, outDir)) ? { file: `${id}.png`, thumb: `thumb/${id}.webp` } : `${id}.png`; // thumb: drawn on cards; file: lightbox / splash
     else if (fs.existsSync(new URL(`${id}.svg`, outDir))) cards[id] = `${id}.svg`;
   }
   fs.writeFileSync(new URL('manifest.json', outDir), JSON.stringify({ cards }, null, 2) + '\n');
@@ -116,7 +116,7 @@ export function rebuildManifest() {
 const isMain = import.meta.url === `file:///${process.argv[1].replace(/\\/g, '/')}`;
 if (isMain && process.argv.includes('--manifest')) {
   const cards = rebuildManifest();
-  console.log(`manifest: ${Object.keys(cards).length} cards (${Object.values(cards).filter((f) => f.endsWith('.png')).length} png)`);
+  console.log(`manifest: ${Object.keys(cards).length} cards (${Object.values(cards).filter((f) => (typeof f === 'string' ? f : f.file).endsWith('.png')).length} png, ${Object.values(cards).filter((f) => f.thumb).length} thumbs)`);
 } else if (isMain) {
   const args = process.argv.slice(2); const force = args.includes('--force'); const ids = args.filter((a) => !a.startsWith('--'));
   const seed = Number(process.env.SEED ?? 1);
@@ -126,7 +126,7 @@ if (isMain && process.argv.includes('--manifest')) {
   let ok = 0;
   for (const [id, def, pid] of defs) {
     const file = `${id}.png`; const target = new URL(file, outDir);
-    if (!force && fs.existsSync(target)) { console.log(`skip ${id}`); ok++; continue; }
+    if (!force && fs.existsSync(target)) { console.log(`skip ${id}`); ok++; continue; } // (manifest entries may be { file, thumb } objects)
     const text = prompt(def, pid);
     // ZeroGPU anonymous quota: an `error` event with no payload means "quota exceeded, wait" — back off for minutes, not seconds
     const maxAttempts = Number(process.env.MAX_ATTEMPTS ?? 12), quotaWait = Number(process.env.QUOTA_WAIT_MS ?? 240000);

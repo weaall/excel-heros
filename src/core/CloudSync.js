@@ -50,7 +50,7 @@ export class CloudSync {
     if (!this.enabled() || this.busy) return null;
     const check = checkSave(this.game.state, Date.now());
     if (!check.ok) { this.status = 'rejected'; this.lastError = `업로드 보류: ${check.reasons.join(', ')}`; this.game.emit('cloud', this); return null; }
-    this.busy = true;
+    this.busy = true; this.status = 'saving'; this.game.emit('cloud', this);
     try {
       const r = await this.#call('/v1/save', { method: 'PUT', body: JSON.stringify({ save: this.game.state, name: this.cfg().name || this.auth.user?.name, dps: this.game.partyDPS(), force }) });
       this.status = 'ok'; this.lastError = null; this.lastPush = r.updatedAt ?? Date.now(); this.dirty = false; this.game.emit('cloud', this); return r;
@@ -61,7 +61,8 @@ export class CloudSync {
   /** Fetch the server copy (the caller decides whether to load it — see GameManager.loadCloudSave). */
   async pull() {
     if (!this.enabled()) return null;
-    try { return await this.#call('/v1/save'); }
+    this.status = 'loading'; this.game.emit('cloud', this);
+    try { const r = await this.#call('/v1/save'); this.status = 'ok'; this.game.emit('cloud', this); return r; }
     catch (e) { if (e.status === 404) return null; this.status = 'error'; this.lastError = e.message; this.game.emit('cloud', this); throw e; }
   }
 

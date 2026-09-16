@@ -61,6 +61,7 @@ src/ui/Ads.js                  AdSense H5 Games Ads 보상형 광고 래퍼 (미
 backend/                       Cloudflare Worker + D1 백엔드 (worker.js, schema.sql, wrangler.toml)
 src/data/divisions.js          부서 → 7개 부문 매핑, 부문 시너지 수치 · 부문 고유 특성
 src/data/pickup.js             픽업 배너 (3일 주기 S/A, 50% 픽업 확률, 모집 포인트)
+scripts/thumbs.py              카드 일러 → 416×608 WebP 썸네일 (Pillow) · 매니페스트는 genCardsHF --manifest
 src/data/dollSprites.js        일러를 보고 손으로 짠 16×28 페이퍼돌 도트 스펙 41종 + 조립기
 src/data/skins.js              스킨 2종/영웅 (사복=호감도 Lv10, 정장=보석) · 팔레트/일러 키
 src/data/story.js              사내 메신저 에피소드 10화 (채팅 로그 형태)

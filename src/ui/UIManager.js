@@ -147,6 +147,7 @@ export class UIManager {
     $('#account-btn').addEventListener('click', () => this.openBackstage('options'));
     this.game.on('cloud', () => this.#refreshCloud()); this.game.on('board', () => this.#refreshBoard());
     this.game.on('affection', ({ id, level }) => { if (level === BALANCE.AFFECTION.unlockSecret || level === BALANCE.AFFECTION.unlockLine || level === BALANCE.AFFECTION.maxLevel) this.toast(`♥ ${this.game.heroDef(id).name} 호감도 Lv ${level}${level === BALANCE.AFFECTION.unlockLine ? ' · 개인 메시지가 사내 메신저에 도착' : level === BALANCE.AFFECTION.maxLevel ? ' · MAX' : ' · 사무실 비화 해금'}`); this.#refreshDetail(); });
+    this.game.on('gacha-art', () => { const box = $('#pickup-cards'); if (box) box.dataset.key = ''; this.#refreshGacha(); if (document.querySelector('#sheet-album.active')) this.#buildAlbum(); });
     this.game.on('dispatch', () => this.#refreshDispatch()); this.game.on('skin', () => { if (document.querySelector('#sheet-album.active')) this.#buildAlbum(); });
     $('#btn-dispatch').addEventListener('click', () => { const ids = [...document.querySelectorAll('#dispatch-pick input:checked')].map((i) => i.value); if (!ids.length) { this.toast('출장 보낼 대기 사원을 선택하세요 (파티 밖 카드)'); return; } if (this.game.startDispatch(ids)) this.toast(`출장 출발 · ${BALANCE.DISPATCH.hours}시간 후 복귀`); else this.toast('출장을 시작할 수 없습니다 (하루 2회, 진행 중이면 대기)'); });
     $('#btn-dispatch-claim').addEventListener('click', () => { const r = this.game.claimDispatch(); if (r) this.toast(`출장 복귀: 보석 +${r.gems} · 강화 카드 +${r.cards}`); });
@@ -587,9 +588,9 @@ export class UIManager {
     if (syn.balanced) parts.push('균형 편성 (HP +10%)');
     const txt = $('#synergy-text'); if (txt) txt.textContent = parts.length ? parts.join(' · ') : '없음';
     const pane = $('#pane-synergy'); if (!pane) return; pane.innerHTML = '';
-    for (const x of syn.sets) pane.append(el('span', { class: 'syn', style: `--sc:${x.color}`, title: x.perk.desc }, el('b', {}, x.name), `${x.count}명 · ATK +${Math.round(x.atk * 100)}%${x.hp ? ` HP +${Math.round(x.hp * 100)}%` : ''} · ${x.perk.desc}`));
-    pane.append(el('span', { class: `syn ${syn.balanced ? '' : 'off'}`, style: '--sc:#27ae60' }, el('b', {}, '균형 편성'), syn.balanced ? 'HP +10%' : '4개 역할 필요'));
-    if (!syn.sets.length) pane.append(el('span', { class: 'syn off' }, '같은 부문 2명 이상 → 시너지'));
+    for (const x of syn.sets) pane.append(el('tr', {}, el('td', { style: `color:${x.color}; font-weight:700` }, x.name), el('td', { class: 'num' }, x.count), el('td', { class: 'eff' }, `ATK +${Math.round(x.atk * 100)}%${x.hp ? ` · HP +${Math.round(x.hp * 100)}%` : ''} · ${x.perk.desc}`)));
+    pane.append(el('tr', { class: syn.balanced ? '' : 'off' }, el('td', {}, '균형 편성'), el('td', { class: 'num' }, syn.balanced ? '4/4' : `${new Set(this.game.state.party.map((id) => this.game.heroDef(id).role)).size}/4`), el('td', { class: 'eff' }, syn.balanced ? 'HP +10%' : '탱커·근접·원거리·힐러 모두 편성 시 HP +10%')));
+    if (!syn.sets.length) pane.append(el('tr', { class: 'off' }, el('td', { colspan: 3, class: 'eff' }, '같은 부문 2명 이상을 편성하면 시너지가 켜집니다')));
   }
 
   /** 사내_메신저: episode list + chat log rendered as worksheet rows that appear one by one. */
@@ -939,7 +940,7 @@ export class UIManager {
         el('td', { class: 'act' }, btn(claimed ? '완료' : '수령', () => { const rr = g.claimQuest(q.id); if (rr) this.toast(`보상: ${rewardText(rr)}`); }, done && !claimed ? 'primary' : '', !done || claimed))));
     }
     this.#refreshDispatch();
-    { const c = g.claimableSummary(); const b = $('#btn-claim-all'); if (b) { b.disabled = c.total === 0; $('#claim-all-count').textContent = c.total; b.title = c.total ? `업무 ${c.quests} · 전체 완료 ${c.allClear} · 업적 ${c.ach} · 출장 ${c.dispatch}` : '수령할 보상이 없습니다'; } }
+    { const c = g.claimableSummary(); const b = $('#btn-claim-all'); if (b) { b.disabled = c.total === 0; $('#claim-all-count').textContent = c.total; b.title = c.total ? `업무 ${c.quests} · 전체 완료 ${c.allClear} · 업적 ${c.ach} · 마일스톤 ${c.ms} · 출장 ${c.dispatch}` : '수령할 보상이 없습니다'; } }
     const ob = $('#btn-overtime'); if (ob) { ob.disabled = !this.game.canOvertime(); ob.textContent = this.game.overtime ? '야근 중…' : s.daily.overtimeDone ? '오늘 야근 완료 ✓' : '야근 시작'; const ot = $('#overtime-text'); if (s.daily.overtimeDone) ot.textContent = `오늘의 야근을 마쳤습니다 · 개인 최고 ${s.stats.overtimeBest ?? 0} 처치 · 누적 ${s.stats.overtimes ?? 0}회`; }
     const all = Quests.allQuestsClaimed(s);
     $('#btn-allclear').disabled = !all || s.daily.allClearClaimed;
@@ -1000,12 +1001,17 @@ export class UIManager {
   #refreshMilestones() {
     const s = this.game.state; const tbody = $('#ms-table tbody'); if (!tbody) return; tbody.innerHTML = '';
     $('#ms-count').textContent = `${Milestones.claimedCount(s)} / ${MILESTONES.length}`;
+    for (const m of Milestones.pending(s)) { // reached, waiting to be claimed
+      tbody.append(el('tr', { class: 'done' }, el('td', { class: 'name' }, m.name, el('div', { class: 'sub' }, m.desc)),
+        el('td', { class: 'num' }, '달성 ✓'), el('td', { class: 'small' }, `보석 ${m.reward.gems}${m.reward.cards ? ` · 카드 ${m.reward.cards}` : ''}`),
+        el('td', { class: 'act' }, btn('수령', () => { const r = this.game.claimMilestone(m.id); if (r) this.toast(`마일스톤 수령: 보석 +${r.reward.gems}${r.reward.cards ? ` · 카드 +${r.reward.cards}` : ''}`); }, 'primary'))));
+    }
     for (const m of Milestones.upcoming(s)) {
       const v = milestoneValue(s, m);
       tbody.append(el('tr', {}, el('td', { class: 'name' }, m.name, el('div', { class: 'sub' }, m.desc)),
         el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${Math.min(96, Math.round((v / m.target) * 96))}%` }), el('span', {}, `${fmt(v)} / ${fmt(m.target)}`)),
         el('td', { class: 'small' }, `보석 ${m.reward.gems}${m.reward.cards ? ` · 카드 ${m.reward.cards}` : ''}`),
-        el('td', { class: 'small muted' }, '도달 시 자동 지급')));
+        el('td', { class: 'small muted' }, '진행 중')));
     }
     const recent = MILESTONES.filter((m) => Milestones.isClaimed(s, m.id)).slice(-3).reverse();
     for (const m of recent) tbody.append(el('tr', { class: 'claimed' }, el('td', { class: 'name' }, m.name, el('div', { class: 'sub' }, m.desc)), el('td', { class: 'num' }, '완료'), el('td', { class: 'small' }, `보석 ${m.reward.gems}${m.reward.cards ? ` · 카드 ${m.reward.cards}` : ''}`), el('td', { class: 'small muted' }, '지급됨')));
@@ -1058,6 +1064,8 @@ export class UIManager {
 
   #refreshCloud() {
     const c = this.game.cloud, a = c.auth, user = a.user; const box = $('#cloud-status'); if (!box) return;
+    const sc = $('#status-cloud'); if (sc) { const busy = c.status === 'saving' || c.status === 'loading' || a.pending; sc.classList.toggle('busy', !!busy); sc.textContent = !c.configured() ? '' : a.pending ? '계정 확인 중…' : c.status === 'saving' ? '계정에 저장 중…' : c.status === 'loading' ? '계정 저장본 불러오는 중…' : user ? (c.lastPush ? `☁ ${new Date(c.lastPush).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 저장됨` : '☁ 로그인됨') : '☁ 로그인 필요'; }
+    const gateNote = $('#lg-note'); if (gateNote && a.pending) gateNote.textContent = '계정 확인 중…';
     // title bar account
     $('#account-name').textContent = user ? user.name : '김인턴';
     const av = $('#account-avatar'); av.innerHTML = ''; if (user?.picture) av.append(el('img', { src: user.picture, alt: '', referrerpolicy: 'no-referrer' })); else av.textContent = (user?.name ?? '김').slice(0, 1);

@@ -1,49 +1,172 @@
 {
   "cards": {
-    "staff_park": "staff_park.png",
-    "parttime": "parttime.png",
-    "guard": "guard.png",
-    "barista": "barista.png",
-    "courier": "courier.png",
-    "contract": "contract.png",
-    "vlookup": "vlookup.png",
-    "pivot": "pivot.png",
-    "macro": "macro.png",
-    "hr_jung": "hr_jung.png",
-    "audit_han": "audit_han.png",
-    "acct_lead": "acct_lead.png",
-    "dev_lead": "dev_lead.png",
-    "ga_lead": "ga_lead.png",
-    "welfare": "welfare.png",
-    "cfo": "cfo.png",
-    "cto": "cto.png",
-    "coo": "coo.png",
-    "ceo": "ceo.png",
-    "chairman": "chairman.png",
-    "helpdesk": "helpdesk.png",
-    "cleaner": "cleaner.png",
-    "sales_kang": "sales_kang.png",
-    "legal_yoon": "legal_yoon.png",
-    "pm_lead": "pm_lead.png",
-    "design_lead": "design_lead.png",
-    "cmo": "cmo.png",
-    "founder": "founder.png",
-    "intern_seo": "intern_seo.png",
-    "pr_yoo": "pr_yoo.png",
-    "nurse_han": "nurse_han.png",
-    "lab_park": "lab_park.png",
-    "chro": "chro.png",
+    "staff_park": {
+      "file": "staff_park.png",
+      "thumb": "thumb/staff_park.webp"
+    },
+    "parttime": {
+      "file": "parttime.png",
+      "thumb": "thumb/parttime.webp"
+    },
+    "guard": {
+      "file": "guard.png",
+      "thumb": "thumb/guard.webp"
+    },
+    "barista": {
+      "file": "barista.png",
+      "thumb": "thumb/barista.webp"
+    },
+    "courier": {
+      "file": "courier.png",
+      "thumb": "thumb/courier.webp"
+    },
+    "contract": {
+      "file": "contract.png",
+      "thumb": "thumb/contract.webp"
+    },
+    "vlookup": {
+      "file": "vlookup.png",
+      "thumb": "thumb/vlookup.webp"
+    },
+    "pivot": {
+      "file": "pivot.png",
+      "thumb": "thumb/pivot.webp"
+    },
+    "macro": {
+      "file": "macro.png",
+      "thumb": "thumb/macro.webp"
+    },
+    "hr_jung": {
+      "file": "hr_jung.png",
+      "thumb": "thumb/hr_jung.webp"
+    },
+    "audit_han": {
+      "file": "audit_han.png",
+      "thumb": "thumb/audit_han.webp"
+    },
+    "acct_lead": {
+      "file": "acct_lead.png",
+      "thumb": "thumb/acct_lead.webp"
+    },
+    "dev_lead": {
+      "file": "dev_lead.png",
+      "thumb": "thumb/dev_lead.webp"
+    },
+    "ga_lead": {
+      "file": "ga_lead.png",
+      "thumb": "thumb/ga_lead.webp"
+    },
+    "welfare": {
+      "file": "welfare.png",
+      "thumb": "thumb/welfare.webp"
+    },
+    "cfo": {
+      "file": "cfo.png",
+      "thumb": "thumb/cfo.webp"
+    },
+    "cto": {
+      "file": "cto.png",
+      "thumb": "thumb/cto.webp"
+    },
+    "coo": {
+      "file": "coo.png",
+      "thumb": "thumb/coo.webp"
+    },
+    "ceo": {
+      "file": "ceo.png",
+      "thumb": "thumb/ceo.webp"
+    },
+    "chairman": {
+      "file": "chairman.png",
+      "thumb": "thumb/chairman.webp"
+    },
+    "helpdesk": {
+      "file": "helpdesk.png",
+      "thumb": "thumb/helpdesk.webp"
+    },
+    "cleaner": {
+      "file": "cleaner.png",
+      "thumb": "thumb/cleaner.webp"
+    },
+    "sales_kang": {
+      "file": "sales_kang.png",
+      "thumb": "thumb/sales_kang.webp"
+    },
+    "legal_yoon": {
+      "file": "legal_yoon.png",
+      "thumb": "thumb/legal_yoon.webp"
+    },
+    "pm_lead": {
+      "file": "pm_lead.png",
+      "thumb": "thumb/pm_lead.webp"
+    },
+    "design_lead": {
+      "file": "design_lead.png",
+      "thumb": "thumb/design_lead.webp"
+    },
+    "cmo": {
+      "file": "cmo.png",
+      "thumb": "thumb/cmo.webp"
+    },
+    "founder": {
+      "file": "founder.png",
+      "thumb": "thumb/founder.webp"
+    },
+    "intern_seo": {
+      "file": "intern_seo.png",
+      "thumb": "thumb/intern_seo.webp"
+    },
+    "pr_yoo": {
+      "file": "pr_yoo.png",
+      "thumb": "thumb/pr_yoo.webp"
+    },
+    "nurse_han": {
+      "file": "nurse_han.png",
+      "thumb": "thumb/nurse_han.webp"
+    },
+    "lab_park": {
+      "file": "lab_park.png",
+      "thumb": "thumb/lab_park.webp"
+    },
+    "chro": {
+      "file": "chro.png",
+      "thumb": "thumb/chro.webp"
+    },
     "cso": "cso.svg",
     "ai_lead": "ai_lead.svg",
     "union_chief": "union_chief.svg",
     "hacker": "hacker.svg",
-    "chairwoman": "chairwoman.png",
-    "intern": "intern.png",
-    "staff": "staff.png",
-    "senior": "senior.png",
-    "manager": "manager.png",
-    "sales": "sales.png",
-    "finance": "finance.png",
-    "admin": "admin.png"
+    "chairwoman": {
+      "file": "chairwoman.png",
+      "thumb": "thumb/chairwoman.webp"
+    },
+    "intern": {
+      "file": "intern.png",
+      "thumb": "thumb/intern.webp"
+    },
+    "staff": {
+      "file": "staff.png",
+      "thumb": "thumb/staff.webp"
+    },
+    "senior": {
+      "file": "senior.png",
+      "thumb": "thumb/senior.webp"
+    },
+    "manager": {
+      "file": "manager.png",
+      "thumb": "thumb/manager.webp"
+    },
+    "sales": {
+      "file": "sales.png",
+      "thumb": "thumb/sales.webp"
+    },
+    "finance": {
+      "file": "finance.png",
+      "thumb": "thumb/finance.webp"
+    },
+    "admin": {
+      "file": "admin.png",
+      "thumb": "thumb/admin.webp"
+    }
   }
 }

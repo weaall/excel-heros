@@ -1,4 +1,4 @@
-// Milestones are granted automatically the moment they are reached (state.milestones[id] = true).
+// Milestones become claimable when reached; the player collects them on the 검토 sheet (state.milestones[id] = true once claimed).
 import { MILESTONES, milestoneValue } from '../data/milestones.js';
 
 export const isClaimed = (state, id) => !!state.milestones?.[id];
@@ -14,7 +14,14 @@ export const upcoming = (state) => {
 };
 export const claimedCount = (state) => MILESTONES.filter((m) => isClaimed(state, m.id)).length;
 
-/** Grant every pending milestone. Returns the list of { milestone, reward } granted. */
+/** Claim one reached milestone. Returns { milestone, reward } or null. */
+export function claim(state, id) {
+  const m = MILESTONES.find((x) => x.id === id); if (!m || isClaimed(state, id) || !reached(state, m)) return null;
+  state.milestones ??= {}; state.milestones[id] = true;
+  state.gems += m.reward.gems ?? 0; state.cards += m.reward.cards ?? 0;
+  return { milestone: m, reward: m.reward };
+}
+/** Grant every pending milestone (used by claim-all). Returns the list of { milestone, reward } granted. */
 export function grantPending(state) {
   const granted = [];
   for (const m of pending(state)) {

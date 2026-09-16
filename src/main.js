@@ -8,14 +8,19 @@ import { UIManager } from './ui/UIManager.js';
 import { SoundManager } from './ui/Sound.js';
 import { loadSpriteSheets } from './data/spriteSheets.js';
 import { loadPack } from './data/packSprites.js';
-import { loadCardArt } from './data/cardArt.js';
+import { loadCardArt, onCardArtLoaded } from './data/cardArt.js';
 
+// Boot screen: every step reports here so a slow network shows progress instead of a frozen page.
+const bootStep = (pct, text) => { const b = document.getElementById('boot-bar'), t = document.getElementById('boot-status'); if (b) b.style.width = `${pct}%`; if (t) t.textContent = text; };
+bootStep(10, '스프라이트를 불러오는 중…');
 // Hand-made sprite sheets (assets/sprites/manifest.json) override the procedural art when present.
-const [sheetCount, packOk, artCount] = await Promise.all([loadSpriteSheets(), loadPack(), loadCardArt()]);
-if (artCount) console.info(`[cardArt] ${artCount} illustration(s) loaded`);
+const [sheetCount, packOk] = await Promise.all([loadSpriteSheets(), loadPack()]);
+// Card illustrations load in the background (WebP thumbnails, ~1.7 MB total); cards re-render as they arrive.
+let artDone = 0; const artPromise = loadCardArt().then((n) => { console.info(`[cardArt] ${n} illustration(s) loaded`); return n; });
 if (!packOk) console.warn('[pack] CC0 sprite pack unavailable; using procedural art');
 if (sheetCount) console.info(`[sprites] ${sheetCount} sheet(s) loaded`);
 
+bootStep(30, '저장 데이터를 확인하는 중…');
 const save = new SaveManager();
 const loaded = save.load();
 const game = new GameManager({ state: loaded ?? createInitialState(), save });
@@ -29,7 +34,8 @@ document.addEventListener('pointerdown', () => ui.sound.unlock(), { once: true }
 // is the source of truth and this browser's save is only an offline cache.
 const devGuest = location.hostname === 'localhost' && new URLSearchParams(location.search).has('guest'); // local testing only
 const needGate = !devGuest && game.cloud.configured() && !!globalThis.EXCEL_HEROES_CLOUD?.googleClientId && !game.cloud.auth.loggedIn();
-if (needGate) await ui.showLoginGate();
+bootStep(55, needGate ? '로그인을 기다리는 중…' : '계정을 확인하는 중…');
+if (needGate) { document.getElementById('boot')?.classList.add('done'); await ui.showLoginGate(); }
 let cloudLoaded = false;
 if (game.cloud.enabled()) {
   try {
@@ -38,6 +44,7 @@ if (game.cloud.enabled()) {
     if (srv && ((r.updatedAt ?? 0) > (local.lastSaved ?? 0) + 5000 || (srv.stats?.playSeconds ?? 0) > local.stats.playSeconds + 30)) { game.loadCloudSave(srv); cloudLoaded = true; }
   } catch { /* offline or server down: keep local */ }
 }
+bootStep(85, '통합 문서를 여는 중…');
 const startState = game.state;
 if (loaded || cloudLoaded) {
   const report = SaveManager.computeOffline(startState, Date.now(), (stage) => game.goldPerSecAt(stage));
@@ -47,6 +54,11 @@ if (loaded || cloudLoaded) {
   ui.showWelcome();
 }
 game.persist();
+bootStep(100, '준비 완료');
+setTimeout(() => { const b = document.getElementById('boot'); if (b) { b.classList.add('done'); setTimeout(() => b.remove(), 300); } }, 150);
+// re-render cards when illustrations finish arriving (progressive: roster refresh every few images, once at the end)
+onCardArtLoaded((id, n) => { artDone = n; if (n % 8 === 0) game.emit('roster'); });
+artPromise.then(() => { game.emit('roster'); game.emit('gacha-art'); });
 
 // --- Simulation loop -------------------------------------------------------
 // setInterval keeps ticking (≥1 Hz) in throttled/background tabs; the elapsed

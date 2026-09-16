@@ -433,8 +433,8 @@ export class GameManager extends Emitter {
   claimableSummary() {
     const s = this.state; const quests = Quests.activeQuests(s).filter((q) => Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)).length;
     const allClear = !s.daily.allClearClaimed && Quests.allQuestsClaimed(s) ? 1 : 0;
-    const ach = Achievements.claimableCount(s); const dispatch = this.dispatchInfo().done ? 1 : 0;
-    return { quests, allClear, ach, dispatch, total: quests + allClear + ach + dispatch };
+    const ach = Achievements.claimableCount(s); const dispatch = this.dispatchInfo().done ? 1 : 0; const ms = Milestones.pending(s).length;
+    return { quests, allClear, ach, dispatch, ms, total: quests + allClear + ach + dispatch + ms };
   }
   claimAll() {
     const s = this.state; const got = { gems: 0, gold: 0, cards: 0, count: 0 };
@@ -443,6 +443,7 @@ export class GameManager extends Emitter {
     add(this.claimAllClear());
     for (const a of ACHIEVEMENTS) while (Achievements.canClaim(s, a.id)) add(this.claimAchievement(a.id));
     add(this.claimDispatch());
+    for (const r of this.claimMilestonesAll()) add(r.reward);
     if (got.count) this.log(`한꺼번에 수령 ${got.count}건: 보석 +${got.gems}${got.gold ? `, 골드 +${got.gold}` : ''}${got.cards ? `, 카드 +${got.cards}` : ''}`, 'info');
     this.emit('quests');
     return got;
@@ -509,15 +510,20 @@ export class GameManager extends Emitter {
   achievementsClaimable() { return Achievements.claimableCount(this.state); }
 
   /** Milestones are granted the moment they are reached (stage / main level / party level sum). */
+  /** Detect newly reached milestones (no grant): one notification each, collected on the 검토 sheet. */
   checkMilestones() {
-    const granted = Milestones.grantPending(this.state);
-    for (const { milestone: m, reward } of granted) {
-      this.log(`마일스톤 달성: ${m.name} — 보석 +${reward.gems}${reward.cards ? `, 강화 카드 +${reward.cards}` : ''}`, 'stage');
-      this.emit('milestone', { milestone: m, reward });
-    }
-    if (granted.length) { this.emit('gems'); this.emit('cards'); this.emit('quests'); this.emit('sfx', 'clear'); }
-    return granted;
+    this.msNotified ??= new Set();
+    const fresh = Milestones.pending(this.state).filter((m) => !this.msNotified.has(m.id));
+    for (const m of fresh) { this.msNotified.add(m.id); this.log(`마일스톤 달성: ${m.name} — 검토 시트에서 수령 (보석 ${m.reward.gems}${m.reward.cards ? `, 카드 ${m.reward.cards}` : ''})`, 'stage'); this.emit('milestone', { milestone: m, reward: m.reward }); }
+    if (fresh.length) { this.emit('quests'); this.emit('sfx', 'clear'); }
+    return fresh;
   }
+  claimMilestone(id) {
+    const r = Milestones.claim(this.state, id);
+    if (r) { this.log(`마일스톤 수령: ${r.milestone.name} +${r.reward.gems} 보석${r.reward.cards ? `, 카드 +${r.reward.cards}` : ''}`, 'info'); this.emit('gems'); this.emit('cards'); this.emit('quests'); }
+    return r;
+  }
+  claimMilestonesAll() { const list = Milestones.grantPending(this.state); if (list.length) { this.emit('gems'); this.emit('cards'); this.emit('quests'); } return list; }
 
   /** True while the party is fighting to clear the current stage (vs. farming it). */
   isChallenging() { return !!this.state.challenging; }

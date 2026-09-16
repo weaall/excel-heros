@@ -22,18 +22,23 @@ test('milestone table: unique ids, positive rewards, ascending targets per kind'
   assert.ok(boss.reward.gems > normal.reward.gems && boss.reward.cards > normal.reward.cards, 'boss floors pay more');
 });
 
-test('milestones are granted once when reached, survive migration and prestige', () => {
+test('milestones are detected once when reached, claimed manually, survive migration and prestige', () => {
   const s = createInitialState(); s.maxCleared = 12; s.heroes[MAIN_ID].level = 25;
   const g = new GameManager({ state: s, save: memSave() });
   const gems0 = g.state.gems, cards0 = g.state.cards;
   let events = 0; g.on('milestone', () => events++);
-  const granted = g.checkMilestones();
-  const ids = granted.map((x) => x.milestone.id);
+  const reachedList = g.checkMilestones();
+  const ids = reachedList.map((x) => x.id);
   assert.ok(ids.includes('stage5') && ids.includes('stage10') && ids.includes('mainlv10') && ids.includes('mainlv20'), ids.join());
   assert.ok(!ids.includes('stage15') && !ids.includes('mainlv30'));
-  assert.equal(events, granted.length);
-  assert.ok(g.state.gems > gems0 && g.state.cards > cards0);
-  assert.equal(g.checkMilestones().length, 0, 'no double grant');
+  assert.equal(events, reachedList.length);
+  assert.equal(g.state.gems, gems0, 'reaching a milestone grants nothing by itself');
+  assert.equal(g.checkMilestones().length, 0, 'notified once');
+  assert.equal(g.claimMilestone('stage15'), null, 'not reached yet');
+  const r = g.claimMilestone('stage10'); assert.ok(r); assert.ok(g.state.gems > gems0);
+  assert.equal(g.claimMilestone('stage10'), null, 'no double claim');
+  const rest = g.claimMilestonesAll(); assert.ok(rest.length >= 3); assert.ok(g.state.cards > cards0);
+  assert.equal(g.claimableSummary().ms, 0);
   assert.equal(M.upcoming(g.state).find((m) => m.kind === 'stage').id, 'stage15');
   assert.equal(milestoneValue(g.state, MILESTONES.find((m) => m.kind === 'party')), 25);
   const m = migrate(JSON.parse(JSON.stringify(g.state)));

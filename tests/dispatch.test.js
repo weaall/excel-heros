@@ -10,7 +10,7 @@ const own = (g, id) => { g.state.heroes[id] = { owned: true, star: 1, shards: 0,
 const H = 3600000;
 
 test('출장: bench-only picks, slot cap, timer, rewards by grade, daily limit, party guard', () => {
-  const g = new GameManager({ save: memSave() }); const D = BALANCE.DISPATCH; const t0 = Date.now();
+  const g = new GameManager({ save: memSave() }); const D = BALANCE.DISPATCH; const t0 = new Date(2026, 8, 14, 9).getTime(); // fixed 09:00 so +8h stays on the same local date
   for (const id of ['guard', 'barista', 'cfo', 'ceo', 'courier']) own(g, id);
   g.state.party = [MAIN_ID, 'guard'];
   let info = g.dispatchInfo(t0);

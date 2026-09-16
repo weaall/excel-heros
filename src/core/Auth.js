@@ -53,7 +53,7 @@ export class Auth {
     this.session = { token: body.token, user: body.user, expiresAt: body.expiresAt }; this.#store(); this.#emit();
     return this.session;
   }
-  async #onCredential(resp) { try { await this.loginWithCredential(resp?.credential); } catch { /* error is on this.error and already emitted */ } }
+  async #onCredential(resp) { this.pending = true; this.#emit(); try { await this.loginWithCredential(resp?.credential); } catch { /* error is on this.error and already emitted */ } finally { this.pending = false; } }
 
   /** Drop the session locally and (best effort) on the server. */
   async logout() {

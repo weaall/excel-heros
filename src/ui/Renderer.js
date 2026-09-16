@@ -33,7 +33,7 @@ export class Renderer {
     game.on('ult', ({ hero }) => { const p = profileOf(hero.heroId); this.banner = { kind: 'skill', text: hero.skillName ?? 'ULT', sub: p?.ult ? `"${p.ult}" — ${hero.def.name}` : hero.def.name, hero, t: 0, life: 1.5 }; });
     game.on('overtime-start', (o) => { this.banner = { kind: 'boss', text: '야근 모드 시작!', sub: `${stageLabel(o.stage)} 난이도 · ${BALANCE.OVERTIME.duration}초 · 처치마다 보석`, t: 0, life: 1.8 }; });
     game.on('overtime-end', (r) => { this.banner = { kind: 'clear', text: '야근 종료', sub: `처치 ${r.kills} (엘리트 ${r.elites}) · 보석 +${r.gems} · 카드 +${r.cards}`, t: 0, life: 2.4 }; });
-    game.on('milestone', ({ milestone, reward }) => { this.banner = { kind: 'milestone', text: `마일스톤: ${milestone.name}`, sub: `보석 +${reward.gems}${reward.cards ? ` · 강화 카드 +${reward.cards}` : ''}`, t: 0, life: 2.2 }; });
+    game.on('milestone', ({ milestone, reward }) => { this.banner = { kind: 'milestone', text: `마일스톤 달성: ${milestone.name}`, sub: `검토 시트에서 수령 — 보석 ${reward.gems}${reward.cards ? ` · 강화 카드 ${reward.cards}` : ''}`, t: 0, life: 2.2 }; });
     game.on('challenge', () => { if (!game.isChallenging() && this.banner?.kind !== 'clear') this.banner = { kind: 'farm', text: `${game.stageLabel()} 자동 사냥`, sub: '', t: 0, life: 1.2 }; });
   }
 

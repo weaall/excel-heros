@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<!-- Boot splash (Excel start screen): visible before any script runs, filled in by main.js, removed when the game is ready -->
+<div id="boot" class="boot"><div class="boot-card"><div class="boot-logo"><span class="app-icon big">X</span><b>Excel</b></div><div class="boot-title">엑셀 히어로즈</div><div class="boot-bar"><i id="boot-bar"></i></div><div class="boot-status" id="boot-status">시작하는 중…</div></div></div>
 <div id="app" class="app">
   <header class="titlebar">
     <span class="app-icon">X</span>
@@ -271,7 +273,7 @@
               </table>
             </div>
             <div class="qs-block">
-              <div class="qs-title">마일스톤 <span class="muted">도달 시 자동 지급 · <b id="ms-count">0</b></span></div>
+              <div class="qs-title">마일스톤 <span class="muted">달성 후 수령 · <b id="ms-count">0</b></span></div>
               <table class="xl-table" id="ms-table">
                 <thead><tr><th>목표</th><th>진행</th><th>보상</th><th></th></tr></thead>
                 <tbody></tbody>
@@ -370,7 +372,10 @@
           <button id="pane-bulk5" class="xl-btn" title="파티 전원을 최대 5레벨씩 (골드가 되는 만큼)">일괄 +5</button>
           <button id="pane-bulk-max" class="xl-btn" title="골드가 다 떨어질 때까지 파티 전원 균등 레벨업">일괄 최대</button>
         </div>
-        <div class="pane-synergy" id="pane-synergy" title="같은 부문 2명: ATK +5% · 3명: ATK +12%, HP +6% · 4개 역할 모두 편성: HP +10%"></div>
+        <table class="xl-table compact" id="synergy-table" title="같은 부문 2명: 파티 ATK +5% + 부문 고유 특성 · 3명: ATK +12%, HP +6% · 4개 역할 모두 편성: HP +10%">
+          <thead><tr><th>시너지</th><th class="num">인원</th><th>효과</th></tr></thead>
+          <tbody id="pane-synergy"></tbody>
+        </table>
         <table class="xl-table" id="hero-table">
           <thead><tr><th>이름</th><th class="num">Lv</th><th class="num">ATK</th><th class="num">비용</th><th></th></tr></thead>
           <tbody></tbody>
@@ -479,6 +484,7 @@
     <span class="status-dim" id="status-cell">A1</span>
     <span class="status-dim">접근성: 계속 진행 가능</span>
     <span class="spacer"></span>
+    <span id="status-cloud" class="status-dim" title="계정 저장 상태"></span>
     <span id="status-gold"></span><span id="status-gems"></span><span id="status-dps"></span>
     <span class="status-dim">계산 모드: 자동</span>
     <span class="status-views">▦ ▤ ▥</span>
