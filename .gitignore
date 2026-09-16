@@ -6,3 +6,6 @@ Thumbs.db
 
 # local Hugging Face token for scripts/genCardsHF.mjs (never commit)
 .hf_token
+
+# wrangler local cache (account metadata)
+.wrangler/
