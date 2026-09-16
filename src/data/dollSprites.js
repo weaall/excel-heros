@@ -6,6 +6,7 @@
 const FW = 16, FH = 28, FRAMES = 9;
 const SKIN = { light: '#f6d7c3', fair: '#f9e0cf', tan: '#e0b48a' };
 const SHOE = '#23262d';
+const OUTLINE = '#1b1d25'; // same near-black 1px edge as the 0x72 / Tiny Creatures monsters, so heroes and enemies read as one set
 
 // ------------------------------------------------------------------ specs --
 // hair: short | bob | long | ponytail | bun | twin | spiky | curly | bald | side
@@ -153,9 +154,13 @@ function drawDoll(p, s, { legPhase = 0, bob = 0, hit = false } = {}) {
   if (acc.crown) { const G = '#d4a017'; p.rect(4, HT - 4, 8, 2, G); p.set(4, HT - 5, G); p.set(7, HT - 5, G); p.set(8, HT - 5, G); p.set(11, HT - 5, G); p.set(7, HT - 4, '#e74c3c'); p.set(8, HT - 4, '#e74c3c'); }
   if (acc.tiara) { p.rect(5, HT - 3, 6, 1, '#d4a017'); p.set(7, HT - 4, '#d4a017'); p.set(8, HT - 4, '#5dade2'); }
   if (acc.flower) { p.rect(2, HT + 1, 2, 2, acc.flower); p.set(2, HT + 1, '#ffffff'); }
-  // --- halo: thin arc above the hair
-  if (s.halo && !acc.crown && !acc.cap && !acc.hardhat && !acc.headphones) { p.rect(5, HT - 5, 6, 1, s.halo); p.set(4, HT - 4, s.halo); p.set(11, HT - 4, s.halo); }
   p.dy = 0;
+}
+/** Halo pass (after outlining): thin coloured arc above the hair unless a hat/crown sits there. */
+function drawHalo(p, s, bob = 0) {
+  const acc = Object.fromEntries((s.acc ?? []).map((a) => { const [k, v] = a.split(':'); return [k, v ?? true]; }));
+  if (!s.halo || acc.crown || acc.cap || acc.hardhat || acc.headphones) return;
+  const HT = 9; p.dy = bob; p.rect(5, HT - 5, 6, 1, s.halo); p.set(4, HT - 4, s.halo); p.set(11, HT - 4, s.halo); p.dy = 0;
 }
 
 /** Apply a 1px dark outline on silhouette edges (a darker version of the pixel's own colour, like the 0x72 sheet). */
@@ -164,7 +169,7 @@ function outline(p) {
   for (const [k, c] of p.d) {
     const x = k % FW, y = Math.floor(k / FW);
     const edge = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx < 0 || nx >= FW || ny < 0 || ny >= FH || !p.d.has(ny * FW + nx); });
-    if (edge) out.set(k, isLight(c) ? shade(c, 0.55) : shade(c, 0.45));
+    if (edge) out.set(k, OUTLINE);
   }
   return out;
 }
@@ -180,7 +185,8 @@ export function buildDollStrip(id, palette = null) {
     const idle = f < 4, walk = f >= 4 && f < 8;
     const bob = idle ? [0, 1, 1, 0][f] : walk ? [0, -1, 0, -1][f - 4] : 0;
     drawDoll(p, s, { legPhase: walk ? [1, 0, 3, 0][f - 4] : 0, bob, hit: f === 8 });
-    for (const [k, col] of outline(p)) { const x = k % FW, y = Math.floor(k / FW); const [r, g, b] = hex(col); const o = (y * c.width + f * FW + x) * 4; img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = 255; }
+    const px = outline(p); const hp = new Px(); drawHalo(hp, s, bob); for (const [k, col] of hp.d) px.set(k, col);
+    for (const [k, col] of px) { const x = k % FW, y = Math.floor(k / FW); const [r, g, b] = hex(col); const o = (y * c.width + f * FW + x) * 4; img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = b; img.data[o + 3] = 255; }
   }
   ctx.putImageData(img, 0, 0);
   return c;
@@ -193,6 +199,7 @@ export function dollPixels(id, frame = 0, palette = null) {
   const p = new Px(); const idle = frame < 4, walk = frame >= 4 && frame < 8;
   drawDoll(p, s, { legPhase: walk ? [1, 0, 3, 0][frame - 4] : 0, bob: idle ? [0, 1, 1, 0][frame] : walk ? [0, -1, 0, -1][frame - 4] : 0, hit: frame === 8 });
   const data = new Uint8ClampedArray(FW * FH * 4);
-  for (const [k, col] of outline(p)) { const [r, g, b] = hex(col); data[k * 4] = r; data[k * 4 + 1] = g; data[k * 4 + 2] = b; data[k * 4 + 3] = 255; }
+  const px = outline(p); const hp = new Px(); drawHalo(hp, s, idle ? [0, 1, 1, 0][frame] : walk ? [0, -1, 0, -1][frame - 4] : 0); for (const [k, col] of hp.d) px.set(k, col);
+  for (const [k, col] of px) { const [r, g, b] = hex(col); data[k * 4] = r; data[k * 4 + 1] = g; data[k * 4 + 2] = b; data[k * 4 + 3] = 255; }
   return { width: FW, height: FH, data };
 }

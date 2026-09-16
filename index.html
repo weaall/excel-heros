@@ -183,7 +183,7 @@
           <span>강화 카드 <b id="cards-cell">0</b>장</span>
           <span title="보유 영웅 1종마다 파티 ATK +1% · 골드 +1%, 보유 영웅의 별 1개마다 ATK +0.5%">도감 보너스 <b id="collection-text"></b></span>
           <span title="같은 부문 2명: 파티 ATK +5% + 부문 고유 특성 · 3명: ATK +12%, HP +6% · 4개 역할 모두 편성: HP +10%">부문 시너지 <b id="synergy-text">없음</b></span>
-          <span class="muted">카드를 눌러 상세 보기 · 배치 / ★승급 / 강화 / 조각 변환 / 직급 승진</span>
+          <span class="muted">카드를 눌러 상세 보기 · 배치 / ★한계 돌파 / 강화 / 조각 변환 / 직급 승진</span>
         </div>
         <div class="filter-bar" id="roster-filter">
           <span class="filter-label">▼ 필터</span>
@@ -231,7 +231,7 @@
                 <tr><td colspan="3" class="muted small" id="ten-rule">10행 가져오기는 항상 A 이상 1장을 보장합니다. 첫 10행은 <b>S 확정</b>(신입 환영).</td></tr>
               </tbody>
             </table>
-            <p class="muted small">새 카드 → 즉시 ★1 해금. 중복 → 조각 5~10개 (★승급 재료 또는 강화 카드로 변환).</p>
+            <p class="muted small">새 카드 → 즉시 ★1 해금. 중복 → 조각 5~10개 (★한계 돌파 재료 · 남는 조각은 강화 카드로 변환).</p>
           </div>
           <div>
             <h3 class="section-title">가져오기 이력</h3>
@@ -246,7 +246,7 @@
       <!-- Sheet4: 일일_업무 (quests) ------------------------------------------>
       <section class="sheet" id="sheet-quests">
         <div class="sheet-head">
-          <span>업무일 <b id="daily-date"></b></span>
+          <span>업무일 <b id="daily-date"></b> <span class="muted small" id="daily-reset"></span></span>
           <button id="btn-login" class="xl-btn primary">출근 도장 찍기</button>
           <span id="streak-text" class="small" title="어제에 이어 오늘도 출근하면 연속 일수가 올라가고, 2일째부터 하루당 보석 +20 (최대 7일치)"></span>
           <span class="spacer"></span>
@@ -515,6 +515,7 @@
     <p class="lg-legal small muted">이메일과 프로필 사진만 사용하며, 비밀번호는 저장하지 않습니다.</p>
   </div>
 </div>
+<div id="coach" class="coach" hidden><div class="coach-box"><b id="coach-title"></b><p id="coach-text"></p><div class="coach-foot"><span id="coach-step" class="small muted"></span><button id="coach-skip" class="xl-btn small">건너뛰기</button><button id="coach-next" class="xl-btn small primary">다음</button></div></div></div>
 <div id="card-memo" class="card-memo" hidden><img alt=""><div class="memo-body"><b></b><span class="memo-dept"></span><em></em></div></div>
 <div id="lightbox" class="lightbox" hidden><img alt=""><div class="lb-caption"></div></div>
 <div id="ad-overlay" class="ad-overlay" hidden>

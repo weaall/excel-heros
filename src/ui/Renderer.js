@@ -115,8 +115,8 @@ export class Renderer {
   #drawOvertime() {
     const o = this.game.overtime; if (!o) return; const { ctx } = this;
     const t = Math.max(0, o.t), urgent = t < 10;
-    ctx.save(); ctx.fillStyle = urgent && Math.floor(this.t * 4) % 2 ? 'rgba(192,57,43,0.9)' : 'rgba(44,62,80,0.85)'; ctx.fillRect(8, 8, 232, 40);
-    ctx.fillStyle = '#f1c40f'; ctx.fillRect(8, 8, 232 * (t / BALANCE.OVERTIME.duration), 3);
+    ctx.save(); ctx.fillStyle = urgent && Math.floor(this.t * 4) % 2 ? 'rgba(160,40,30,0.96)' : 'rgba(20,28,40,0.96)'; ctx.fillRect(8, 8, 244, 42); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(8.5, 8.5, 243, 41);
+    ctx.fillStyle = '#f1c40f'; ctx.fillRect(8, 8, 244 * (t / BALANCE.OVERTIME.duration), 3);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Consolas, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(`야근 모드  ${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`, 16, 24);
     ctx.font = '11px Consolas, monospace'; ctx.fillStyle = '#ecf0f1';
@@ -151,6 +151,8 @@ export class Renderer {
     });
   }
 
+  /** Fill text with a dark outline so white labels stay readable over bright sashes and backgrounds. */
+  #txt(text, x, y, stroke = 'rgba(0,0,0,0.65)') { const { ctx } = this; ctx.save(); ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = stroke; ctx.strokeText(text, x, y); ctx.restore(); ctx.fillText(text, x, y); }
   #drawBanner(dt) {
     const b = this.banner; if (!b) return;
     b.t += dt; if (b.t >= b.life) { this.banner = null; return; }
@@ -162,8 +164,8 @@ export class Renderer {
       ctx.fillStyle = 'rgba(30,0,0,0.55)'; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(-60 + slide, 150); ctx.lineTo(CANVAS_W + 60 + slide, 110); ctx.lineTo(CANVAS_W + 60 + slide, 210); ctx.lineTo(-60 + slide, 250); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 40px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(b.text, CANVAS_W / 2 - 60 + slide, 178);
-      ctx.font = 'bold 15px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#f9e79f'; ctx.fillText(b.sub, CANVAS_W / 2 - 60 + slide, 230);
+      this.#txt(b.text, CANVAS_W / 2 - 60 + slide, 178);
+      ctx.font = 'bold 15px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#f9e79f'; this.#txt(b.sub, CANVAS_W / 2 - 60 + slide, 230);
       // hazard stripes along the sash edges (긴급 tape)
       ctx.fillStyle = '#f1c40f';
       for (let i = -2; i < CANVAS_W / 24 + 4; i++) { const x0 = i * 24 + slide; ctx.beginPath(); ctx.moveTo(x0, 150 - x0 * 0.048); ctx.lineTo(x0 + 12, 150 - (x0 + 12) * 0.048); ctx.lineTo(x0 + 12, 158 - (x0 + 12) * 0.048); ctx.lineTo(x0, 158 - x0 * 0.048); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(x0, 242 - x0 * 0.048); ctx.lineTo(x0 + 12, 242 - (x0 + 12) * 0.048); ctx.lineTo(x0 + 12, 250 - (x0 + 12) * 0.048); ctx.lineTo(x0, 250 - x0 * 0.048); ctx.closePath(); ctx.fill(); }
@@ -181,16 +183,16 @@ export class Renderer {
       ctx.fillStyle = 'rgba(40,0,60,0.35)'; ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       ctx.fillStyle = '#6c3483'; ctx.beginPath(); ctx.moveTo(-60 + slide, 130); ctx.lineTo(CANVAS_W + 60 + slide, 170); ctx.lineTo(CANVAS_W + 60 + slide, 250); ctx.lineTo(-60 + slide, 210); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#fff'; ctx.font = 'bold 36px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(b.text, CANVAS_W / 2 + 70 + slide, 190);
-      ctx.font = 'bold 14px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#e8daef'; ctx.fillText(b.sub, CANVAS_W / 2 + 70 + slide, 228);
+      this.#txt(b.text, CANVAS_W / 2 + 70 + slide, 190);
+      ctx.font = 'bold 14px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = '#e8daef'; this.#txt(b.sub, CANVAS_W / 2 + 70 + slide, 228);
       const img = heroSprite(b.hero.def, 'attack', 1); ctx.imageSmoothingEnabled = false;
       ctx.drawImage(img, 60 + slide * 0.5, 80, img.width * 3, img.height * 3);
     } else {
       const col = b.kind === 'clear' ? '#217346' : b.kind === 'challenge' ? '#1f5fa8' : b.kind === 'milestone' ? '#b7950b' : '#5d6d7e';
       ctx.fillStyle = col; ctx.globalAlpha = fade * 0.9; ctx.fillRect(slide, 150, CANVAS_W, 64);
       ctx.globalAlpha = fade; ctx.fillStyle = '#fff'; ctx.font = 'bold 28px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(b.text, CANVAS_W / 2 + slide, 174);
-      if (b.sub) { ctx.font = '13px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillText(b.sub, CANVAS_W / 2 + slide, 200); }
+      this.#txt(b.text, CANVAS_W / 2 + slide, 174);
+      if (b.sub) { ctx.font = '13px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.9)'; this.#txt(b.sub, CANVAS_W / 2 + slide, 200); }
     }
     ctx.restore();
   }

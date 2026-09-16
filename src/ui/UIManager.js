@@ -232,6 +232,7 @@ export class UIManager {
       this.acc = 0;
       this.#refreshStatus();
       this.#refreshHeroTable(true);
+      { const el$ = $('#daily-reset'); if (el$ && document.querySelector('#sheet-quests.active')) { const now = new Date(); const mid = new Date(now); mid.setHours(24, 0, 0, 0); const sec = Math.max(0, Math.floor((mid - now) / 1000)); el$.textContent = `· 초기화까지 ${String(Math.floor(sec / 3600)).padStart(2, '0')}:${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')}`; } }
       if (document.querySelector('#sheet-quests.active') && this.game.dispatchInfo().active) this.#refreshDispatch(true);
       this.#refreshTeamTable(true);
       if (this.game.state.settings.excel && this.stealthTimer >= 0.5) { this.stealthTimer = 0; this.#refreshStealth(); }
@@ -664,8 +665,8 @@ export class UIManager {
 
   /** Small idle-sprite preview used by the skin chips. */
   #skinPreview(def) {
-    const c = document.createElement('canvas'); c.width = 32; c.height = 56; c.className = 'skin-prev'; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false;
-    const img = heroSprite(def, 'idle', 0, 1); if (img) ctx.drawImage(img, 16, 4, 32, 56, 0, 0, 32, 56);
+    const c = document.createElement('canvas'); c.width = 64; c.height = 112; c.className = 'skin-prev'; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; // 4× pixel preview
+    const img = heroSprite(def, 'idle', 0); if (img) ctx.drawImage(img, 16, 4, 32, 56, 0, 0, 64, 112); // default scale → 64×64 frame, doll at (16,4) 32×56
     return c;
   }
 
@@ -746,16 +747,16 @@ export class UIManager {
         `다음 레벨 골드 ${fmt(v.cost)} · 되돌리면 ${fmt(v.refundPerLevel)} 환급`));
       table.append(row('공격력 ATK', fmt(v.atk)));
       table.append(row('체력 HP', fmt(v.hp)));
-      if (!v.isMain && v.star < BALANCE.MAX_STAR) { const k = starMult(v.star + 1) / starMult(v.star); table.append(row(`★${v.star + 1} 미리보기`, `ATK ${fmt(Math.floor(v.atk * k))} · HP ${fmt(Math.floor(v.hp * k))}`, null, `승급 시 ×${k.toFixed(2)} · 강화 한계 ${BALANCE.ENHANCE_CAP_BY_STAR[v.star] ?? v.enhanceCap}`)); }
+      if (!v.isMain && v.star < BALANCE.MAX_STAR) { const k = starMult(v.star + 1) / starMult(v.star); table.append(row(`★${v.star + 1} 미리보기`, `ATK ${fmt(Math.floor(v.atk * k))} · HP ${fmt(Math.floor(v.hp * k))}`, null, `한계 돌파 시 ×${k.toFixed(2)} · 강화 한계 ${BALANCE.ENHANCE_CAP_BY_STAR[v.star] ?? v.enhanceCap}`)); }
       table.append(row('공격 속도', `${v.interval}s`));
       table.append(row('강화', `+${e.enhance} / 한계 ${v.enhanceCap}`,
         sb(v.enhanceMaxed ? 'MAX' : `+1 (카드 ${v.enhanceCost})`, () => { if (!g.enhance(id)) this.toast(v.enhanceMaxed ? `★${v.star} 카드의 강화 한계는 +${v.enhanceCap}입니다. ★승급이나 각성으로 한계를 올리세요` : '강화 카드가 부족합니다'); }, v.canEnhance ? 'primary' : '', !v.canEnhance, '강화 카드로 +4% ATK/HP'),
         v.isMain ? '한계는 직급 승진으로 상승' : `한계 = ★×10${v.awakened ? ' + 각성 10' : ''} · 보유 강화 카드 ${fmt(s.cards)}장`));
       if (!v.isMain) table.append(row('조각', v.promoteCost !== null ? `${e.shards} / ${v.promoteCost}` : `${e.shards} (최대 ★)`,
         el('div', { class: 'ctl-group' },
-          sb(`★ 승급`, () => this.#promoteWithDialog(id), v.canPromote ? 'primary' : '', !v.canPromote, v.promoteCost !== null ? `조각 ${v.promoteCost}개로 ★${v.star + 1}` : '최대 ★'),
+          sb(`★ 한계 돌파`, () => this.#promoteWithDialog(id), v.canPromote ? 'primary' : '', !v.canPromote, v.promoteCost !== null ? `조각 ${v.promoteCost}개로 ★${v.star + 1}` : '최대 ★'),
           sb(`조각→카드`, () => g.convertShards(id), '', e.shards <= 0, `조각 ${e.shards}개 → 강화 카드 ${e.shards * v.shardCardValue}장`)),
-        v.promoteCost !== null ? `다음 ★까지 ${Math.max(0, v.promoteCost - e.shards)}개 · 중복 뽑기로 획득` : '★5 · 각성으로 계속 성장'));
+        v.promoteCost !== null ? `다음 한계 돌파까지 조각 ${Math.max(0, v.promoteCost - e.shards)}개 · 같은 카드가 또 나오면 조각 5~10` : '★5 · 각성으로 계속 성장'));
       if (!v.isMain && v.star >= BALANCE.AWAKEN.star) table.append(row('각성', v.awakened ? '✦ 완료' : '가능',
         v.awakened ? null : sb(`✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, 'primary', !v.canAwaken),
         `ATK/HP +${Math.round(BALANCE.AWAKEN.atk * 100)}% · 특성 ×${BALANCE.AWAKEN.trait} · 스킬 ×${BALANCE.AWAKEN.skill} · 강화 한계 +${BALANCE.ENHANCE_CAP_AWAKEN}`));
@@ -815,7 +816,7 @@ export class UIManager {
         v.star === BALANCE.SKILL_BOOST_STAR ? el('div', { class: 'detail-line skill' }, `스킬 강화: 위력 ×${BALANCE.SKILL_BOOST_MULT}`) : null,
         v.star >= BALANCE.AWAKEN.star ? el('div', { class: 'detail-line', style: 'color:#b8860b' }, `✦ 각성 가능 (강화 카드 ${v.awakenCost}장)`) : null,
       ));
-    this.openModal('★ 승급 완료', body);
+    this.openModal('★ 한계 돌파 완료', body);
     $('#modal-actions').innerHTML = ''; $('#modal-actions').append(btn('상세로', () => this.openDetail(id)), btn('확인', () => this.closeModal(), 'primary'));
     this.game.emit('sfx', 'levelup');
   }
@@ -1216,7 +1217,7 @@ export class UIManager {
     $('#modal-actions').innerHTML = ''; $('#modal-actions').append(btn('확인', () => this.closeModal(), 'primary'));
     $('#modal').hidden = false;
   }
-  closeModal() { $('#modal').hidden = true; this.detailId = null; }
+  closeModal() { $('#modal').hidden = true; this.detailId = null; if (this.pendingCoach) { this.pendingCoach = false; setTimeout(() => this.showCoach(), 200); } }
   showOffline(rep) {
     const body = el('div', {}, el('table', { class: 'xl-table compact', html: `<tbody>
         <tr><td>자리 비운 시간</td><td class="num">${fmtTime(rep.elapsed)}${rep.capped ? ' (최대 10시간 적용)' : ''}</td></tr>
@@ -1230,7 +1231,31 @@ export class UIManager {
     }
     this.openModal('백그라운드 계산 완료', body);
   }
+  /** First-run guide: 4 Excel-style help balloons that point at the things a new player needs (skippable, once). */
+  showCoach() {
+    const st = this.game.state.settings; if (st.coachDone) return;
+    const steps = [
+      { sel: '.ribbon-tab[data-ribbon="insert"]', title: '1. 직원 데이터 가져오기', text: '삽입 탭(또는 아래 데이터_가져오기 시트)에서 보석으로 카드를 뽑습니다. 시작 보석 1,000으로 10행 가져오기 한 번은 바로 됩니다. 첫 10행은 S 확정!' },
+      { sel: '.task-pane', title: '2. 파티 관리', text: '오른쫀 작업 창에서 골드로 파티를 레벨업하고 회사 업그레이드를 삽니다. 카드를 눌러 상세 창에서 배치·승급·스킨을 다룹니다.' },
+      { sel: '.ribbon-tab[data-ribbon="review"]', title: '3. 검토 = 일일 업무', text: '출근 도장, 일일 업무, 업적, 마일스톤, 출장, 야근 모드가 여기 모여 있습니다. 완료된 보상은 「한꺼번에 수령」 한 번으로.' },
+      { sel: '#qa-challenge', title: '4. 다음 단계 도전', text: '파티가 충분히 강해지면 다음 스테이지에 도전합니다. 승산이 표시되고, 자동 진행을 켜면 알아서 올라갑니다. Esc는 전투 화면을 표로 바꾸는 보스 키입니다.' },
+    ];
+    const box = $('#coach'); if (!box) return; let i = 0; let hl = box.querySelector('.coach-hl'); if (!hl) { hl = el('div', { class: 'coach-hl' }); box.prepend(hl); }
+    const finish = () => { box.hidden = true; st.coachDone = true; this.game.persist(); };
+    const show = () => {
+      const s = steps[i]; const t = document.querySelector(s.sel); if (!t) { i++; return i < steps.length ? show() : finish(); }
+      const r = t.getBoundingClientRect(); hl.style.left = `${r.left - 4}px`; hl.style.top = `${r.top - 4}px`; hl.style.width = `${r.width + 8}px`; hl.style.height = `${r.height + 8}px`;
+      const bx = box.querySelector('.coach-box'); const left = Math.min(window.innerWidth - 320, Math.max(8, r.left)); const top = r.bottom + 12 + 300 > window.innerHeight ? Math.max(8, r.top - 150) : r.bottom + 12;
+      bx.style.left = `${left}px`; bx.style.top = `${top}px`;
+      $('#coach-title').textContent = s.title; $('#coach-text').textContent = s.text; $('#coach-step').textContent = `${i + 1} / ${steps.length}`; $('#coach-next').textContent = i === steps.length - 1 ? '시작하기' : '다음';
+      box.hidden = false;
+    };
+    $('#coach-next').onclick = () => { i++; if (i >= steps.length) finish(); else show(); };
+    $('#coach-skip').onclick = finish;
+    show();
+  }
   showWelcome() {
+    this.pendingCoach = true;
     this.openModal('새 통합 문서', `
       <p>어느 날 아침, 도시에 <b>스프레드시트 괴물</b>이 나타났습니다. 시트를 잘못 병합한 누군가의 실수였다는 소문도 있습니다. 회사 직원들은 사무용품을 들고 폐허가 된 거리로 나섰습니다. 본사까지 가는 길, 열 개의 지구를 되찾아야 합니다.</p>
       <p><b>엑셀 히어로즈</b>: 파티가 셀 A1:M8 안에서 자동으로 괴물을 처리합니다.</p>
