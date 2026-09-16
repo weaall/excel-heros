@@ -1024,7 +1024,9 @@ export class UIManager {
     $('#btn-dispatch-claim').hidden = !info.active; $('#btn-dispatch-claim').disabled = !info.done; $('#btn-dispatch-claim').textContent = info.done ? '복귀 · 보상 받기' : `복귀까지 ${fmtT(info.remaining)}`;
     if (light) return;
     box.innerHTML = '';
-    const ids = info.active ? info.heroIds : info.bench;
+    // 높은 등급이 위로: 등급(S→D) → ★ → 레벨 순. 출장 보석은 등급이 높을수록 커서 고르기 쉬운 순서다.
+    const rank = (id) => { const v = g.heroView(id); return GRADES[v.def.grade].base.atk * 10000 + v.star * 100 + v.entry.level; };
+    const ids = [...(info.active ? info.heroIds : info.bench)].sort((a, b) => rank(b) - rank(a));
     for (const id of ids) {
       const v = g.heroView(id); const away = info.active;
       const cb = el('input', { type: 'checkbox', value: id }); cb.checked = away; cb.disabled = away;
