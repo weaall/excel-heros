@@ -552,7 +552,7 @@ export class UIManager {
       if (!v.isMain && v.def.grade !== currentGrade && (this.filter?.sort ?? 'grade') === 'grade') { // grade section header (S → D), like grouped rows in a sheet
         currentGrade = v.def.grade;
         const all = HEROES.filter((h) => h.grade === currentGrade), owned = all.filter((h) => this.game.state.heroes[h.id].owned).length;
-        grid.append(el('div', { class: 'grade-section', style: `--gc:${v.grade.color}; --gb:${v.grade.bg}` }, el('b', {}, `${currentGrade} · ${v.grade.label}`), el('span', { class: 'muted small' }, ` 보유 ${owned} / ${all.length} · 확률 ${Math.round(v.grade.rate * 100)}%`)));
+        grid.append(el('div', { class: 'grade-section', style: `--gc:${v.grade.color}; --gb:${v.grade.bg}` }, el('b', {}, `${currentGrade} · ${v.grade.label}`), el('span', { class: 'muted small' }, ` 보유 ${owned} / ${all.length} · 확률 ${+(v.grade.rate * 100).toFixed(1)}%`)));
       }
       const c = cardCanvas(v.def, {
         star: v.star, owned: e.owned,
