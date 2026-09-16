@@ -27,6 +27,7 @@ test('부문 시너지: 2 of a division = ATK, 3 = ATK+HP, all four roles = HP; 
   for (const h of tech) own(g, h.id);
   g.state.party = [MAIN_ID];
   assert.equal(g.synergy().atk, 0);
+  g.state.heroes[tech[0].id].level = 30; // large enough that a +5% bonus survives flooring
   const solo = g.heroView(tech[0].id).atk;
   g.state.party = [MAIN_ID, tech[0].id, tech[1].id];
   let syn = g.synergy();

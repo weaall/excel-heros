@@ -144,6 +144,83 @@ export const ART_PALETTES = {
     "B": "#9f548c",
     "W": "#fbcad2"
   },
+  "cso": {
+    "B": "#22254e",
+    "W": "#21244d"
+  },
+  "ai_lead": {
+    "H": "#25b2c0",
+    "B": "#84b3ea",
+    "W": "#f7bcb3"
+  },
+  "union_chief": {
+    "H": "#4bb2c9",
+    "B": "#f95634"
+  },
+  "hacker": {
+    "H": "#1b2943",
+    "B": "#6981e4",
+    "W": "#262c4c"
+  },
+  "intern_min": {
+    "B": "#f7eaf1",
+    "W": "#539daf"
+  },
+  "security_yang": {
+    "H": "#3b9fe1",
+    "B": "#e2dab0",
+    "W": "#f9b796"
+  },
+  "mail_cho": {
+    "H": "#1c77cc",
+    "B": "#102b53",
+    "W": "#1b77cb"
+  },
+  "qa_lee": {
+    "H": "#ea988d",
+    "B": "#4e3c9b",
+    "W": "#4d3d9a"
+  },
+  "reception_go": {
+    "H": "#3e2e2b",
+    "B": "#a98680",
+    "W": "#243755"
+  },
+  "trainer_seok": {
+    "H": "#303444",
+    "B": "#f9a75a",
+    "W": "#b77773"
+  },
+  "translator_ji": {
+    "H": "#91a5c8",
+    "B": "#8a7569",
+    "W": "#8c776a"
+  },
+  "secretary_yun": {
+    "H": "#393a50",
+    "B": "#303d53",
+    "W": "#f9efe9"
+  },
+  "logistics_bae": {
+    "H": "#7a5449",
+    "B": "#fbe8dd",
+    "W": "#7b5245"
+  },
+  "cdo": {
+    "H": "#1e3049",
+    "B": "#304471",
+    "W": "#314673"
+  },
+  "cco": {
+    "H": "#825063",
+    "B": "#222c42",
+    "W": "#957a85"
+  },
+  "chief_of_staff": {
+    "H": "#7d614d",
+    "B": "#f8d3c9",
+    "W": "#fdfab3"
+  },
   "chairwoman": {
     "H": "#4f311f",
     "B": "#f9fcea",

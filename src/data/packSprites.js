@@ -54,6 +54,7 @@ export const HERO_MAP = {
   cto: { base: 'lizard_m', hue: 300, weapon: 'lavish_sword' }, coo: { base: 'knight_f', hue: 200 }, ceo: { base: 'wizzard_f', hue: 45 }, chairman: { base: 'knight_m', hue: 45, weapon: 'golden_sword' },
   helpdesk: { base: 'elf_f', hue: 240 }, cleaner: { base: 'dwarf_f', hue: 0 }, sales_kang: { base: 'dwarf_m', hue: 320 }, legal_yoon: { base: 'knight_f', hue: 250 },
   pm_lead: { base: 'elf_f', hue: 120 }, design_lead: { base: 'wizzard_f', hue: 300 }, cmo: { base: 'elf_f', hue: 340 }, founder: { base: 'lizard_m', hue: 130 },
+  intern_min: { base: 'elf_f', hue: 340 }, security_yang: { base: 'knight_f', hue: 220 }, mail_cho: { base: 'dwarf_m', hue: 200 }, qa_lee: { base: 'wizzard_f', hue: 230 }, reception_go: { base: 'elf_f', hue: 15 }, trainer_seok: { base: 'knight_m', hue: 30 }, translator_ji: { base: 'elf_f', hue: 200 }, secretary_yun: { base: 'wizzard_f', hue: 0 }, logistics_bae: { base: 'knight_m', hue: 40 }, cdo: { base: 'wizzard_f', hue: 190 }, cco: { base: 'elf_f', hue: 350 }, chief_of_staff: { base: 'knight_f', hue: 45 },
   cso: { base: 'elf_f', hue: 260 }, ai_lead: { base: 'wizzard_f', hue: 170 }, union_chief: { base: 'knight_m', hue: 0 }, hacker: { base: 'elf_f', hue: 190 },
   intern_seo: { base: 'elf_f', hue: 0 }, pr_yoo: { base: 'dwarf_f', hue: 20 }, nurse_han: { base: 'wizzard_f', hue: 200 }, lab_park: { base: 'elf_f', hue: 210 }, chro: { base: 'knight_f', hue: 320 }, chairwoman: { base: 'knight_f', hue: 45 },
 };

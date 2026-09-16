@@ -132,10 +132,64 @@
       "file": "chro.png",
       "thumb": "thumb/chro.webp"
     },
-    "cso": "cso.svg",
-    "ai_lead": "ai_lead.svg",
-    "union_chief": "union_chief.svg",
-    "hacker": "hacker.svg",
+    "cso": {
+      "file": "cso.png",
+      "thumb": "thumb/cso.webp"
+    },
+    "ai_lead": {
+      "file": "ai_lead.png",
+      "thumb": "thumb/ai_lead.webp"
+    },
+    "union_chief": {
+      "file": "union_chief.png",
+      "thumb": "thumb/union_chief.webp"
+    },
+    "hacker": {
+      "file": "hacker.png",
+      "thumb": "thumb/hacker.webp"
+    },
+    "intern_min": {
+      "file": "intern_min.png",
+      "thumb": "thumb/intern_min.webp"
+    },
+    "security_yang": {
+      "file": "security_yang.png",
+      "thumb": "thumb/security_yang.webp"
+    },
+    "mail_cho": {
+      "file": "mail_cho.png",
+      "thumb": "thumb/mail_cho.webp"
+    },
+    "qa_lee": "qa_lee.png",
+    "reception_go": {
+      "file": "reception_go.png",
+      "thumb": "thumb/reception_go.webp"
+    },
+    "trainer_seok": {
+      "file": "trainer_seok.png",
+      "thumb": "thumb/trainer_seok.webp"
+    },
+    "translator_ji": "translator_ji.png",
+    "secretary_yun": {
+      "file": "secretary_yun.png",
+      "thumb": "thumb/secretary_yun.webp"
+    },
+    "logistics_bae": {
+      "file": "logistics_bae.png",
+      "thumb": "thumb/logistics_bae.webp"
+    },
+    "cdo": {
+      "file": "cdo.png",
+      "thumb": "thumb/cdo.webp"
+    },
+    "cco": {
+      "file": "cco.png",
+      "thumb": "thumb/cco.webp"
+    },
+    "chief_of_staff": {
+      "file": "chief_of_staff.png",
+      "thumb": "thumb/chief_of_staff.webp"
+    },
     "chairwoman": {
       "file": "chairwoman.png",
       "thumb": "thumb/chairwoman.webp"

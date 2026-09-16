@@ -11,9 +11,9 @@ import { BALANCE } from '../src/config/balance.js';
 const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
 const run = (g, seconds, step = 0.05) => { for (let t = 0; t < seconds; t += step) g.tick(step); };
 
-test('38 heroes: unique ids, valid grade/role/trait/skill, pack sprite mapping, palette present', () => {
-  assert.equal(HEROES.length, 38);
-  assert.equal(new Set(HEROES.map((h) => h.id)).size, 38);
+test('50 heroes: unique ids, valid grade/role/trait/skill, pack sprite mapping, palette present', () => {
+  assert.equal(HEROES.length, 50);
+  assert.equal(new Set(HEROES.map((h) => h.id)).size, 50);
   for (const h of HEROES) {
     assert.ok(GRADES[h.grade], h.id); assert.ok(ROLES[h.role], h.id); assert.ok(TRAITS[h.trait], h.id); assert.ok(SKILLS[h.skill.type], h.id);
     assert.ok(HERO_MAP[h.id], `pack mapping for ${h.id}`); assert.ok(h.palette?.W, `palette for ${h.id}`);

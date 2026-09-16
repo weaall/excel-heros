@@ -4,7 +4,8 @@ import { decodePNG, encodePNG } from './png.mjs';
 import { HEROES, MAIN_JOBS } from '../src/data/heroes.js';
 
 const out = process.argv[2] ?? 'artsheet.png', cols = Number(process.argv[3] ?? 7), cw = Number(process.argv[4] ?? 180);
-const ids = [...HEROES.map((h) => h.id), ...Object.values(MAIN_JOBS).map((j) => j.id)].filter((id) => fs.existsSync(new URL(`../assets/cards/${id}.png`, import.meta.url)));
+const only = process.env.IDS ? new Set(process.env.IDS.split(',')) : null; // IDS=a,b,c to render a subset
+const ids = [...HEROES.map((h) => h.id), ...Object.values(MAIN_JOBS).map((j) => j.id)].filter((id) => (!only || only.has(id)) && fs.existsSync(new URL(`../assets/cards/${id}.png`, import.meta.url)));
 const ch = Math.round(cw * 1216 / 832); const rows = Math.ceil(ids.length / cols);
 const W = cols * cw, H = rows * ch; const px = new Uint8ClampedArray(W * H * 4).fill(40);
 for (let i = 3; i < px.length; i += 4) px[i] = 255;

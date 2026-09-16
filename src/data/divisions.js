@@ -21,6 +21,7 @@ const DEPT_DIVISION = {
   '마케팅팀': 'market', '마케팅본부': 'market', '영업팀': 'market', '홍보팀': 'market', '기획팀': 'market', '디자인팀': 'market',
   '대표이사실': 'exec', '회장실': 'exec', '이사회': 'exec', '전략기획실': 'exec',
   'AI연구소': 'tech', '보안연구소': 'tech', '노동조합': 'people',
+  '해외사업팀': 'market', '고객경험본부': 'market', '물류팀': 'ops', '데이터본부': 'tech',
 };
 
 /** Division id for a hero id ('main' for the main hero). Unknown departments fall back to 경영지원. */
