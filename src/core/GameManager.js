@@ -75,19 +75,50 @@ export class GameManager extends Emitter {
   setSound(v) { this.state.settings.sound = !!v; this.emit('settings'); }
   setGridlines(v) { this.state.settings.gridlines = !!v; this.emit('settings'); }
 
-  /** 파티 자동 편성: the strongest owned heroes by ATK, guaranteeing one tank and one healer when available. */
+  /**
+   * 파티 자동 편성. Picking the five biggest numbers is the wrong answer: 부문 시너지 multiplies the whole party,
+   * the all-roles bonus and a healer decide whether it survives, and 비품 세트 already moved individual power around.
+   * So it seeds with a tank + healer + the strongest remaining, then hill-climbs by swapping one member at a time
+   * while the party score improves.
+   */
   autoParty() {
-    const owned = Object.keys(this.state.heroes).filter((id) => this.state.heroes[id].owned && !this.isMain(id) && !this.isDispatched(id))
-      .map((id) => this.heroView(id)).sort((a, b) => b.atk - a.atk);
     const slots = BALANCE.PARTY_SIZE - 1;
-    const pick = [];
-    for (const role of ['tank', 'healer']) { const best = owned.find((v) => v.def.role === role); if (best) pick.push(best); }
-    for (const v of owned) { if (pick.length >= slots) break; if (!pick.includes(v)) pick.push(v); }
-    this.state.party = [MAIN_ID, ...pick.slice(0, slots).map((v) => v.id)];
+    const owned = Object.keys(this.state.heroes)
+      .filter((id) => this.state.heroes[id].owned && !this.isMain(id) && !this.isDispatched(id))
+      .map((id) => this.heroView(id)).sort((a, b) => b.power - a.power);
+    const pool = owned.slice(0, 18).map((v) => v.id); // beyond this nothing can win a slot; keeps the search instant
+    const seed = [];
+    for (const role of ['tank', 'healer']) { const best = owned.find((v) => v.def.role === role && !seed.includes(v.id)); if (best) seed.push(best.id); }
+    for (const v of owned) { if (seed.length >= slots) break; if (!seed.includes(v.id)) seed.push(v.id); }
+    // roles the roster can actually supply must stay represented, whatever the raw numbers say
+    const required = ['tank', 'healer'].filter((r) => owned.some((v) => v.def.role === r));
+    const legal = (ids) => required.every((r) => ids.some((id) => this.heroDef(id).role === r));
+    let team = [MAIN_ID, ...seed.slice(0, slots)];
+    for (let pass = 0; pass < 3; pass++) {
+      let improved = false;
+      for (let i = 1; i < team.length; i++) for (const cand of pool) {
+        if (team.includes(cand)) continue;
+        const alt = team.slice(); alt[i] = cand;
+        if (!legal(alt)) continue;
+        if (this.partyScore(alt) > this.partyScore(team) + 1e-9) { team = alt; improved = true; }
+      }
+      if (!improved) break;
+    }
+    this.state.party = team;
     this.entities.rebuildParty();
-    this.log(`파티 자동 편성: ${this.state.party.map((id) => this.heroDef(id).name).join(', ')}`, 'info');
+    this.log(`파티 자동 편성: ${this.state.party.map((id) => this.heroDef(id).name).join(', ')} (편성 점수 ${Math.round(this.partyScore(team))})`, 'info');
     this.emit('party'); this.emit('roster');
     return this.state.party;
+  }
+  /** What a party is worth: 전투력 합에 부문 시너지·역할 균형·힐러 유무를 곱한 값. Used by 자동 편성 and shown in the party pane. */
+  partyScore(ids = this.state.party) {
+    const before = this.state.party;
+    this.state.party = ids;
+    const syn = this.synergy();
+    const roles = new Set(ids.map((id) => this.heroDef(id).role));
+    this.state.party = before;
+    const power = ids.reduce((a, id) => a + this.heroView(id).power, 0);
+    return power * (1 + syn.atk + syn.hp / 2) * (1 + syn.sets.length * 0.04) * (roles.has('healer') ? 1.08 : 1) * (syn.balanced ? 1.06 : 1);
   }
   /** 도감 보너스: owned heroes and their stars buff party ATK and gold income. */
   collection() {

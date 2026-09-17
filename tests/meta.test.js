@@ -142,3 +142,29 @@ test('levels can be undone with a refund; enhancement cap follows stars, awakeni
   g.state.heroes.guard.star = 5; g.state.heroes.guard.awakened = true; assert.equal(g.heroView('guard').enhanceCap, 60);
   assert.equal(g.heroView(MAIN_ID).enhanceCap, 10, 'intern tier caps at +10');
 });
+
+test('파티 자동 편성 weighs 부문 시너지, not just raw power', () => {
+  const s = createInitialState();
+  const own = (id, level, star = 3) => { s.heroes[id] = { owned: true, star, shards: 0, level, enhance: 0, equip: {} }; };
+  // three 경영지원 cards (a trio synergy) at a modest level, against stronger but unrelated cards
+  own('guard', 30); own('barista', 30); own('staff_park', 30); own('contract', 30);
+  own('vlookup', 34); own('macro', 34); own('pivot', 34);
+  const g = new GameManager({ state: s, save: memSave() });
+  const party = g.autoParty();
+  assert.equal(party.length, BALANCE.PARTY_SIZE);
+  assert.equal(party[0], MAIN_ID, '주인공은 항상 첫 자리');
+  assert.ok(party.some((id) => g.heroDef(id).role === 'tank'), 'tank kept');
+  assert.ok(party.some((id) => g.heroDef(id).role === 'healer'), 'healer kept');
+  // the chosen party must score at least as well as any single swap the search was allowed to make
+  const score = g.partyScore(party);
+  for (const cand of ['vlookup', 'macro', 'pivot', 'contract']) {
+    for (let i = 1; i < party.length; i++) {
+      if (party.includes(cand)) continue;
+      const alt = party.slice(); alt[i] = cand;
+      const roles = new Set(alt.map((id) => g.heroDef(id).role));
+      if (!roles.has('tank') || !roles.has('healer')) continue;
+      assert.ok(g.partyScore(alt) <= score + 1e-9, `${cand} into slot ${i} would have been better`);
+    }
+  }
+  assert.ok(g.synergy().sets.length >= 1, '편성이 최소 한 개의 부문 시너지를 잡는다');
+});
