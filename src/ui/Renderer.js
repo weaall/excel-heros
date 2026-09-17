@@ -23,7 +23,7 @@ export class Renderer {
     this.t = 0;
     this.banner = null;
     this.skillCard = null; // small illustration cut-in for regular skills (one at a time; a new cast replaces it)
-    game.on('skill-cast', ({ hero, type }) => { this.skillCard = { hero, type, t: 0, life: 1.4 }; });
+    game.on('skill-cast', ({ hero, type }) => { this.skillCard = { hero, type, t: 0, life: 1.6 }; });
     this.selected = null;   // { col, row } selected worksheet cell (Excel-style selection box)
     game.on('challengeStart', ({ stage, boss }) => {
       this.banner = boss
@@ -167,22 +167,50 @@ export class Renderer {
     ctx.strokeStyle = frame; ctx.lineWidth = 2; ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
   }
   /** Regular skill cut-in: a name-tag sized illustration card in the top-left (below the boss bar), out of the way of the line. */
+  /** Portrait clipped to a leaning parallelogram (anime cut-in shape). */
+  #artPara(img, x, y, w, h, skew, frame) {
+    const { ctx } = this;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(x + skew, y); ctx.lineTo(x + w + skew, y); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h); ctx.closePath();
+    ctx.save(); ctx.clip();
+    if (img) { const sc = Math.max(w / img.width, h / img.height) * 1.15; const dw = img.width * sc, dh = img.height * sc; ctx.imageSmoothingEnabled = true; ctx.drawImage(img, x + (w - dw) / 2 + skew / 2, y - dh * 0.06, dw, dh); }
+    else { ctx.fillStyle = '#20222c'; ctx.fillRect(x, y, w + skew, h); }
+    ctx.restore();
+    ctx.strokeStyle = frame; ctx.lineWidth = 3; ctx.stroke();
+    ctx.restore();
+  }
   #drawSkillCard(dt) {
     const c = this.skillCard; if (!c) return;
     c.t += dt; if (c.t >= c.life) { this.skillCard = null; return; }
-    const { ctx } = this; const k = c.t / c.life; const def = c.hero.def; const grade = GRADES[def.grade];
-    const fade = Math.min(1, k * 8, (1 - k) * 5); const slide = k < 0.1 ? (1 - k / 0.1) * -160 : 0;
-    const x = 10 + slide, y = 46, W = 236, H = 76;
+    const { ctx } = this; const k = c.t / c.life; const def = c.hero.def; const col = GRADES[def.grade]?.color ?? '#6c3483';
+    // slam in (0→0.12, ease-out), hold, slide out (0.78→1, ease-in)
+    const IN = 0.12, OUT = 0.78, OFF = -340;
+    const slide = k < IN ? OFF * (1 - (1 - (1 - k / IN)) ** 1) * ((1 - k / IN) ** 2) : k > OUT ? OFF * ((k - OUT) / (1 - OUT)) ** 2 : 0;
+    const fade = Math.min(1, k * 12, (1 - k) * 8);
+    const W = 132, H = 186, SK = 26, x = 16 + slide, y = 92;
     ctx.save(); ctx.globalAlpha = fade;
-    ctx.fillStyle = 'rgba(20,22,30,0.82)'; ctx.fillRect(x, y, W, H);
-    ctx.fillStyle = grade?.color ?? '#6c3483'; ctx.fillRect(x, y, 4, H);
-    const img = this.#artOf(def);
-    if (img) this.#artBox(img, x + 12, y + 6, 64, 64, grade?.color ?? '#fff');
-    else { const sp = heroSprite(def, 'attack', 1); ctx.imageSmoothingEnabled = false; ctx.drawImage(sp, x + 12, y + 6, 64, 64); }
+    // speed lines behind the portrait while it flies in
+    if (k < 0.3) {
+      ctx.globalAlpha = fade * (1 - k / 0.3) * 0.5; ctx.strokeStyle = col; ctx.lineWidth = 2;
+      for (let i = 0; i < 7; i++) { const ly = y + 14 + i * 26; ctx.beginPath(); ctx.moveTo(x - 120 - i * 18, ly); ctx.lineTo(x + 40, ly); ctx.stroke(); }
+      ctx.globalAlpha = fade;
+    }
+    // grade band behind the portrait, offset so it reads as a second layer
+    ctx.fillStyle = col; ctx.globalAlpha = fade * 0.9;
+    ctx.beginPath(); ctx.moveTo(x + SK + 10, y - 8); ctx.lineTo(x + W + SK + 10, y - 8); ctx.lineTo(x + W + 10, y + H + 8); ctx.lineTo(x + 10, y + H + 8); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = fade;
+    this.#artPara(this.#artOf(def) ?? heroSprite(def, 'attack', 1), x, y, W, H, SK, '#ffffff');
+    // name plate: dark bar sweeping out to the right of the portrait
+    const pw = 214, px = x + W + SK - 6, py = y + H - 66;
+    ctx.fillStyle = 'rgba(16,18,26,0.88)';
+    ctx.beginPath(); ctx.moveTo(px + 12, py); ctx.lineTo(px + pw, py); ctx.lineTo(px + pw - 12, py + 60); ctx.lineTo(px, py + 60); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = col; ctx.fillRect(px + 6, py + 58, pw - 12, 3);
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillText(def.name, x + 86, y + 20);
-    ctx.fillStyle = '#d7bde2'; ctx.font = 'bold 15px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.fillText(c.hero.skillName ?? SKILLS[c.type]?.name ?? '스킬', x + 86, y + 42);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '11px "Malgun Gothic", "Segoe UI", sans-serif'; if (c.hero.skillName && c.hero.skillName !== SKILLS[c.type]?.name) ctx.fillText(SKILLS[c.type]?.name ?? '', x + 86, y + 61);
+    ctx.fillStyle = 'rgba(255,255,255,0.78)'; ctx.font = 'bold 12px "Malgun Gothic", "Segoe UI", sans-serif';
+    const big = c.hero.skillName ?? SKILLS[c.type]?.name ?? '스킬';
+    ctx.fillText(SKILLS[c.type]?.name && SKILLS[c.type].name !== big ? `${def.name} · ${SKILLS[c.type].name} 계열` : def.name, px + 20, py + 16);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 22px "Malgun Gothic", "Segoe UI", sans-serif';
+    this.#txt(big, px + 20, py + 40);
     ctx.restore();
   }
   #drawBanner(dt) {
