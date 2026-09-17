@@ -113,3 +113,14 @@ test('card art manifest: every entry points at files that exist, thumbnails are 
     }
   }
 });
+
+test('헤일로는 등급을 말한다: 등급이 오를수록 고리가 커진다', async () => {
+  const { dollPixels } = await import('../src/data/dollSprites.js');
+  const lit = (g) => { const d = dollPixels('parttime', 0, null, g); let n = 0; for (let i = 3; i < d.data.length; i += 4) if (d.data[i]) n++; return n; };
+  const [D, C, B, A, S] = ['D', 'C', 'B', 'A', 'S'].map(lit);
+  assert.equal(D, C, 'D와 C는 같은 기본 고리');
+  assert.ok(B > C, 'B는 고리가 넓어진다');
+  assert.ok(A > B, 'A는 이중 고리');
+  assert.ok(S > A, 'S는 양옆 스파크까지');
+  assert.ok(S - D >= 6, `등급 차이가 눈에 보일 만큼 (차이 ${S - D}px)`);
+});

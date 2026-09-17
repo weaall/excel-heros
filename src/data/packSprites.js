@@ -111,9 +111,9 @@ export function packHeroFrame(def, anim = 'idle', frame = 0, scale = 1) {
 
 /** Cached 9-frame recoloured strip for a hero (see heroSkins.js). */
 function heroStrip(def, m) {
-  const key = `strip:${def.id}${skinKey(def)}`; let s = cache.get(key);
+  const key = `strip:${def.id}${skinKey(def)}:${def.grade}`; let s = cache.get(key);
   // hand-designed paper dolls (dollSprites.js) win over the recoloured 0x72 base; skins pass their palette through
-  if (!s) { s = (hasDoll(def.id) && buildDollStrip(def.id, def.skin ?? null)) || buildHeroStrip(sheet, def, m); cache.set(key, s); }
+  if (!s) { s = (hasDoll(def.id) && buildDollStrip(def.id, def.skin ?? null, def.grade)) || buildHeroStrip(sheet, def, m); cache.set(key, s); }
   return s;
 }
 

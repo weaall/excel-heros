@@ -179,10 +179,19 @@ function drawDoll(p, s, { legPhase = 0, bob = 0, hit = false } = {}) {
   p.dy = 0;
 }
 /** Halo pass (after outlining): thin coloured arc above the hair unless a hat/crown sits there. */
+/** Halo shape by grade: the ring is this world's mark of power, so it should read at a glance. */
+const HALO_TIER = { D: 0, C: 0, B: 1, A: 2, S: 3 };
 function drawHalo(p, s, bob = 0) {
   const acc = Object.fromEntries((s.acc ?? []).map((a) => { const [k, v] = a.split(':'); return [k, v ?? true]; }));
   if (!s.halo || acc.crown || acc.cap || acc.hardhat || acc.headphones) return;
-  const HT = 9; p.dy = bob; p.rect(5, HT - 5, 6, 1, s.halo); p.set(4, HT - 4, s.halo); p.set(11, HT - 4, s.halo); p.dy = 0;
+  const HT = 9, tier = HALO_TIER[s.grade] ?? 0, glow = s.haloGlow ?? s.halo;
+  p.dy = bob;
+  // tier 0 (D·C): the plain thin ring everyone started with
+  p.rect(5, HT - 5, 6, 1, s.halo); p.set(4, HT - 4, s.halo); p.set(11, HT - 4, s.halo);
+  if (tier >= 1) { p.rect(4, HT - 5, 1, 1, s.halo); p.rect(11, HT - 5, 1, 1, s.halo); }           // B: wider ring
+  if (tier >= 2) { p.rect(5, HT - 7, 6, 1, glow); p.set(4, HT - 6, glow); p.set(11, HT - 6, glow); } // A: a second ring above
+  if (tier >= 3) { p.set(3, HT - 6, glow); p.set(12, HT - 6, glow); p.set(2, HT - 7, glow); p.set(13, HT - 7, glow); } // S: side sparks
+  p.dy = 0;
 }
 
 /** Apply a 1px dark outline on silhouette edges (a darker version of the pixel's own colour, like the 0x72 sheet). */
@@ -213,9 +222,9 @@ function applySkin(base, skin) {
 }
 
 /** Build the 9-frame strip for a doll spec (browser only — needs canvas). `skin` = palette or full skin. */
-export function buildDollStrip(id, skin = null) {
+export function buildDollStrip(id, skin = null, grade = null) {
   const base = DOLLS[id]; if (!base) return null;
-  const s = applySkin(base, skin);
+  const s = { ...applySkin(base, skin), grade: grade ?? base.grade };
   const c = document.createElement('canvas'); c.width = FW * FRAMES; c.height = FH; const ctx = c.getContext('2d');
   const img = ctx.createImageData(c.width, c.height);
   for (let f = 0; f < FRAMES; f++) {
@@ -231,9 +240,9 @@ export function buildDollStrip(id, skin = null) {
 }
 export const hasDoll = (id) => !!DOLLS[id];
 /** Canvas-free render of one frame (for Node tooling / previews): { width, height, data: RGBA Uint8ClampedArray }. */
-export function dollPixels(id, frame = 0, skin = null) {
+export function dollPixels(id, frame = 0, skin = null, grade = null) {
   const base = DOLLS[id]; if (!base) return null;
-  const s = applySkin(base, skin);
+  const s = { ...applySkin(base, skin), grade: grade ?? base.grade };
   const p = new Px(); const idle = frame < 4, walk = frame >= 4 && frame < 8;
   drawDoll(p, s, { legPhase: walk ? [1, 0, 3, 0][frame - 4] : 0, bob: idle ? [0, 1, 1, 0][frame] : walk ? [0, -1, 0, -1][frame - 4] : 0, hit: frame === 8 });
   const data = new Uint8ClampedArray(FW * FH * 4);
