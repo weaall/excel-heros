@@ -124,8 +124,9 @@ export const ART_PALETTES = {
     "W": "#e3b6b3"
   },
   "founder": {
-    "B": "#184177",
-    "W": "#9c89bd"
+    "H": "#fcde8b",
+    "B": "#2d3752",
+    "W": "#fee6dd"
   },
   "intern_seo": {
     "B": "#597fbd",
@@ -153,17 +154,18 @@ export const ART_PALETTES = {
     "W": "#21244d"
   },
   "ai_lead": {
-    "H": "#25b2c0",
-    "B": "#84b3ea",
-    "W": "#f7bcb3"
+    "B": "#856d4f",
+    "W": "#90b6cf"
   },
   "union_chief": {
-    "B": "#4f576e"
+    "H": "#503e31",
+    "B": "#4f6c81",
+    "W": "#aabbd4"
   },
   "hacker": {
-    "H": "#21effc",
-    "B": "#2b2950",
-    "W": "#2c2951"
+    "H": "#3d4554",
+    "B": "#4e5367",
+    "W": "#fcebe6"
   },
   "intern_min": {
     "B": "#f7eaf1",
