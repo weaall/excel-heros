@@ -10,7 +10,7 @@ const OUTLINE = '#1b1d25'; // same near-black 1px edge as the 0x72 / Tiny Creatu
 
 // ------------------------------------------------------------------ specs --
 // hair: short | bob | long | ponytail | bun | twin | spiky | curly | bald | side
-// outfit: suit (jacket + shirt column) | shirt | hoodie | apron | dress | coat | cardigan | labcoat | vest
+// outfit: suit (jacket + narrow shirt column) | cardigan (open front, wide panel) | shirt | hoodie | apron | dress | coat | labcoat | vest
 // bottom: pants | skirt
 // acc: glasses sunglasses mustache beard headset hardhat cap crown tiara lanyard:<color> tie:<color> scarf:<color> flower headphones suspenders badge
 export const DOLLS = {
@@ -121,7 +121,8 @@ function drawDoll(p, s, { legPhase = 0, bob = 0, hit = false } = {}) {
   p.rect(3, TT, 10, 4, bodyCol);
   p.rect(2, TT + 1, 1, 2, bodyCol); p.rect(13, TT + 1, 1, 2, bodyCol); p.set(2, TT + 3, skin); p.set(13, TT + 3, skin);
   switch (s.outfit) {
-    case 'suit': case 'cardigan': p.rect(8, TT, 2, 4, shirt); p.set(7, TT, topDark); p.set(10, TT, topDark); p.set(7, TT + 1, topDark); p.set(10, TT + 1, topDark); break;
+    case 'suit': p.rect(8, TT, 2, 4, shirt); p.set(7, TT, topDark); p.set(10, TT, topDark); p.set(7, TT + 1, topDark); p.set(10, TT + 1, topDark); break;
+    case 'cardigan': p.rect(7, TT, 4, 4, shirt); p.set(6, TT, topDark); p.set(11, TT, topDark); p.rect(4, TB, 8, 1, topDark); break; // open front, wide inner panel, soft hem
     case 'vest': p.rect(4, TT, 8, 4, shirt); p.rect(3, TT, 1, 4, top); p.rect(12, TT, 1, 4, top); p.rect(4, TT + 1, 2, 3, top); p.rect(10, TT + 1, 2, 3, top); p.rect(8, TT, 2, 4, shirt); break;
     case 'hoodie': p.rect(4, TT, 8, 1, topDark); p.rect(3, TT + 1, 10, 1, topDark); p.rect(6, TT + 3, 5, 1, topDark); if (s.shirt !== top) p.rect(8, TT + 1, 2, 2, s.shirt); break;
     case 'apron': p.rect(3, TT, 10, 4, shirt); p.rect(4, TT + 1, 8, 3, top); p.set(6, TT, top); p.set(10, TT, top); if (skirt) { p.dy = 0; p.rect(4, TB + 1 + bob, 8, 2, top); p.dy = bob; } break;
@@ -129,7 +130,7 @@ function drawDoll(p, s, { legPhase = 0, bob = 0, hit = false } = {}) {
     case 'shirt': p.rect(6, TT, 6, 1, shade(shirt, 0.8)); p.rect(8, TT + 1, 2, 3, shade(shirt, 0.92)); break;
     case 'dress': break;
   }
-  if (acc.trim) { p.set(3, TT, acc.trim); p.set(12, TT, acc.trim); p.set(3, TB, acc.trim); p.set(12, TB, acc.trim); }
+  if (acc.trim) { p.rect(4, TT, 1, 3, acc.trim); p.rect(11, TT, 1, 3, acc.trim); } // inside the outline (x 3 / x 12 are the edge and get overwritten)
   if (acc.tie) { p.rect(8, TT, 2, 3, acc.tie); }
   if (acc.suspenders) { p.rect(6, TT, 1, 4, '#333333'); p.rect(11, TT, 1, 4, '#333333'); }
   if (acc.lanyard) { p.rect(7, TT, 1, 2, acc.lanyard); p.rect(10, TT, 1, 2, acc.lanyard); p.rect(8, TT + 2, 2, 1, '#f4f4f4'); }
@@ -190,10 +191,26 @@ function outline(p) {
   return out;
 }
 
-/** Build the 9-frame strip for a doll spec (browser only — needs canvas). `palette` overrides come from skins. */
-export function buildDollStrip(id, palette = null) {
+/**
+ * Merge a skin into a doll spec. `skin` may be a bare palette ({ B, P, H }) or a full skin
+ * ({ palette, doll: { outfit, dropAcc, addAcc } }) — the latter also changes clothes and props.
+ */
+function applySkin(base, skin) {
+  if (!skin) return base;
+  const pal = skin.palette ?? skin, o = skin.doll ?? null;
+  let out = { ...base, top: pal.B ?? base.top, bottomColor: pal.P ?? base.bottomColor, hairColor: pal.H ?? base.hairColor };
+  if (o) {
+    const kept = (base.acc ?? []).filter((a) => !(o.dropAcc ?? []).includes(a.split(':')[0]));
+    out = { ...out, ...(o.outfit ? { outfit: o.outfit } : {}), acc: [...kept, ...(o.addAcc ?? [])] };
+    if (o.outfit === 'hoodie' || o.outfit === 'shirt') out.shirt = out.top; // one-piece tops use the jacket colour
+  }
+  return out;
+}
+
+/** Build the 9-frame strip for a doll spec (browser only — needs canvas). `skin` = palette or full skin. */
+export function buildDollStrip(id, skin = null) {
   const base = DOLLS[id]; if (!base) return null;
-  const s = palette ? { ...base, top: palette.B ?? base.top, bottomColor: palette.P ?? base.bottomColor, hairColor: palette.H ?? base.hairColor, shirt: palette.W && base.outfit !== 'shirt' ? base.shirt : base.shirt } : base;
+  const s = applySkin(base, skin);
   const c = document.createElement('canvas'); c.width = FW * FRAMES; c.height = FH; const ctx = c.getContext('2d');
   const img = ctx.createImageData(c.width, c.height);
   for (let f = 0; f < FRAMES; f++) {
@@ -209,9 +226,9 @@ export function buildDollStrip(id, palette = null) {
 }
 export const hasDoll = (id) => !!DOLLS[id];
 /** Canvas-free render of one frame (for Node tooling / previews): { width, height, data: RGBA Uint8ClampedArray }. */
-export function dollPixels(id, frame = 0, palette = null) {
+export function dollPixels(id, frame = 0, skin = null) {
   const base = DOLLS[id]; if (!base) return null;
-  const s = palette ? { ...base, top: palette.B ?? base.top, bottomColor: palette.P ?? base.bottomColor, hairColor: palette.H ?? base.hairColor } : base;
+  const s = applySkin(base, skin);
   const p = new Px(); const idle = frame < 4, walk = frame >= 4 && frame < 8;
   drawDoll(p, s, { legPhase: walk ? [1, 0, 3, 0][frame - 4] : 0, bob: idle ? [0, 1, 1, 0][frame] : walk ? [0, -1, 0, -1][frame - 4] : 0, hit: frame === 8 });
   const data = new Uint8ClampedArray(FW * FH * 4);

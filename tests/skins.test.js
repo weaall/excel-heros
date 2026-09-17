@@ -52,3 +52,22 @@ test('skill levels: cards buy power and shorter cooldowns up to the cap, only on
   assert.ok(Math.abs(g.entities.heroes.find((h) => h.heroId === 'guard').skillCdMult - (1 - BALANCE.SKILL_LEVEL.max * BALANCE.SKILL_LEVEL.cooldownPerLevel)) < 1e-9);
   const m = migrate(JSON.parse(JSON.stringify(g.state))); assert.equal(m.heroes.guard.skillLv, BALANCE.SKILL_LEVEL.max); assert.equal(m.heroes.barista.skillLv, 0);
 });
+
+test('skins change the paper doll\'s clothes, not just its colours', async () => {
+  const { dollPixels, DOLLS } = await import('../src/data/dollSprites.js');
+  const { SKINS } = await import('../src/data/skins.js');
+  for (const id of ['ceo', 'staff_park', 'cco']) {
+    const base = dollPixels(id, 0);
+    const [casual, formal] = SKINS[id];
+    assert.ok(casual.doll?.outfit && formal.doll?.outfit, id);
+    for (const sk of [casual, formal]) {
+      const skinned = dollPixels(id, 0, sk);
+      assert.notDeepEqual(Array.from(skinned.data), Array.from(base.data), `${id} ${sk.id} differs from the base doll`);
+      let n = 0; for (let i = 3; i < skinned.data.length; i += 4) if (skinned.data[i]) n++;
+      assert.ok(n > 120 && n < 16 * 28, `${id} ${sk.id} still renders a body (${n}px)`);
+    }
+    // casual drops the work accessories the base doll wore
+    const work = (DOLLS[id].acc ?? []).filter((a) => casual.doll.dropAcc.includes(a.split(':')[0]));
+    if (work.length) assert.notDeepEqual(Array.from(dollPixels(id, 0, casual).data), Array.from(dollPixels(id, 0, { palette: casual.palette }).data), `${id} casual removes ${work.join()}`);
+  }
+});

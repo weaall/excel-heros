@@ -16,15 +16,20 @@ function casualPalette(pal) {
   return { B: hslToHex((h + 150) % 360, Math.min(0.75, Math.max(0.35, s + 0.15)), Math.min(0.72, Math.max(0.45, l + 0.08))), W: hslToHex((h + 30) % 360, 0.55, 0.62), P: hslToHex((h + 150) % 360, 0.35, 0.28) };
 }
 const FORMAL = { B: '#1f2a44', W: '#d4a017', P: '#141a2b' };
+// Paper-doll overrides (src/data/dollSprites.js): the sprite changes clothes, not just colours.
+// dropAcc removes work items (tie, lanyard, badge, gold trim …); addAcc puts the skin's own props on.
+const CASUAL_WORK_ACC = ['tie', 'lanyard', 'badge', 'trim', 'suspenders', 'hardhat', 'apron'];
+const CASUAL_DOLL = (female) => ({ outfit: female ? 'cardigan' : 'hoodie', dropAcc: CASUAL_WORK_ACC, addAcc: female ? [] : ['headphones:#3a3f4c'] });
+const FORMAL_DOLL = { outfit: 'suit', dropAcc: ['hardhat', 'apron', 'suspenders', 'trim'], addAcc: ['trim:#d4a017', 'badge'] };
 
 const CASUAL_NAME = { F: '퇴근 사복', M: '퇴근 사복' };
 export const SKINS = {};
 for (const def of [...HEROES, ...Object.values(MAIN_JOBS)]) {
   const pid = HEROES.includes(def) ? def.id : 'main'; const p = PROFILES[pid] ?? {}; const female = p.gender === 'F';
   SKINS[def.id] = [
-    { id: 'casual', name: CASUAL_NAME[female ? 'F' : 'M'], desc: '호감도 Lv 10 달성 보상 · 편안한 퇴근 복장', palette: casualPalette(def.palette ?? {}), frame: '#e84393', unlock: { affection: 10 },
+    { id: 'casual', name: CASUAL_NAME[female ? 'F' : 'M'], desc: '호감도 Lv 10 달성 보상 · 편안한 퇴근 복장', palette: casualPalette(def.palette ?? {}), doll: CASUAL_DOLL(female), frame: '#e84393', unlock: { affection: 10 },
       prompt: female ? 'casual off-duty outfit, oversized cardigan, loose hair, tote bag, relaxed smile' : 'casual off-duty outfit, hoodie, headphones around neck, relaxed smile' },
-    { id: 'formal', name: '회사 정장', desc: `보석 ${SKIN_GEM_COST} · 창립기념일용 네이비 정장과 금색 배지`, palette: FORMAL, frame: '#d4a017', unlock: { gems: SKIN_GEM_COST },
+    { id: 'formal', name: '회사 정장', desc: `보석 ${SKIN_GEM_COST} · 창립기념일용 네이비 정장과 금색 배지`, palette: FORMAL, doll: FORMAL_DOLL, frame: '#d4a017', unlock: { gems: SKIN_GEM_COST },
       prompt: female ? 'elegant navy formal suit dress, gold company badge, hair up, confident' : 'sharp navy three-piece suit, gold company badge, confident' },
   ];
 }
