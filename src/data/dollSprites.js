@@ -41,7 +41,7 @@ export const DOLLS = {
   pm_lead:    { hair: 'bob', hairColor: '#2f6fd6', skin: 'fair', outfit: 'shirt', top: '#f4f4f4', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#3a4a6a', acc: ['lanyard:#3b5bd6', 'badge'], halo: '#ffffff' }, // art: blue bob, white blouse, lanyard
   design_lead:{ hair: 'curly', hairColor: '#f2789f', skin: 'fair', outfit: 'shirt', top: '#f5b8c8', shirt: '#f5b8c8', bottom: 'skirt', bottomColor: '#5b9bd5', acc: ['cap:#5b9bd5'], halo: '#ffd1ec' }, // art: pink curls under a blue beret, striped pastel tee
   cmo:        { hair: 'long', hairColor: '#d94f3a', skin: 'fair', outfit: 'suit', top: '#1f2a3a', shirt: '#2a3a5a', bottom: 'pants', bottomColor: '#1f2a3a', acc: ['sunglasses'], halo: '#ff9f8a' },
-  founder:    { hair: 'long', hairColor: '#dfe3ea', skin: 'fair', outfit: 'coat', top: '#f4f2ec', shirt: '#1a1a1a', bottom: 'pants', bottomColor: '#2a2a33', acc: ['glasses', 'trim:#d4a017'], halo: '#d4a017' },
+  founder:    { hair: 'long', hairColor: '#e8eaf0', skin: 'fair', outfit: 'coat', top: '#2a3050', shirt: '#161a2c', bottom: 'pants', bottomColor: '#1e2236', acc: ['glasses', 'trim:#d4a017'], halo: '#d4a017' },
   intern_seo: { hair: 'long', hairColor: '#b98a5c', skin: 'fair', outfit: 'shirt', top: '#f5f5f5', shirt: '#f5f5f5', bottom: 'skirt', bottomColor: '#8fb8e8', acc: ['lanyard:#3b5bd6'], halo: '#fff4c2' },
   pr_yoo:     { hair: 'bob', hairColor: '#d63a3a', skin: 'fair', outfit: 'shirt', top: '#f5f5f5', shirt: '#f5f5f5', bottom: 'skirt', bottomColor: '#3b6fd8', acc: [], halo: '#ffc9d6' },
   nurse_han:  { hair: 'bun', hairColor: '#e9eef2', skin: 'fair', outfit: 'labcoat', top: '#ffffff', shirt: '#dfe9f3', bottom: 'skirt', bottomColor: '#f0f0f0', acc: ['badge'], halo: '#d6f0ff' },

@@ -124,9 +124,9 @@ export const ART_PALETTES = {
     "W": "#e3b6b3"
   },
   "founder": {
-    "H": "#b398ba",
-    "B": "#fbddb1",
-    "W": "#f8cfae"
+    "H": "#947ca6",
+    "B": "#6f7087",
+    "W": "#735b4d"
   },
   "intern_seo": {
     "B": "#597fbd",
