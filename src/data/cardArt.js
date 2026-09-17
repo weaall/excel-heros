@@ -3,6 +3,9 @@
 // Any hero with an entry gets the illustration on its card, portrait and gacha reveal; the rest keep pixel art.
 // Recommended: 512×512 (or 3:4 portrait 384×512), bust-up, transparent or solid background — see docs/ART_PROMPTS.md.
 const art = new Map(); const crops = new Map(); // id -> [x0, y0, x1, y1] fractions of the source to use
+let version = ''; // manifest build stamp, appended to every art URL so regenerated files are never served from cache
+export const artVersion = () => version;
+const withV = (path) => (version ? `${path}?v=${version}` : path);
 
 let onLoaded = null;
 /** Progress callback (id, loadedCount) for the boot screen / lazy re-render. */
@@ -12,15 +15,16 @@ export async function loadCardArt(url = 'assets/cards/manifest.json') {
   try {
     const res = await fetch(url, { cache: 'no-store' }); if (!res.ok) return 0;
     const manifest = await res.json(); const entries = Object.entries(manifest.cards ?? {});
+    version = String(manifest.version ?? '');
     await Promise.all(entries.map(async ([id, spec]) => {
       const file = typeof spec === 'string' ? spec : spec.file; if (typeof spec === 'object' && spec.crop) crops.set(id, spec.crop);
-      urls.set(id, `assets/cards/${file}`);
+      urls.set(id, withV(`assets/cards/${file}`));
       const src = typeof spec === 'object' && spec.thumb ? spec.thumb : file; // cards draw the small WebP; the full PNG is only opened on demand
       try {
         if (/.svg$/i.test(src)) { // SVG must go through an <img> (createImageBitmap rejects SVG blobs)
-          const img = new Image(); img.decoding = 'async'; img.src = `assets/cards/${src}`; await img.decode(); art.set(id, img); return;
+          const img = new Image(); img.decoding = 'async'; img.src = withV(`assets/cards/${src}`); await img.decode(); art.set(id, img); return;
         }
-        const r = await fetch(`assets/cards/${src}`); if (!r.ok) return; art.set(id, await createImageBitmap(await r.blob()));
+        const r = await fetch(withV(`assets/cards/${src}`)); if (!r.ok) return; art.set(id, await createImageBitmap(await r.blob()));
         onLoaded?.(id, art.size);
       }
       catch (e) { console.warn('[cardArt] failed', id, e); }

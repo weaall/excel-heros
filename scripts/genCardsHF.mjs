@@ -164,7 +164,12 @@ export function rebuildManifest() {
     if (fs.existsSync(new URL(`${id}.png`, outDir))) cards[id] = fs.existsSync(new URL(`thumb/${id}.webp`, outDir)) ? { file: `${id}.png`, thumb: `thumb/${id}.webp` } : `${id}.png`; // thumb: drawn on cards; file: lightbox / splash
     else if (fs.existsSync(new URL(`${id}.svg`, outDir))) cards[id] = `${id}.svg`;
   }
-  fs.writeFileSync(new URL('manifest.json', outDir), JSON.stringify({ cards }, null, 2) + '\n');
+  // build stamp = newest art file on disk; it only changes when an illustration does, so caches stay warm otherwise
+  let newest = 0;
+  for (const f of fs.readdirSync(outDir)) { if (!/\.(png|webp|svg)$/i.test(f)) continue; const t = fs.statSync(new URL(f, outDir)).mtimeMs; if (t > newest) newest = t; }
+  const thumbDir = new URL('thumb/', outDir);
+  if (fs.existsSync(thumbDir)) for (const f of fs.readdirSync(thumbDir)) { const t = fs.statSync(new URL(f, thumbDir)).mtimeMs; if (t > newest) newest = t; }
+  fs.writeFileSync(new URL('manifest.json', outDir), JSON.stringify({ version: Math.round(newest / 1000), cards }, null, 2) + '\n');
   return cards;
 }
 

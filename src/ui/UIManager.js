@@ -11,6 +11,7 @@ import { MILESTONES, milestoneValue } from '../data/milestones.js';
 import { profileOf, PROFILES } from '../data/profiles.js';
 import { extraOf } from '../data/profilesExtra.js';
 import { PROLOGUE } from '../data/prologue.js';
+import { artVersion } from '../data/cardArt.js';
 import { SLOT_ORDER, gradeColor } from '../data/equipment.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
 import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
@@ -1349,7 +1350,8 @@ export class UIManager {
     return new Promise((resolve) => {
       const img = $('#pl-art'), dots = $('#pl-dots'); let i = 0, done = false;
       dots.innerHTML = ''; PROLOGUE.forEach(() => dots.append(el('i', {})));
-      for (const sc of PROLOGUE) { const pre = new Image(); pre.src = `assets/story/${sc.id}.webp`; } // warm the cache
+      const v = artVersion() ? `?v=${artVersion()}` : ''; // same build stamp as the cards: regenerated panels are never stale
+      for (const sc of PROLOGUE) { const pre = new Image(); pre.src = `assets/story/${sc.id}.webp${v}`; } // warm the cache
       const finish = () => {
         if (done) return; done = true;
         box.hidden = true; this.game.state.settings.prologueSeen = true; this.game.persist();
@@ -1361,7 +1363,7 @@ export class UIManager {
         const next = new Image();
         next.onload = () => { img.src = next.src; img.classList.add('on'); };
         next.onerror = () => { img.removeAttribute('src'); };
-        next.src = `assets/story/${sc.id}.webp`;
+        next.src = `assets/story/${sc.id}.webp${v}`;
         $('#pl-title').textContent = `${i + 1}. ${sc.title}`;
         const t = $('#pl-text'); t.innerHTML = '';
         sc.lines.forEach((line, n) => t.append(el('p', { style: `animation-delay:${0.12 + n * 0.5}s` }, line)));

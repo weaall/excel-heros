@@ -93,3 +93,23 @@ test('prologue: every scene has a title, narration lines and a generated panel i
     assert.ok(Array.isArray(sc.lines) && sc.lines.length >= 2 && sc.lines.every((l) => typeof l === 'string' && l.length > 3), sc.id);
   }
 });
+
+test('card art manifest: every entry points at files that exist, thumbnails are not older than their source, and the build stamp is present', async () => {
+  const fs = await import('node:fs');
+  const dir = new URL('../assets/cards/', import.meta.url);
+  const manifest = JSON.parse(fs.readFileSync(new URL('manifest.json', dir), 'utf8'));
+  assert.ok(Number.isFinite(manifest.version) && manifest.version > 0, 'manifest carries a build stamp for cache busting');
+  const entries = Object.entries(manifest.cards ?? {});
+  assert.ok(entries.length >= 61, `${entries.length} cards`);
+  for (const [id, spec] of entries) {
+    const file = typeof spec === 'string' ? spec : spec.file;
+    const full = new URL(file, dir);
+    assert.ok(fs.existsSync(full), `${id}: ${file} exists`);
+    if (typeof spec === 'object' && spec.thumb) {
+      const thumb = new URL(spec.thumb, dir);
+      assert.ok(fs.existsSync(thumb), `${id}: ${spec.thumb} exists`);
+      // a regenerated illustration whose thumbnail was never rebuilt is exactly how a card and its lightbox drift apart
+      assert.ok(fs.statSync(thumb).mtimeMs >= fs.statSync(full).mtimeMs - 1000, `${id}: thumbnail is not older than the illustration (run scripts/thumbs.py)`);
+    }
+  }
+});
