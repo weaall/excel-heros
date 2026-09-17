@@ -222,6 +222,12 @@
             <button id="pull1" class="xl-btn big">1행 가져오기<small>보석 100</small></button>
             <button id="pull10" class="xl-btn big primary">10행 가져오기<small>보석 900</small></button>
           </div>
+          <div class="code-box">
+            <label for="code-input">보석 코드</label>
+            <input id="code-input" type="text" maxlength="32" placeholder="코드를 입력하세요" autocomplete="off" spellcheck="false">
+            <button id="code-redeem" class="xl-btn">사용</button>
+            <span class="muted small" id="code-msg"></span>
+          </div>
         </div>
         <div class="gacha-layout">
           <div>
@@ -372,6 +378,7 @@
 
     <!-- Right task pane (Excel "작업 창"): party management -------------------->
     <aside class="task-pane">
+        <div id="prestige-hint" class="prestige-hint" hidden><b>회사 이전을 고려할 때입니다</b><p id="prestige-hint-text"></p><button id="prestige-hint-go" class="xl-btn small primary">회사 이전 보기</button><button id="prestige-hint-hide" class="xl-btn small">나중에</button></div>
       <div class="pane-title">파티 관리 <span class="pane-x">✕</span></div>
       <div class="pane-body">
         <div class="pane-actions">

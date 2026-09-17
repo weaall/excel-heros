@@ -693,3 +693,15 @@ body.stealth #roster-table { display: table; }
 .dt-sec.equip-auto .ds { flex-basis: 100%; }
 #hero-table td.eq.ok { color: var(--xl-green); font-weight: 700; }
 #hero-table td.eq.bad { color: #b03a2e; }
+
+/* 보석 코드 */
+.code-box { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 10px 0 2px; flex-wrap: wrap; }
+.code-box label { font-size: 12px; color: var(--muted); }
+.code-box input { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line-dark); width: 190px; text-transform: uppercase; }
+.code-box .ok { color: var(--xl-green); } .code-box .bad { color: #b03a2e; }
+/* 회사 이전 권유 (벽에 막혔을 때만) */
+.prestige-hint { margin: 0 0 8px; padding: 8px 10px; border: 1px solid #d4a017; background: linear-gradient(135deg, #fdf6e3, #fff 70%); }
+.prestige-hint[hidden] { display: none; }
+.prestige-hint b { color: #7d5a00; font-size: 12.5px; }
+.prestige-hint p { margin: 4px 0 6px; font-size: 12px; color: #444; line-height: 1.5; }
+.prestige-hint .xl-btn { margin-right: 4px; }

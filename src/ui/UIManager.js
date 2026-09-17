@@ -148,6 +148,20 @@ export class UIManager {
       const r = this.game.dismissAll(grade);
       this.toast(r.count + '장 방출 → 강화 카드 ' + fmt(r.cards) + '장' + (r.gold ? ', 골드 ' + fmt(r.gold) : ''));
     });
+    {
+      const input = $('#code-input'), msg = $('#code-msg');
+      const redeem = () => {
+        const r = this.game.redeemCode(input.value);
+        if (!r.ok) { msg.textContent = r.reason; msg.className = 'muted small bad'; return; }
+        const parts = [r.gems && `보석 +${r.gems}`, r.cards && `강화 카드 +${r.cards}`, r.gold && `골드 +${fmt(r.gold)}`].filter(Boolean).join(' · ');
+        msg.textContent = `${r.label}: ${parts}`; msg.className = 'muted small ok';
+        input.value = ''; this.toast(`코드 사용 — ${parts}`);
+      };
+      $('#code-redeem')?.addEventListener('click', redeem);
+      input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeem(); });
+    }
+    $('#prestige-hint-go')?.addEventListener('click', () => { $('#prestige-hint').hidden = true; this.openBackstage('options'); });
+    $('#prestige-hint-hide')?.addEventListener('click', () => { $('#prestige-hint').hidden = true; this.prestigeHintSnooze = Date.now() + 15 * 60000; });
     $('#rf-clear').addEventListener('click', () => { this.filter = { grade: '', role: '', div: '', owned: '', sort: 'grade' }; for (const k of ['grade', 'role', 'div', 'owned']) $(`#rf-${k}`).value = ''; $('#rf-sort').value = 'grade'; this.#buildCards(); });
     // account / cloud save (Google sign-in → backend session)
     $('#cloud-url').addEventListener('change', (e) => { this.game.setCloud({ url: e.target.value }); this.#refreshCloud(); });
@@ -1272,12 +1286,22 @@ export class UIManager {
     for (const r of rows) tbody.append(el('tr', { class: r.me ? 'me' : '' }, el('td', { class: 'num' }, r.rank), el('td', { class: 'name' }, r.picture ? el('img', { src: r.picture, class: 'icon round', alt: '', referrerpolicy: 'no-referrer' }) : null, `${r.name}${r.me ? ' (나)' : ''}`), el('td', { class: 'num' }, stageLabel(Math.max(1, r.maxCleared))), el('td', { class: 'num' }, r.shares), el('td', { class: 'num' }, fmt(r.dps)), el('td', { class: 'num' }, r.collection), el('td', { class: 'num' }, fmtTime(r.playSeconds))));
   }
 
+  /** Show the 회사 이전 suggestion only while the player is actually walled, and never nag more than once per 15 min. */
+  #refreshPrestigeHint() {
+    const box = $('#prestige-hint'); if (!box) return;
+    if (this.prestigeHintSnooze && Date.now() < this.prestigeHintSnooze) { box.hidden = true; return; }
+    const a = this.game.prestigeAdvice();
+    if (!a) { box.hidden = true; return; }
+    $('#prestige-hint-text').textContent = a.text;
+    box.hidden = false;
+  }
   #refreshPrestige() {
     const info = this.game.prestigeInfo(); const el$ = $('#prestige-info'); if (!el$) return;
     el$.innerHTML = `현재 지분 <b>${info.shares}</b> (파티 ATK·골드 +${Math.round(info.bonus * 100)}%) · 이전 ${info.count}회<br>` +
       (info.eligible ? `지금 이전하면 지분 <b>+${info.gain}</b> (+${Math.round(info.gain * info.perShare * 100)}%)` : `Phase ${info.minCleared / BALANCE.BOSS_EVERY}-10 클리어(스테이지 ${info.minCleared}) 후 이전 가능 · 현재 최고 클리어 ${this.game.state.maxCleared}`);
     $('#btn-prestige').disabled = !info.eligible;
     $('#shares-top').textContent = info.shares;
+    this.#refreshPrestigeHint();
   }
   #buildFormulaSheet() {
     // the 게임 공식 table was hidden from the backstage by request; keep the builder harmless if the element is absent

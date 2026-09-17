@@ -168,3 +168,40 @@ test('파티 자동 편성 weighs 부문 시너지, not just raw power', () => {
   }
   assert.ok(g.synergy().sets.length >= 1, '편성이 최소 한 개의 부문 시너지를 잡는다');
 });
+
+test('보석 코드: one use per save, unknown and expired codes refused, plausibility accepts the gems', async () => {
+  const { CODES, checkCode, normalizeCode, MAX_CODE_GEMS } = await import('../src/data/codes.js');
+  const { checkSave } = await import('../src/core/plausibility.js');
+  const code = Object.keys(CODES)[0];
+  assert.ok(code, 'at least one code ships');
+  assert.equal(normalizeCode(' ex-cel heroes '), 'EXCELHEROES', 'case, spaces and dashes are forgiven');
+  const g = new GameManager({ state: createInitialState(), save: memSave() });
+  const gems = g.state.gems, cards = g.state.cards;
+  const r = g.redeemCode(code.toLowerCase());
+  assert.ok(r.ok, 'a valid code pays out');
+  assert.equal(g.state.gems, gems + (CODES[code].gems ?? 0));
+  assert.equal(g.state.cards, cards + (CODES[code].cards ?? 0));
+  assert.equal(g.redeemCode(code).ok, false, 'not twice');
+  assert.match(g.redeemCode(code).reason, /이미/);
+  assert.match(g.redeemCode('NOPE').reason, /없는/);
+  assert.match(g.redeemCode('').reason, /입력/);
+  assert.equal(checkCode(code, {}, Date.parse('2999-01-01')).ok, CODES[code].until ? false : true, 'expiry is honoured when set');
+  assert.ok(MAX_CODE_GEMS >= (CODES[code].gems ?? 0));
+  // the redeemed gems must not make an otherwise honest save look implausible
+  g.state.stats.playSeconds = 600;
+  assert.deepEqual(checkSave(g.state, Date.now() + 700_000).reasons, []);
+});
+
+test('회사 이전 권유는 벽에 막혔을 때만 나온다', () => {
+  const s = createInitialState();
+  const g = new GameManager({ state: s, save: memSave() });
+  assert.equal(g.prestigeAdvice(), null, '자격이 없으면 권유하지 않는다');
+  s.maxCleared = 60; s.maxStage = 60; s.stage = 60; s.stats.totalKills = 60 * 20;
+  g.waitingAdvance = true;
+  const a = g.prestigeAdvice();
+  assert.ok(a && a.gain > 0 && a.text.includes('지분'), '막혀 있으면 구체적인 이득을 알려 준다');
+  g.waitingAdvance = false;
+  for (const id of ['guard', 'barista', 'staff_park', 'contract']) s.heroes[id] = { owned: true, star: 5, shards: 0, level: 400, enhance: 50, equip: {} };
+  s.heroes.main.level = 400; g.entities.rebuildParty();
+  assert.equal(g.prestigeAdvice(), null, '충분히 강하면 권유하지 않는다');
+});

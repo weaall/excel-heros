@@ -96,6 +96,8 @@ export const BALANCE = Object.freeze({
 
   GEMS_FIRST_CLEAR: 10, GEMS_REPEAT_CLEAR: 1,
   GEMS_BOSS_FIRST: 50,  GEMS_BOSS_REPEAT: 10,
+  GEMS_REPEAT_PER_PHASE: 1,      // 반복 클리어: 페이즈당 +1 (deep stages take minutes, so a flat 1 starved the gacha)
+  GEMS_BOSS_REPEAT_PER_PHASE: 5, // 반복 보스: 페이즈당 +5
 
   GACHA_SINGLE_COST: 100,
   GACHA_TEN_COST: 900,
@@ -203,3 +205,13 @@ export const prestigeShares = (maxCleared) => (maxCleared < B.PRESTIGE.minCleare
 
 /** Quest/daily rewards are relative: N times the gold-per-kill of the player's best stage. */
 export const relativeGold = (maxStage, kills, goldMult = 1) => Math.floor(baseGold(Math.max(1, maxStage)) * kills * goldMult);
+
+/**
+ * Gems a stage clear pays. First clears are a fixed milestone; repeats scale with the phase, because a repeat at
+ * phase 7 costs the player minutes where a phase-1 repeat costs seconds.
+ */
+export const gemsForClear = (stage, { first = false, boss = false } = {}) => {
+  const phase = Math.floor((Math.max(1, stage) - 1) / B.BOSS_EVERY);
+  if (boss) return first ? B.GEMS_BOSS_FIRST : B.GEMS_BOSS_REPEAT + phase * B.GEMS_BOSS_REPEAT_PER_PHASE;
+  return first ? B.GEMS_FIRST_CLEAR : B.GEMS_REPEAT_CLEAR + phase * B.GEMS_REPEAT_PER_PHASE;
+};

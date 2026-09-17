@@ -24,7 +24,8 @@ import { EPISODE_BY_ID, episodeUnlocked } from '../data/story.js';
 import { skinsOf, skinById } from '../data/skins.js';
 import { PROFILES } from '../data/profiles.js';
 import { localDateKey } from './state.js';
-import { relativeGold } from '../config/balance.js';
+import { relativeGold, gemsForClear } from '../config/balance.js';
+import { checkCode } from '../data/codes.js';
 import { SLOTS, SLOT_ORDER, itemPct, itemLabel, rollItem, itemBasePct } from '../data/equipment.js';
 import { sanitizeName } from './plausibility.js';
 import { migrate } from './state.js';
@@ -120,6 +121,33 @@ export class GameManager extends Emitter {
     const power = ids.reduce((a, id) => a + this.heroView(id).power, 0);
     return power * (1 + syn.atk + syn.hp / 2) * (1 + syn.sets.length * 0.04) * (roles.has('healer') ? 1.08 : 1) * (syn.balanced ? 1.06 : 1);
   }
+  /** Redeem a 보석 코드. Returns { ok, reward, label } or { ok: false, reason }. One use per save. */
+  redeemCode(raw) {
+    const r = checkCode(raw, this.state.redeemed ?? {});
+    if (!r.ok) return r;
+    const { gems = 0, cards = 0, gold = 0 } = r.reward;
+    this.state.redeemed = { ...(this.state.redeemed ?? {}), [r.code]: Date.now() };
+    this.state.gems += gems; this.state.cards += cards;
+    if (gold) { this.state.gold += gold; this.state.stats.totalGold += gold; }
+    this.log(`코드 ${r.code} 사용: ${[gems && `보석 ${gems}`, cards && `강화 카드 ${cards}`, gold && `골드 ${gold}`].filter(Boolean).join(', ')}`, 'info');
+    this.emit('gems'); this.emit('cards'); this.emit('gold'); this.persist();
+    return { ok: true, code: r.code, label: r.reward.label, gems, cards, gold };
+  }
+
+  /**
+   * Is the player stuck in a way 회사 이전 would fix? Measured: re-climbing 60 stages after a reset takes ~41 min
+   * against ~104 min the first time, and the shares are permanent — but nothing in the game ever says so, so players
+   * grind a wall that the reset is designed to solve.
+   */
+  prestigeAdvice() {
+    const info = this.prestigeInfo();
+    if (!info.eligible) return null;
+    const fc = this.challengeForecast(this.state.stage + (this.isChallenging() ? 0 : 1));
+    const stalled = this.waitingAdvance || fc.prob < BALANCE.SAFE_ADVANCE_MIN;
+    if (!stalled) return null;
+    return { ...info, stalled: true, text: `다음 단계 승산 ${Math.round(fc.prob * 100)}% — 지금 회사를 이전하면 지분 +${info.gain} (파티 ATK·골드 +${Math.round(info.gain * info.perShare * 100)}%)을 영구히 얻고, 다시 올라오는 속도는 처음보다 훨씬 빠릅니다.` };
+  }
+
   /** 도감 보너스: owned heroes and their stars buff party ATK and gold income. */
   collection() {
     const owned = HEROES.filter((h) => this.state.heroes[h.id]?.owned);
@@ -973,9 +1001,7 @@ export class GameManager extends Emitter {
   #clearStage() {
     const s = this.state; const boss = isBossStage(s.stage);
     const first = s.stage > s.maxCleared;
-    const gems = boss
-      ? (first ? BALANCE.GEMS_BOSS_FIRST : BALANCE.GEMS_BOSS_REPEAT)
-      : (first ? BALANCE.GEMS_FIRST_CLEAR : BALANCE.GEMS_REPEAT_CLEAR);
+    const gems = gemsForClear(s.stage, { first, boss });
     const lucky = this.partyTraitCount('lucky') * TRAITS.lucky.value;
     const cards = first ? (Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1) * BALANCE.CARDS_FIRST_CLEAR_PER_PHASE : 0;
     s.gems += gems + lucky; s.cards += cards; s.maxCleared = Math.max(s.maxCleared, s.stage);

@@ -3,6 +3,7 @@
 // impossible saves off the shared leaderboard / cloud store. Every bound is deliberately generous so a legit
 // save never trips it — see docs/BALANCE.md 6-19.
 import { BALANCE, upgradeCost, prestigeShares } from '../config/balance.js';
+import { MAX_CODE_GEMS } from '../data/codes.js';
 
 const DAY = 86400000;
 export const MAX_SAVE_BYTES = 256 * 1024;
@@ -18,7 +19,11 @@ export function goldInLevels(state) {
 export function gemBudget(state, now = Date.now()) {
   const days = Math.max(1, Math.ceil((now - (state.createdAt ?? now)) / DAY) + 1);
   const cleared = Math.max(state.maxCleared | 0, (state.prestige?.count ?? 0) * 100);
-  return BALANCE.STARTING_GEMS + cleared * 150 + days * 1500 + (state.stats?.chests ?? 0) * BALANCE.CHEST.gemsMax + 6000;
+  // repeat clears now scale with the phase, so a deep save legitimately earns far more per day than a shallow one
+  const phase = Math.floor(cleared / BALANCE.BOSS_EVERY);
+  const perDay = 1500 + phase * 900; // deep farming: generous, still bounded by account age
+  const codes = Object.keys(state.redeemed ?? {}).length * MAX_CODE_GEMS; // 보석 코드로 받은 몫
+  return BALANCE.STARTING_GEMS + cleared * 150 + days * perDay + (state.stats?.chests ?? 0) * BALANCE.CHEST.gemsMax + codes + 6000;
 }
 
 /**
