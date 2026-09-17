@@ -102,7 +102,7 @@ test('야근 모드: once a day, 60 s of kills pay gems without touching stage p
   const { GameManager } = await import('../src/core/GameManager.js');
   const { BALANCE } = await import('../src/config/balance.js');
   const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
-  g.state.maxStage = 12; g.state.stage = 5; g.state.challenging = false; g.state.heroes.main.level = 80; g.entities.rebuildParty(); g.checkMilestones(); // milestones for the forced maxStage are granted up front so they do not pollute the gem delta
+  g.state.maxStage = 12; g.state.stage = 5; g.state.challenging = false; g.state.heroes.main.level = 80; g.entities.rebuildParty(); g.checkMilestones(); g.state.tutorial.bonus = true; // 교육 보상이 보석 합계에 끼어들지 않게 (교육은 tutorial.test.js에서 검증) // milestones for the forced maxStage are granted up front so they do not pollute the gem delta
   const gems0 = g.state.gems, kills0 = g.state.kills, cleared0 = g.state.maxCleared, drops0 = g.state.stats.gemDrops ?? 0;
   assert.equal(g.canOvertime(), true);
   assert.equal(g.startOvertime(), true);

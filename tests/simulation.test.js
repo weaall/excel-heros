@@ -52,6 +52,7 @@ test('boss timeout falls back to farming 1-9 with auto-advance off; boss kill ad
   assert.equal(g.entities.boss, null);
 
   const s2 = createInitialState(); s2.stage = 10; s2.maxStage = 10; s2.maxCleared = 9; s2.heroes[MAIN_ID].level = 60;
+  s2.tutorial.bonus = true; // 교육 보상이 보석 합계에 끼어들지 않게 (교육은 tutorial.test.js에서 검증)
   const g2 = new GameManager({ state: s2, save: memSave() });
   const gemsBefore = g2.state.gems; // milestones are no longer auto-granted (claimed on the 검토 sheet)
   for (let t = 0; t < 30 && g2.state.stage !== 11; t += 0.05) g2.tick(0.05); // stop right after the boss falls (later waves may drop chest gems)

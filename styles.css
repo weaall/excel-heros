@@ -733,3 +733,18 @@ body.stealth #roster-table { display: table; }
 body.stealth .statusbar .now-doing { color: #444; font-weight: 400; }
 
 body.stealth .stealth-hidden { display: none !important; }
+
+/* 신입 사원 교육: 읽고 닫는 안내가 아니라, 직접 해야 지워지는 목록 */
+.tutorial { margin: 0 0 8px; border: 1px solid var(--xl-green); background: #fff; }
+.tutorial[hidden] { display: none; }
+.tut-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--xl-green-light); border-bottom: 1px solid var(--line); }
+.tut-head b { color: #1b5e3a; font-size: 12.5px; } .tut-head .xl-btn { margin-left: auto; padding: 0 5px; }
+.tutorial ol { list-style: none; margin: 0; padding: 4px 0; }
+.tutorial li { display: grid; grid-template-columns: 18px 1fr; gap: 2px 6px; padding: 4px 8px; font-size: 12px; }
+.tutorial li .mark { color: #bbb; } .tutorial li.done .mark { color: var(--xl-green); }
+.tutorial li .t { font-weight: 700; } .tutorial li.done .t { color: #888; text-decoration: line-through; font-weight: 400; }
+.tutorial li .d { grid-column: 2; color: #555; line-height: 1.45; }
+.tutorial li .r { grid-column: 2; color: #b7950b; font-size: 11px; }
+.tutorial li.now { background: #fffbe8; box-shadow: inset 3px 0 0 #d4a017; }
+.tutorial li.done .d, .tutorial li.done .r { display: none; }
+body.stealth .tutorial { display: none; }

@@ -14,6 +14,7 @@ import { PROLOGUE } from '../data/prologue.js';
 import { artVersion } from '../data/cardArt.js';
 import { SLOT_ORDER, gradeColor } from '../data/equipment.js';
 import { STEALTH_TEXT, STEALTH_HIDE, stealthStatus } from '../data/stealthLabels.js';
+import { TUTORIAL_BONUS } from '../data/tutorial.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
 import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite, heroSprite } from '../data/sprites.js';
@@ -170,6 +171,8 @@ export class UIManager {
       $('#code-redeem')?.addEventListener('click', redeem);
       input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeem(); });
     }
+    $('#tut-hide')?.addEventListener('click', () => this.game.hideTutorial(true));
+    this.game.on('tutorial', () => this.#refreshTutorial());
     $('#prestige-hint-go')?.addEventListener('click', () => { $('#prestige-hint').hidden = true; this.openBackstage('options'); });
     $('#prestige-hint-hide')?.addEventListener('click', () => { $('#prestige-hint').hidden = true; this.prestigeHintSnooze = Date.now() + 15 * 60000; });
     $('#rf-clear').addEventListener('click', () => { this.filter = { grade: '', role: '', div: '', owned: '', sort: 'grade' }; for (const k of ['grade', 'role', 'div', 'owned']) $(`#rf-${k}`).value = ''; $('#rf-sort').value = 'grade'; this.#buildCards(); });
@@ -780,7 +783,7 @@ export class UIManager {
   }
 
   // ------------------------------------------------------ hero detail --
-  openDetail(id) { this.detailId = id; this.#renderDetail(); $('#modal').hidden = false; }
+  openDetail(id) { this.detailId = id; this.#renderDetail(); $('#modal').hidden = false; this.game.markTutorial('detail'); }
   #refreshDetail() { if (this.detailId && !$('#modal').hidden) this.#renderDetail(); }
   /**
    * Card detail dialog, laid out like a worksheet record: art on the left; on the right a header line, a stat table
@@ -1367,6 +1370,35 @@ export class UIManager {
     else txt = `🔁 ${stageLabel(s.stage)} 반복 사냥 중 — 골드·비품을 모으는 중`;
     box.textContent = txt;
   }
+  /**
+   * 신입 사원 교육 목록. 읽고 닫는 안내가 아니라 직접 해야 지워지는 체크리스트다.
+   * 현재 항목은 노란 줄로 강조하고, 그 항목이 가리키는 버튼도 함께 깜빡여 어디를 눌러야 하는지 남기지 않는다.
+   */
+  #refreshTutorial() {
+    const box = $('#tutorial'); if (!box) return;
+    const t = this.game.tutorialState();
+    if (t.hidden || (t.allDone && t.bonusPaid)) { box.hidden = true; this.#tutorialTarget(null); return; }
+    box.hidden = false;
+    $('#tut-count').textContent = `${t.steps.filter((x) => x.ok).length} / ${t.steps.length}`;
+    const list = $('#tut-list'); list.innerHTML = '';
+    for (const st of t.steps) {
+      const now = st === t.current;
+      list.append(el('li', { class: `${st.ok ? 'done' : ''} ${now ? 'now' : ''}` },
+        el('span', { class: 'mark' }, st.ok ? '\u2714' : '\u25a1'),
+        el('span', { class: 't' }, st.title),
+        el('span', { class: 'd' }, st.text),
+        el('span', { class: 'r' }, `보상 보석 ${st.gems}`)));
+    }
+    if (t.allDone && !t.bonusPaid) list.append(el('li', { class: 'now' }, el('span', { class: 'mark' }, '\u2605'), el('span', { class: 't' }, `수료 보상 보석 ${TUTORIAL_BONUS}`)));
+    this.#tutorialTarget(t.current?.target ?? null);
+  }
+  /** Blink the element the current step points at, so "어디를 눌러야 하지"가 남지 않는다. */
+  #tutorialTarget(sel) {
+    if (this.tutTarget === sel) return;
+    document.querySelector('.tut-point')?.classList.remove('tut-point');
+    this.tutTarget = sel;
+    if (sel) document.querySelector(sel)?.classList.add('tut-point');
+  }
   #refreshPrestigeHint() {
     const box = $('#prestige-hint'); if (!box) return;
     if (this.prestigeHintSnooze && Date.now() < this.prestigeHintSnooze) { box.hidden = true; return; }
@@ -1382,6 +1414,7 @@ export class UIManager {
     $('#btn-prestige').disabled = !info.eligible;
     $('#shares-top').textContent = info.shares;
     this.#refreshPrestigeHint();
+    this.#refreshTutorial();
   }
   #buildFormulaSheet() {
     // the 게임 공식 table was hidden from the backstage by request; keep the builder harmless if the element is absent
@@ -1417,6 +1450,7 @@ export class UIManager {
   applyStealth(on, silent = false) {
     document.body.classList.toggle('stealth', on);
     this.#applyStealthLabels(on);
+    if (on) this.game.markTutorial('stealth');
     $('#canvas-wrap').hidden = on; $('#stealth-view').hidden = !on;
     $('#status-ready').textContent = on ? '계산 중 (4개 프로세서): 37%' : '준비';
     $('#set-stealth').checked = on;

@@ -38,7 +38,8 @@ export function createInitialState(now = Date.now()) {
     dispatch: { heroIds: [], startedAt: 0, endsAt: 0, date: null, count: 0 },
     equipment: { items: [], nextId: 1 }, // 비품 가방: { id, slot, grade, lv } // 출장 in progress + today's count
     storyRead: {},
-    redeemed: {},          // 보석 코드 → 사용 시각 (한 저장당 1회)        // episode id -> true (first read rewarded) // 모집 포인트: +1 per row pulled, spend SPARK_COST on the current pickup card
+    redeemed: {},
+    tutorial: { done: {}, flags: {}, bonus: false, hidden: false }, // 신입 사원 교육 진행          // 보석 코드 → 사용 시각 (한 저장당 1회)        // episode id -> true (first read rewarded) // 모집 포인트: +1 per row pulled, spend SPARK_COST on the current pickup card
     team: { coffee: 0, payroll: 0, chairs: 0, sales: 0 },
     settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true, safeAdvance: true, cloud: { url: '', name: '' }, coachDone: false, prologueSeen: false, autoReclaim: true },
     daily: { date: localDateKey(now), quests: dailyQuestIds(localDateKey(now)), progress: {}, claimed: {}, loginClaimed: false, allClearClaimed: false, adsUsed: 0 },
@@ -75,6 +76,8 @@ export function migrate(raw) {
   s.dispatch = { ...fresh.dispatch, ...(raw.dispatch ?? {}) }; s.dispatch.heroIds = (s.dispatch.heroIds ?? []).filter((id) => s.heroes[id]?.owned);
   s.storyRead = { ...(raw.storyRead ?? {}) };
   s.redeemed = { ...(raw.redeemed ?? {}) };
+  s.tutorial = { done: {}, flags: {}, bonus: false, hidden: false, ...(raw.tutorial ?? {}) };
+  s.tutorial.done = { ...(raw.tutorial?.done ?? {}) }; s.tutorial.flags = { ...(raw.tutorial?.flags ?? {}) };
   s.team = { ...fresh.team, ...(raw.team ?? {}) };
   s.settings = { ...fresh.settings, ...(raw.settings ?? {}) };
   s.daily = { ...fresh.daily, ...(raw.daily ?? {}) };

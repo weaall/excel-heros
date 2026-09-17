@@ -26,6 +26,7 @@ import { PROFILES } from '../data/profiles.js';
 import { localDateKey } from './state.js';
 import { relativeGold, gemsForClear, gemDropAmount } from '../config/balance.js';
 import { checkCode } from '../data/codes.js';
+import { TUTORIAL, TUTORIAL_BONUS } from '../data/tutorial.js';
 import { SLOTS, SLOT_ORDER, itemPct, itemLabel, rollItem, itemBasePct } from '../data/equipment.js';
 import { sanitizeName } from './plausibility.js';
 import { migrate } from './state.js';
@@ -183,6 +184,35 @@ export class GameManager extends Emitter {
     if (heroes) this.log(`대기 사원 ${heroes}명 레벨 회수 → 골드 +${Math.round(gold).toLocaleString()}`, 'info');
     return { heroes, gold };
   }
+
+  // ------------------------------------------------------- 신입 사원 교육 --
+  /** Mark something the player did that no stat records (opening a card, pressing Esc). */
+  markTutorial(flag) {
+    const t = this.state.tutorial; if (!t || t.flags[flag]) return;
+    t.flags[flag] = true; this.checkTutorial();
+  }
+  /** Current checklist: each step with whether it is satisfied and whether its reward was paid. */
+  tutorialState() {
+    const t = this.state.tutorial ?? { done: {}, flags: {} };
+    const steps = TUTORIAL.map((st) => ({ ...st, ok: !!t.done[st.id] || st.check(this), paid: !!t.done[st.id] }));
+    const left = steps.filter((st) => !st.ok);
+    return { steps, current: left[0] ?? null, allDone: left.length === 0, bonusPaid: !!t.bonus, hidden: !!t.hidden };
+  }
+  /** Pay out any step the player has now satisfied (and the completion bonus). Safe to call often. */
+  checkTutorial() {
+    const t = this.state.tutorial; if (!t) return 0;
+    let gems = 0;
+    for (const st of TUTORIAL) {
+      if (t.done[st.id] || !st.check(this)) continue;
+      t.done[st.id] = true; gems += st.gems;
+      this.log(`교육 완료: ${st.title} (+보석 ${st.gems})`, 'info');
+      this.emit('toast', `신입 교육 「${st.title}」 완료 — 보석 +${st.gems}`);
+    }
+    if (!t.bonus && TUTORIAL.every((st) => t.done[st.id])) { t.bonus = true; gems += TUTORIAL_BONUS; this.log(`신입 사원 교육 수료 (+보석 ${TUTORIAL_BONUS})`, 'stage'); this.emit('toast', `신입 사원 교육 수료 — 보석 +${TUTORIAL_BONUS}`); }
+    if (gems) { this.state.gems += gems; this.emit('gems'); this.emit('tutorial'); this.persist(); }
+    return gems;
+  }
+  hideTutorial(v = true) { if (this.state.tutorial) { this.state.tutorial.hidden = !!v; this.emit('tutorial'); this.persist(); } }
 
   /** 도감 보너스: owned heroes and their stars buff party ATK and gold income. */
   collection() {
@@ -1097,6 +1127,8 @@ export class GameManager extends Emitter {
       this.historyTimer = 0; this.emit('history');
     }
     if (this.state.settings.autoUpgrade) { this.autoTimer += dt; if (this.autoTimer >= BALANCE.AUTO_UPGRADE_INTERVAL) { this.autoTimer = 0; this.upgradeCheapestLoop(50); } }
+    this.tutorialTimer = (this.tutorialTimer ?? 0) + dt;
+    if (this.tutorialTimer >= 2) { this.tutorialTimer = 0; if (!this.state.tutorial?.bonus) this.checkTutorial(); }
     this.saveTimer += dt; this.dailyTimer += dt; this.cloud?.tick(dt);
     if (this.dailyTimer >= 60) { this.dailyTimer = 0; if (Quests.ensureDaily(this.state, now)) { this.log('새로운 업무일이 시작되었습니다', 'info'); this.emit('quests'); } }
     if (this.saveTimer >= BALANCE.SAVE_INTERVAL_MS / 1000) { this.saveTimer = 0; this.persist(); }

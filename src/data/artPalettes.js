@@ -124,9 +124,8 @@ export const ART_PALETTES = {
     "W": "#e3b6b3"
   },
   "founder": {
-    "H": "#fcde8b",
-    "B": "#2d3752",
-    "W": "#fee6dd"
+    "B": "#516094",
+    "W": "#d7a0a2"
   },
   "intern_seo": {
     "B": "#597fbd",
@@ -234,9 +233,8 @@ export const ART_PALETTES = {
     "W": "#945f5d"
   },
   "cdo": {
-    "H": "#748f99",
-    "B": "#485169",
-    "W": "#4f5770"
+    "B": "#282d43",
+    "W": "#fdf3f0"
   },
   "cco": {
     "H": "#ec99a4",

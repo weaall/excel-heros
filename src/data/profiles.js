@@ -56,6 +56,6 @@ export const PROFILES = {
   union_chief: { nick: '철벽 위원장',      dept: '노동조합',      gender: 'M', bio: '단체 협약 한 장으로 회사를 지킨다. 목소리가 크지만 손은 따뜻하다.', line: '오늘도 정시 퇴근을 위해!', ult: '단체 협약 발동. 아무도 다치지 않습니다.' },
   hacker:      { nick: '제로데이',         dept: '보안연구소',    gender: 'F', bio: '검은 후드에 형광 헤드셋. 취약점을 찾는 속도가 커피 식는 속도보다 빠르다.', line: '패치 전에 끝낼게.', ult: '제로데이. 이미 들어와 있었어.' },
   chairwoman:  { nick: '이사장',           dept: '이사회',       gender: 'F', bio: '은발의 이사장. 회장 옆에서 40년, 이제 회사를 지키는 방패.', line: '결정은 이사회가 합니다.', ult: '이사회 결의, 전원 정지!' },
-  founder:     { nick: '창업자',           dept: '이사회',       gender: 'M', bio: '차고에서 시작해 회사를 만든 사람. 코드와 치명타로 말한다.', line: '처음엔 컴퓨터 한 대였죠.', ult: '피벗! 다시 시작이다!' },
+  founder:     { nick: '창업자',           dept: '이사회',       gender: 'F', bio: '차고에서 시작해 회사를 만든 사람. 코드와 치명타로 말한다.', line: '처음엔 컴퓨터 한 대였죠.', ult: '피벗! 다시 시작이다!' },
 };
 export const profileOf = (id) => PROFILES[id] ?? null;

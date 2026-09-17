@@ -11,6 +11,7 @@ const run = (g, seconds, step = 0.05) => { for (let t = 0; t < seconds; t += ste
 
 test('a treasure chest never attacks and drops cards + gems when opened', () => {
   const s = createInitialState(); s.heroes[MAIN_ID].level = 15; s.challenging = false;
+  s.tutorial.bonus = true; // 교육 보상이 보석 합계에 끼어들지 않게 (교육은 tutorial.test.js에서 검증)
   const g = new GameManager({ state: s, save: memSave() });
   run(g, 1.5); // let the first wave spawn
   const chest = g.entities.spawnChest(false, 0);
