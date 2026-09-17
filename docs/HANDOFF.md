@@ -58,13 +58,15 @@ Excel 문서로 위장한 방치형 픽셀 RPG + 가챠. **55명 영웅(D~S) + �
 - 메인_전투가 한 화면에 들어가게 고정(6-69): 로그 줄 수·행 번호를 남는 높이에서 계산. 한계 돌파 가능 표시(6-70): 조각 칸 조건부 서식 + 카드 `★↑` 배지 + 시트 머리 카운트.
 
 ## 5. 남은 일 (우선순위 순)
-1. **창업자 카드의 금색 액자**: 여성으로 바꾸고 중앙 구도까지 왔는데, 모델이 `gold filigree`를 **금색 액자**로 읽어 카드에 테두리를 둘렀다. 프롬프트는 이미 `thin gold embroidery on the collar and cuffs` + 네거티브 `picture frame, ornate frame, gold frame, border`로 고쳐 두었으니 **ZeroGPU 쿼터가 차면 `node scripts/genCardsHF.mjs --force founder` 한 번**이면 된다.
-2. **애드센스 승인 후**: `EXCEL_HEROES_ADS.publisherId` 설정, 노출 빈도 조정, ads.txt 확인.
-3. **HF 토큰 재발급**(사용자 작업) 후 `.hf_tokens` 갱신. 채팅에 노출된 토큰들은 여전히 재발급 권고 상태.
-4. **주인공 스킨 일러**: `--skin`은 기본적으로 HEROES만. 메인 직급 11개의 스킨 일러(22장) 미생성.
-5. **보스 스킬 체감 검증**: volley 0.6×3, slow 0.7/4s, throw 1.4× — 시뮬만 돌렸고 실제 플레이 체감은 미검증.
-6. **라인 몬스터 도트 2차 정리**: 26종 모두 서로 다른 생물이긴 하나, Tiny Creatures 팩에서 온 몇몇(야근 닭·야근 고양이·버그 쥐·피드백 뱀)은 갈색 덩어리로 읽힌다. 팩 인덱스 교체 또는 손그림 맵 추가로 해결 가능(`src/data/monsterArt.js`의 `MONSTER_MAPS`에 넣으면 팩보다 우선).
-7. 열린 질문(BALANCE 8장): 부장 트랙 "전직" 기능 필요 여부, 순위표 노출 정책 등.
+1. **애드센스 승인 후**: `EXCEL_HEROES_ADS.publisherId` 설정, 노출 빈도 조정, ads.txt 확인.
+2. **HF 토큰 재발급**(사용자 작업) 후 `.hf_tokens` 갱신. 채팅에 노출된 토큰들은 재발급 권고 상태.
+3. **주인공 스킨 일러**: `--skin` 은 기본적으로 HEROES만. 메인 직급 11개의 스킨 일러(22장) 미생성.
+4. **보스 스킬 체감 검증**: volley 0.6×3, slow 0.7/4s, throw 1.4× — 시뮬만 돌렸고 실제 플레이 체감은 미검증.
+5. **스카우트 수치 재검토**: 6-76에서 근거를 바꿨다(잉여 배수구 → 벽에 걸린 플레이어의 우회로). 하루 3회·상한 비용의 35%가 그 성격에 맞는지는 실플레이로 봐야 한다.
+6. 열린 질문(BALANCE 8장): 부장 트랙 "전직" 기능 필요 여부, 순위표 노출 정책 등.
+
+### 밸런스 시뮬레이션을 돌릴 때 (6-76의 교훈)
+`scratchpad` 시뮬로 결론을 내기 전에 **플레이어가 누르는 걸 전부 넣었는지** 확인한다. 최소 넷: 10연 · ★한계 돌파 · **주인공 승진(`promoteMain`)** · **회사 이전(`prestige`)**. 하나만 빠져도 결론의 부호가 바뀐다 — 실제로 "골드가 남아돈다"가 "골드가 모자란다"로 뒤집혔다.
 
 ## 6. 검증 루틴
 - 코드: `node --test` → 브라우저 `http://localhost:8080/?guest=1&v=<n>`(dev 서버 `node scripts/serve.js`)에서 `window.EH.game / EH.ui`로 상태 조작해 확인(`g.state.cards=5000; g.state.maxCleared=100; g.promoteMain('staff')`, `EH.ui.openDetail('ceo')`, 보스는 `g.state.stage=9; g.state.maxCleared=9; g.startChallenge()`).
