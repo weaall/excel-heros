@@ -7,6 +7,12 @@ export const MONSTER_TYPES = [
   { id: 'merged',    shape: 'cube',      name: '병합된 셀',     face: { eyes: 'sleepy', mouth: 'flat' } },
   { id: 'ref',       shape: 'diamond',   name: '#REF! 오류',    face: { eyes: 'angry',  mouth: 'teeth' } },
   { id: 'virus',     shape: 'spike',     name: '매크로 바이러스', face: { eyes: 'one',   mouth: 'zigzag' } },
+  // 사무기기가 그대로 괴물이 된 종류 — 던전 생물보다 이 게임에 맞고, 훨씬 귀엽다 (손그림 MONSTER_MAPS)
+  { id: 'copier',    shape: 'cube',  name: '복사기 괴물',   face: { eyes: 'round', mouth: 'o' } },
+  { id: 'shredder',  shape: 'cube',  name: '문서 파쇄기',   face: { eyes: 'angry', mouth: 'teeth' } },
+  { id: 'ceo_chair', shape: 'blob',  name: '사장님 의자',   face: { eyes: 'sleepy', mouth: 'flat' } },
+  { id: 'slide',     shape: 'sheet', name: '발표 자료',     face: { eyes: 'round', mouth: 'teeth' } },
+  { id: 'stapler',   shape: 'cube',  name: '스테이플러',    face: { eyes: 'angry', mouth: 'zigzag' } },
   { id: 'ghost',     shape: 'ghost',     name: '유령 참조',     face: { eyes: 'dot',    mouth: 'o' } },
   { id: 'sheet',     shape: 'sheet',     name: '손상된 시트',   face: { eyes: 'angry',  mouth: 'zigzag' } },
   { id: 'chart',     shape: 'chart',     name: '폭주 차트',     face: { eyes: 'round',  mouth: 'teeth' } },

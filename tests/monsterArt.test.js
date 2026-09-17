@@ -62,3 +62,21 @@ test('no two monster types (or bosses) share the same creature sprite', async ()
   }
   assert.ok(seen.size >= 25, `고유 그림이 너무 적다 (${seen.size})`);
 });
+
+// 사무기기 몬스터는 이 게임의 컨셉 그 자체라 손그림(MONSTER_MAPS)으로만 존재한다 — 팩에 사무 가구가 없다.
+// 그래서 팩 매핑이 실수로 생기면 손그림이 조용히 덮인다(packMonsterFrame 이 MONSTER_MAPS 보다 먼저다).
+test('office-equipment monsters keep their hand-pixelled art and show up early', async () => {
+  const { MONSTER_TYPES, stagePool } = await import('../src/data/monsters.js');
+  const { MONSTER_MAP } = await import('../src/data/packSprites.js');
+  const OFFICE = ['copier', 'shredder', 'ceo_chair', 'slide', 'stapler'];
+  for (const id of OFFICE) {
+    assert.ok(MONSTER_TYPES.some((t) => t.id === id), `${id} 가 몬스터 목록에 없다`);
+    assert.ok(MONSTER_MAPS[id], `${id}: 손그림이 없다`);
+    assert.equal(MONSTER_MAP[id], undefined, `${id}: 팩 매핑이 있으면 손그림이 덮인다`);
+    assert.ok(MONSTER_ACCENTS[id], `${id}: 강조색이 없다`);
+  }
+  // 가장 컨셉에 맞는 몬스터가 후반에만 나오면 대부분 못 본다 — 초반 다섯 페이즈 안에 전부 등장해야 한다
+  const early = new Set();
+  for (let s = 1; s <= 50; s += 10) for (const t of stagePool(s)) early.add(t.id.split(':')[0]);
+  for (const id of OFFICE) assert.ok(early.has(id), `${id} 가 초반 5페이즈에 안 나온다`);
+});
