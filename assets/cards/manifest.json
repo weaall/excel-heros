@@ -1,8 +1,14 @@
 {
-  "version": 1789685635,
+  "version": 1789686557,
   "cards": {
-    "staff_park": "staff_park.png",
-    "parttime": "parttime.png",
+    "staff_park": {
+      "file": "staff_park.png",
+      "thumb": "thumb/staff_park.webp"
+    },
+    "parttime": {
+      "file": "parttime.png",
+      "thumb": "thumb/parttime.webp"
+    },
     "guard": {
       "file": "guard.png",
       "thumb": "thumb/guard.webp"
@@ -72,7 +78,10 @@
       "file": "chairman.png",
       "thumb": "thumb/chairman.webp"
     },
-    "helpdesk": "helpdesk.png",
+    "helpdesk": {
+      "file": "helpdesk.png",
+      "thumb": "thumb/helpdesk.webp"
+    },
     "cleaner": {
       "file": "cleaner.png",
       "thumb": "thumb/cleaner.webp"
