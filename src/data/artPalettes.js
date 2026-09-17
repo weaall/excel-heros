@@ -78,8 +78,9 @@ export const ART_PALETTES = {
     "B": "#8475b0"
   },
   "coo": {
-    "B": "#827153",
-    "W": "#827154"
+    "H": "#96b0d3",
+    "B": "#1050a1",
+    "W": "#f8dfbf"
   },
   "ceo": {
     "B": "#7a6076",
@@ -114,9 +115,9 @@ export const ART_PALETTES = {
     "W": "#fa5a54"
   },
   "cmo": {
-    "H": "#e27270",
-    "B": "#da6f6b",
-    "W": "#f9edea"
+    "H": "#f69189",
+    "B": "#0f2648",
+    "W": "#e3b6b3"
   },
   "founder": {
     "B": "#184177",

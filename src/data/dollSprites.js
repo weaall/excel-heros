@@ -31,7 +31,7 @@ export const DOLLS = {
   welfare:    { hair: 'bob', hairColor: '#e63946', skin: 'fair', outfit: 'suit', top: '#2f6fd6', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#7f8c8d', acc: ['flower:#ffd166', 'scarf:#ffb7a1'], halo: '#ffe1e6' },
   cfo:        { hair: 'short', hairColor: '#e8e8e8', skin: 'light', outfit: 'suit', top: '#2a5fc7', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#2a5fc7', acc: ['glasses', 'tie:#d4a017'], halo: '#f1f1f1' },
   cto:        { hair: 'short', hairColor: '#111111', skin: 'light', outfit: 'shirt', top: '#3b6fd8', shirt: '#3b6fd8', bottom: 'pants', bottomColor: '#1f2a44', acc: ['sunglasses'], halo: '#8fb8ff' },
-  coo:        { hair: 'short', hairColor: '#aeb6bf', skin: 'fair', outfit: 'suit', top: '#1f2a44', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#1f2a44', acc: ['badge'], halo: '#dfe9f7' },
+  coo:        { hair: 'bob', hairColor: '#8fd3f4', skin: 'fair', outfit: 'suit', top: '#2456c8', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#1f2a44', acc: ['badge', 'trim:#d4a017'], halo: '#dfe9f7' }, // art: light-blue bob, royal-blue suit with gold
   ceo:        { hair: 'long', hairColor: '#f2f2f2', skin: 'fair', outfit: 'suit', top: '#111111', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#111111', acc: ['sunglasses', 'trim:#d4a017'], halo: '#ffe9a8' },
   chairman:   { hair: 'short', hairColor: '#d0d0d0', skin: 'light', outfit: 'suit', top: '#151515', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#151515', acc: ['beard', 'crown', 'trim:#d4a017'], halo: '#ffd76a' },
   helpdesk:   { hair: 'bob', hairColor: '#152238', skin: 'fair', outfit: 'suit', top: '#2f7fd6', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#2f7fd6', acc: ['headset'], halo: '#d6e9ff' },
