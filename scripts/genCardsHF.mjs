@@ -66,6 +66,11 @@ const OUTFIT_BY_ID = {
   chro: 'elegant mauve suit dress with pearl earrings and a gold brooch, long wavy hair, warm reassuring smile, holding a folder to her chest, soft petals drifting', chairwoman: 'black formal gown-style suit, silver hair, small crown, cane',
   staff_park: 'white shirt sleeves rolled, loosened tie, lanyard', guard: 'navy security uniform, cap, radio', courier: 'orange delivery uniform, cap, gloves, parcel', vlookup: 'vest over shirt, glasses, pen',
   pivot: 'suspenders, shirt, bald, beard', macro: 'dark hoodie, headphones, laptop', audit_han: 'trench coat, sunglasses, magnifying glass', dev_lead: 'flannel shirt, headset, coffee cup', ga_lead: 'grey work vest, gloves, boxes',
+  cro: 'charcoal double-breasted suit with a gold pin, dark hair in a neat bun, thin glasses, calm unshakeable gaze, faint red warning glyphs deflected around her, protective aura',
+  cpo: 'teal shirt with rolled sleeves, headset around neck, short brown hair, holding a tablet showing a product roadmap, floating connected nodes of light, focused smile',
+  ir_lead: 'deep purple three-piece suit, swept black hair, gold tie pin, holding a leather ledger, floating golden charts rising behind him, composed confident smile',
+  labor_atty: 'ivory pantsuit over a soft blouse, long brown wavy hair, thin glasses, holding a document folder to her chest, warm reassuring smile, soft white light',
+  bd_lead: 'orange blazer over a white shirt, spiked black hair, wristwatch, three business cards fanned between his fingers, energetic grin, motion lines',
   cfo: 'deep purple three-piece suit with a gold pocket watch chain, silver hair swept back, thin gold-rimmed glasses, sharp calculating smile, floating golden numbers and charts around him', cto: 'black turtleneck under a tailored charcoal blazer, spiky black hair, tinted glasses pushed up on his head, confident smirk, holographic cyan code panels floating around him', chairman: 'golden formal suit, cane, crown, beard', founder: 'hoodie under blazer, sneakers, glasses', sales_kang: 'sharp navy suit, red tie, briefcase',
   // main hero: the SAME young man in every job (short black hair, light skin, clean-shaven) — only the outfit climbs with the tier
   intern: 'young man, short black hair, white shirt, lanyard, files', staff: 'young man, short black hair, light blue shirt, tie, phone',

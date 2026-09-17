@@ -87,8 +87,11 @@ test('오늘의 픽업: deterministic per date, rotates daily, featured card lan
   const a = pickupFor('2026-09-15'), b = pickupFor('2026-09-15'), c = pickupFor('2026-09-18');
   assert.deepEqual(a, b); assert.equal(HERO_BY_ID[a.S].grade, 'S'); assert.equal(HERO_BY_ID[a.A].grade, 'A');
   assert.notEqual(a.S, c.S, 'S pickup changes from one 3-day banner to the next');
-  const days = new Set(); for (let d = 1; d <= 28; d++) days.add(pickupFor(`2026-10-${String(d).padStart(2, '0')}`).A); // 28 days ≥ 6 banners × 3 days
-  assert.equal(days.size, heroesOfGrade('A').length, 'every A card gets a day within a rotation');
+  // the window has to grow with the roster, or adding an A card silently breaks the guarantee this asserts
+  const { PICKUP_DAYS } = await import('../src/data/pickup.js');
+  const need = heroesOfGrade('A').length, days = new Set();
+  for (let d = 0; d < (need + 2) * PICKUP_DAYS; d++) { const t = new Date(Date.UTC(2026, 9, 1) + d * 86400000); days.add(pickupFor(t.toISOString().slice(0, 10)).A); }
+  assert.equal(days.size, need, 'every A card gets a day within a rotation');
   const rng = createRng(3); let featured = 0, sRolls = 0;
   for (let i = 0; i < 4000; i++) { const r = pullOnce(initialPity(), {}, rng, 'S', a); sRolls++; if (r.heroId === a.S) featured++; if (r.pickup) assert.equal(r.heroId, a.S); }
   const share = featured / sRolls, uniform = 1 / heroesOfGrade('S').length;

@@ -50,6 +50,7 @@ export const HERO_MAP = {
   staff_park: { base: 'elf_m', hue: 160 }, parttime: { base: 'elf_f', hue: 0 }, guard: { base: 'knight_m', hue: 200 }, barista: { base: 'wizzard_f', hue: 120 },
   courier: { base: 'dwarf_m', hue: 40, weapon: 'axe' }, contract: { base: 'elf_f', hue: 200 }, vlookup: { base: 'wizzard_m', hue: 160, weapon: 'red_staff' }, pivot: { base: 'knight_m', hue: 90 },
   macro: { base: 'lizard_m', hue: 0 }, hr_jung: { base: 'wizzard_f', hue: 0 }, audit_han: { base: 'elf_m', hue: 300, weapon: 'katana' }, acct_lead: { base: 'wizzard_f', hue: 40, weapon: 'red_staff' },
+  cro: { base: 'knight_f', hue: 200 }, cpo: { base: 'elf_m', hue: 150 }, ir_lead: { base: 'wizzard_m', hue: 280 }, labor_atty: { base: 'elf_f', hue: 20 }, bd_lead: { base: 'dwarf_m', hue: 30, weapon: 'katana' },
   dev_lead: { base: 'lizard_f', hue: 200 }, ga_lead: { base: 'knight_m', hue: 260, weapon: 'big_hammer' }, welfare: { base: 'elf_f', hue: 300 }, cfo: { base: 'wizzard_m', hue: 270, weapon: 'red_staff' },
   cto: { base: 'lizard_m', hue: 300, weapon: 'lavish_sword' }, coo: { base: 'knight_f', hue: 200 }, ceo: { base: 'wizzard_f', hue: 45 }, chairman: { base: 'knight_m', hue: 45, weapon: 'golden_sword' },
   helpdesk: { base: 'elf_f', hue: 240 }, cleaner: { base: 'dwarf_f', hue: 0 }, sales_kang: { base: 'dwarf_m', hue: 320 }, legal_yoon: { base: 'knight_f', hue: 250 },

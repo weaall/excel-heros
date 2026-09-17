@@ -56,6 +56,11 @@ export const DOLLS = {
   translator_ji: { hair: 'long', hairColor: '#a9c9e8', skin: 'fair', outfit: 'coat', top: '#d8c3a5', shirt: '#ffffff', bottom: 'skirt', bottomColor: '#2f3640', acc: [], halo: '#e6f2ff' },
   secretary_yun: { hair: 'bun', hairColor: '#151515', skin: 'fair', outfit: 'suit', top: '#2f3640', shirt: '#f5f6fa', bottom: 'skirt', bottomColor: '#151515', acc: ['trim:#d4a017'], halo: '#f4e6b0' },
   logistics_bae: { hair: 'short', hairColor: '#3b2a1a', skin: 'tan', outfit: 'vest', top: '#7f8c8d', shirt: '#f39c12', bottom: 'pants', bottomColor: '#2f3640', acc: ['badge'], halo: '#ffe9c2' },
+  cro:        { hair: 'bun', hairColor: '#2b2b3a', skin: 'fair', outfit: 'suit', top: '#37474f', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#263238', acc: ['glasses', 'badge', 'trim:#ffd54f'], halo: '#dfe6ee' },
+  cpo:        { hair: 'short', hairColor: '#3d2b1f', skin: 'light', outfit: 'shirt', top: '#00897b', shirt: '#00897b', bottom: 'pants', bottomColor: '#00695c', acc: ['headset'], halo: '#b2dfdb' },
+  ir_lead:    { hair: 'side', hairColor: '#1a1a1a', skin: 'light', outfit: 'suit', top: '#4a148c', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#311b92', acc: ['tie:#e1bee7', 'trim:#d4a017'], halo: '#e1bee7' },
+  labor_atty: { hair: 'long', hairColor: '#4e342e', skin: 'fair', outfit: 'suit', top: '#eceff1', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#90a4ae', acc: ['glasses'], halo: '#ffd9cc' },
+  bd_lead:    { hair: 'spiky', hairColor: '#212121', skin: 'light', outfit: 'suit', top: '#ef6c00', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#e65100', acc: ['tie:#ffe0b2'], halo: '#ffe0b2' },
   cdo:           { hair: 'long', hairColor: '#151515', skin: 'fair', outfit: 'suit', top: '#1e272e', shirt: '#00d2ff', bottom: 'pants', bottomColor: '#1e272e', acc: ['trim:#00d2ff'], halo: '#9fe9ff' },
   cco:           { hair: 'bob', hairColor: '#f4a9c8', skin: 'fair', outfit: 'suit', top: '#2f3640', shirt: '#ffffff', bottom: 'skirt', bottomColor: '#2f3640', acc: ['badge'], halo: '#ff9fb0' }, // art: pink bob, dark suit, coral halo
   chief_of_staff:{ hair: 'ponytail', hairColor: '#f3e6b8', skin: 'tan', outfit: 'suit', top: '#151515', shirt: '#f5f6fa', bottom: 'pants', bottomColor: '#151515', acc: ['tie:#151515', 'trim:#d4a017'], halo: '#ffe27a' }, // art: blond ponytail, black-gold suit, golden light

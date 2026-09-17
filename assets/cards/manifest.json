@@ -1,5 +1,5 @@
 {
-  "version": 1789608016,
+  "version": 1789622596,
   "cards": {
     "staff_park": {
       "file": "staff_park.png",
@@ -184,6 +184,26 @@
     "logistics_bae": {
       "file": "logistics_bae.png",
       "thumb": "thumb/logistics_bae.webp"
+    },
+    "cro": {
+      "file": "cro.png",
+      "thumb": "thumb/cro.webp"
+    },
+    "cpo": {
+      "file": "cpo.png",
+      "thumb": "thumb/cpo.webp"
+    },
+    "ir_lead": {
+      "file": "ir_lead.png",
+      "thumb": "thumb/ir_lead.webp"
+    },
+    "labor_atty": {
+      "file": "labor_atty.png",
+      "thumb": "thumb/labor_atty.webp"
+    },
+    "bd_lead": {
+      "file": "bd_lead.png",
+      "thumb": "thumb/bd_lead.webp"
     },
     "cdo": {
       "file": "cdo.png",
@@ -612,6 +632,46 @@
     "logistics_bae__formal": {
       "file": "logistics_bae__formal.png",
       "thumb": "thumb/logistics_bae__formal.webp"
+    },
+    "cro__casual": {
+      "file": "cro__casual.png",
+      "thumb": "thumb/cro__casual.webp"
+    },
+    "cro__formal": {
+      "file": "cro__formal.png",
+      "thumb": "thumb/cro__formal.webp"
+    },
+    "cpo__casual": {
+      "file": "cpo__casual.png",
+      "thumb": "thumb/cpo__casual.webp"
+    },
+    "cpo__formal": {
+      "file": "cpo__formal.png",
+      "thumb": "thumb/cpo__formal.webp"
+    },
+    "ir_lead__casual": {
+      "file": "ir_lead__casual.png",
+      "thumb": "thumb/ir_lead__casual.webp"
+    },
+    "ir_lead__formal": {
+      "file": "ir_lead__formal.png",
+      "thumb": "thumb/ir_lead__formal.webp"
+    },
+    "labor_atty__casual": {
+      "file": "labor_atty__casual.png",
+      "thumb": "thumb/labor_atty__casual.webp"
+    },
+    "labor_atty__formal": {
+      "file": "labor_atty__formal.png",
+      "thumb": "thumb/labor_atty__formal.webp"
+    },
+    "bd_lead__casual": {
+      "file": "bd_lead__casual.png",
+      "thumb": "thumb/bd_lead__casual.webp"
+    },
+    "bd_lead__formal": {
+      "file": "bd_lead__formal.png",
+      "thumb": "thumb/bd_lead__formal.webp"
     },
     "cdo__casual": {
       "file": "cdo__casual.png",

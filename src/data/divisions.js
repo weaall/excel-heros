@@ -22,6 +22,7 @@ const DEPT_DIVISION = {
   '대표이사실': 'exec', '회장실': 'exec', '이사회': 'exec', '전략기획실': 'exec',
   'AI연구소': 'tech', '보안연구소': 'tech', '노동조합': 'people',
   '해외사업팀': 'market', '고객경험본부': 'market', '물류팀': 'ops', '데이터본부': 'tech',
+  '리스크관리실': 'finance', 'IR팀': 'finance', '노무팀': 'people', '제품본부': 'tech', '사업개발팀': 'market',
 };
 
 /** Division id for a hero id ('main' for the main hero). Unknown departments fall back to 경영지원. */
