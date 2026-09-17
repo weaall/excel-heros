@@ -1,7 +1,7 @@
 // Global game state, economy, stage flow and player actions. Emits events for the UI.
 import {
   BALANCE, upgradeCost, baseGold, bossGold, isBossStage, stageLabel, heroATK, heroHP,
-  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, enhanceCap, levelCap, offlineGold, prestigeShares,
+  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, enhanceCap, levelCap, scoutCost, offlineGold, prestigeShares,
 } from '../config/balance.js';
 import { HERO_BY_ID, GRADES, SKILLS, TRAITS, heroBaseStats, MAIN_ID, MAIN_JOBS } from '../data/heroes.js';
 import { pullOnce, promoteCost } from './GachaManager.js';
@@ -227,6 +227,36 @@ export class GameManager extends Emitter {
     return gems;
   }
   hideTutorial(v = true) { if (this.state.tutorial) { this.state.tutorial.hidden = !!v; this.emit('tutorial'); this.persist(); } }
+
+  // ------------------------------------------------------ 경력직 스카우트 --
+  /**
+   * 골드로 조각 1개를 산다. ★ 사이에서 골드가 갈 곳이 없어 숫자만 불어나던 문제의 해법이고,
+   * 하루 한도가 있어서 ★의 주 경로는 여전히 가챠다.
+   */
+  scoutInfo(id) {
+    Quests.ensureDaily(this.state);
+    const v = this.heroView(id);
+    const used = this.state.daily.scoutUsed | 0, left = Math.max(0, BALANCE.SCOUT.perDay - used);
+    const cost = v.isMain || !v.entry.owned ? null : scoutCost(v.def.grade, v.star, v.levelCap);
+    return {
+      cost, left, perDay: BALANCE.SCOUT.perDay,
+      can: cost !== null && left > 0 && this.state.gold >= cost && v.promoteCost !== null,
+      why: v.isMain ? '주인공은 조각을 쓰지 않습니다' : !v.entry.owned ? '보유하지 않은 카드입니다'
+        : v.promoteCost === null ? '이미 ★ 최대입니다'
+        : left <= 0 ? `오늘 스카우트를 다 썼습니다 (하루 ${BALANCE.SCOUT.perDay}회)`
+        : this.state.gold < cost ? '골드가 모자랍니다' : '',
+    };
+  }
+  /** Buy one shard with gold. Returns the shard count after, or null when it was not allowed. */
+  scoutShard(id) {
+    const info = this.scoutInfo(id); if (!info.can) return null;
+    this.state.gold -= info.cost;
+    const e = this.state.heroes[id]; e.shards += 1;
+    this.state.daily.scoutUsed = (this.state.daily.scoutUsed | 0) + 1;
+    this.log(`경력직 스카우트: ${this.heroDef(id).name} 조각 +1 (골드 -${Math.round(info.cost).toLocaleString()})`, 'gacha');
+    this.emit('gold'); this.emit('roster'); this.persist();
+    return e.shards;
+  }
 
   /** 도감 보너스: owned heroes and their stars buff party ATK and gold income. */
   collection() {

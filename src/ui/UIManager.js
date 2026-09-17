@@ -855,8 +855,12 @@ export class UIManager {
       if (!v.isMain) table.append(row('조각', v.promoteCost !== null ? `${e.shards} / ${v.promoteCost}` : `${e.shards} (최대 ★)`,
         el('div', { class: 'ctl-group' },
           sb(`★ 한계 돌파`, () => this.#promoteWithDialog(id), v.canPromote ? 'primary' : '', !v.canPromote, v.promoteCost !== null ? `조각 ${v.promoteCost}개로 ★${v.star + 1}` : '최대 ★'),
-          sb(`조각→카드`, () => g.convertShards(id), '', e.shards <= 0, `조각 ${e.shards}개 → 강화 카드 ${e.shards * v.shardCardValue}장`)),
-        v.promoteCost !== null ? `다음 한계 돌파까지 조각 ${Math.max(0, v.promoteCost - e.shards)}개 · 같은 카드가 또 나오면 조각 5~10` : '★5 · 각성으로 계속 성장'));
+          sb(`조각→카드`, () => g.convertShards(id), '', e.shards <= 0, `조각 ${e.shards}개 → 강화 카드 ${e.shards * v.shardCardValue}장`),
+          (() => { const sc = g.scoutInfo(id); return sb(sc.cost !== null ? `스카우트 (골드 ${fmt(sc.cost)})` : '스카우트', () => {
+            if (g.scoutShard(id) === null) this.toast(g.scoutInfo(id).why || '지금은 스카우트할 수 없습니다');
+            else this.toast(`경력직 스카우트 — 조각 +1 (오늘 ${g.scoutInfo(id).left}회 남음)`);
+          }, sc.can ? 'primary' : '', !sc.can, `골드로 조각 1개를 삽니다 · 오늘 ${sc.left} / ${sc.perDay}회 남음${sc.why ? ' — ' + sc.why : ''}`); })()),
+        v.promoteCost !== null ? `다음 한계 돌파까지 조각 ${Math.max(0, v.promoteCost - e.shards)}개 · 같은 카드가 또 나오면 조각 5~10 · 스카우트는 하루 ${BALANCE.SCOUT.perDay}회` : '★5 · 각성으로 계속 성장'));
       if (!v.isMain && v.star >= BALANCE.AWAKEN.star) table.append(row('각성', v.awakened ? '✦ 완료' : '가능',
         v.awakened ? null : sb(`✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, 'primary', !v.canAwaken),
         `ATK/HP +${Math.round(BALANCE.AWAKEN.atk * 100)}% · 특성 ×${BALANCE.AWAKEN.trait} · 스킬 ×${BALANCE.AWAKEN.skill} · 강화 한계 +${BALANCE.ENHANCE_CAP_AWAKEN}`));

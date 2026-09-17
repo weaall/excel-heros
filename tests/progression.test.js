@@ -163,3 +163,53 @@ test('stage modifiers: bosses have none, phases lay them out differently, and ev
     assert.ok(m.name && m.desc.length > 5, m.id);
   }
 });
+
+// ------------------------------------------------- 경력직 스카우트 (골드 소비처) --
+// ★로 레벨 상한을 잠근 뒤(6-66) ★ 사이에서 골드가 완전히 할 일을 잃었다. 스카우트는 그 잉여가 가는 곳이고,
+// 하루 한도가 ★의 주 경로를 가챠로 남긴다. 이 둘이 동시에 성립해야 의미가 있다.
+test('스카우트: gold buys a shard, the price scales with the star cap, and the daily limit holds', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { BALANCE, scoutCost, levelCap } = await import('../src/config/balance.js');
+  const { HEROES } = await import('../src/data/heroes.js');
+  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+  const hero = HEROES.find((h) => h.grade === 'A' && !g.isMain(h.id));
+  g.state.heroes[hero.id].owned = true; g.state.heroes[hero.id].star = 1; g.state.heroes[hero.id].shards = 0;
+  g.state.gold = 1e12; // 안전 정수 범위 안 (1e18 이면 뺄셈 끝자리가 부동소수점에 뭉개진다)
+
+  const info = g.scoutInfo(hero.id);
+  assert.equal(info.left, BALANCE.SCOUT.perDay);
+  assert.equal(info.cost, scoutCost('A', 1, levelCap(1)));
+  assert.equal(info.can, true);
+
+  const gold0 = g.state.gold;
+  assert.equal(g.scoutShard(hero.id), 1, '조각이 하나 늘어난다');
+  assert.equal(gold0 - g.state.gold, info.cost, '표시한 값만큼만 빠진다');
+
+  for (let i = 1; i < BALANCE.SCOUT.perDay; i++) assert.ok(g.scoutShard(hero.id));
+  assert.equal(g.scoutInfo(hero.id).left, 0);
+  assert.equal(g.scoutShard(hero.id), null, '하루 한도를 넘기면 안 된다 — 가챠가 ★의 주 경로로 남아야 한다');
+  assert.equal(g.state.heroes[hero.id].shards, BALANCE.SCOUT.perDay);
+
+  // 값은 ★이 오를수록 비싸진다(후반 골드를 따라간다)
+  const prices = [1, 2, 3, 4].map((st) => scoutCost('A', st, levelCap(st)));
+  for (let i = 1; i < prices.length; i++) assert.ok(prices[i] > prices[i - 1] * 10, `★${i + 1} 값이 충분히 오르지 않는다`);
+  // 등급이 높을수록 비싸다
+  assert.ok(scoutCost('S', 1, levelCap(1)) > scoutCost('D', 1, levelCap(1)));
+});
+
+test('스카우트: refuses the main hero, unowned cards and ★ MAX', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+  const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
+  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+  g.state.gold = 1e12;
+  assert.equal(g.scoutShard(MAIN_ID), null, '주인공은 조각을 쓰지 않는다');
+  const unowned = HEROES.find((h) => !g.state.heroes[h.id].owned && !g.isMain(h.id));
+  assert.equal(g.scoutShard(unowned.id), null, '미보유 카드는 스카우트 대상이 아니다');
+  const maxed = HEROES.find((h) => h.grade === 'B' && !g.isMain(h.id));
+  g.state.heroes[maxed.id].owned = true; g.state.heroes[maxed.id].star = BALANCE.MAX_STAR;
+  assert.equal(g.scoutShard(maxed.id), null, '★ 최대면 조각이 쓸모없다');
+  assert.equal(g.state.daily.scoutUsed | 0, 0, '거절된 시도는 한도를 쓰지 않는다');
+});
