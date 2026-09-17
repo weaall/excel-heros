@@ -36,16 +36,18 @@ const BG_BY_GRADE = { D: 'modern office background, window light', C: 'bright of
 /** Prologue panels (src/data/prologue.js). Landscape story art; the cast is incidental, the moment is the subject. */
 const SCENES = {
   deadline: '1girl, a tired office worker in a white blouse sitting at her desk late at night, chin resting on her hand, monitors full of spreadsheets around her, paper stacks, dark office, city lights through the window behind her, warm desk lamp, face fully visible',
-  meteor: '1boy, a young office worker in a white shirt standing at a tall office window at night, looking up in shock, a huge blazing meteor with a long burning trail falling across the night sky behind the glass, orange light on his face, face fully visible',
-  impact: '1girl, an office worker raising an arm to shield her face, blinding white explosion and expanding shockwave behind her, shattered glass and papers flying, red glowing cracks spreading through the air, dramatic, face fully visible',
-  errors: '1girl, an office worker stepping back in fear in a cracked city street at dawn, a huge monster made of glowing red error symbols and broken spreadsheet grid fragments looming over her, floating red exclamation marks, face fully visible',
+  meteor: '1boy, close up portrait of a young office worker in a white shirt, looking up with wide shocked eyes, his face lit orange from above, streaks of falling fire reflected in his glasses and in the dark office window behind him, night, face fully visible',
+  impact: '1girl, an office worker crouching behind an overturned desk with one arm raised to shield her face, papers and shattered glass flying past her, a white shockwave and orange fire rising from the street far behind the window, detailed office interior, face fully visible',
+  errors: '1girl, close up portrait of an office worker in a blouse, terrified expression with one hand over her mouth, red glowing error symbols and broken grid fragments reflected in her wide eyes and floating around her, dark street at dawn, red rim light, face fully visible',
   halo: '1boy, a young office worker in a white shirt looking up in wonder as a glowing golden halo ring forms above his head, soft golden light on his face, dust drifting in dawn light, ruined street behind him, upper body, face fully visible',
   awaken: '1boy, a young man in a white shirt and lanyard with a golden halo above his head, holding a glowing sword of light made from a keyboard, determined expression, golden energy aura, bright rim light, upper body, face fully visible',
   roster: '1boy, a young man with short black hair in a white shirt and lanyard, a golden halo above his head, holding a printed roster sheet with both hands, determined expression, bright office lobby with morning light behind him, upper body, face fully visible',
 };
-const SCENE_STYLE = 'blue archive style, halo, anime key visual, flat color, cel shading, clean lineart, anime coloring, vivid pastel colors, depth of field, cinematic composition, soft even front lighting, bright face, masterpiece, best quality, very aesthetic, absurdres';
+const SCENE_STYLE = 'blue archive style, anime key visual, flat color, cel shading, clean lineart, anime coloring, vivid pastel colors, depth of field, cinematic composition, soft even front lighting, bright face, masterpiece, best quality, very aesthetic, absurdres';
 const SCENE_NEG = 'lowres, bad anatomy, bad hands, extra digit, text, watermark, signature, username, worst quality, low quality, jpeg artifacts, 3d, realistic, photo, retro poster, woodblock print, monochrome, empty room, no people, faceless, back view, gore, blood, nsfw';
-export const scenePrompt = (id) => `${SCENES[id] ?? id}, ${SCENE_STYLE}`;
+const HALO_SCENES = new Set(['halo', 'awaken', 'roster']); // the ring only exists from the fifth panel on
+export const scenePrompt = (id) => `${SCENES[id] ?? id}, ${HALO_SCENES.has(id) ? 'halo, ' : ''}${SCENE_STYLE}`;
+export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo above head, glowing ring above head, ${SCENE_NEG}`);
 
 const NEG = 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, close-up, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, busy background, cluttered background, high contrast background, nsfw';
 const HAIR = { short: 'short hair', bob: 'bob cut', grey: 'grey hair', bun: 'hair bun', cap: 'baseball cap', side: 'swept bangs', bald: 'bald', spiky: 'spiked hair', long: 'long hair', curly: 'curly hair' };
@@ -195,7 +197,7 @@ if (isMain && process.argv.includes('--manifest')) {
     let soonestReset = Infinity; // ms until the first pool refills, across the pools tried in this rotation
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const buf = await callGenerate(text, seed + id.length, sceneMode ? { width: 1216, height: 832, neg: SCENE_NEG } : {});
+        const buf = await callGenerate(text, seed + id.length, sceneMode ? { width: 1216, height: 832, neg: sceneNeg(id) } : {});
         fs.writeFileSync(target, buf);
         if (!sceneMode) { manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n'); }
         console.log(`ok   ${id} ${(buf.length / 1024).toFixed(0)} KB  ${new Date().toLocaleTimeString()}`); ok++; break;
