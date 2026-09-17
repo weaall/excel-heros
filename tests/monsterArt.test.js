@@ -41,3 +41,21 @@ test('boss props stay inside the boss canvas', async () => {
     }
   }
 });
+
+// 이름과 그림이 어긋나면 도트를 아무리 잘 그려도 소용이 없다. 실제로 야근 닭이 초록 거북, 야근 고양이가 마른
+// 나무, 마감 토끼가 갈색 덩어리였다. 어긋남 자체는 눈으로 봐야 하지만, **두 몬스터가 같은 그림을 쓰는 것**은
+// 여기서 막을 수 있다 — 그러면 이름만 다른 같은 적이 된다.
+test('no two monster types (or bosses) share the same creature sprite', async () => {
+  const { MONSTER_MAP } = await import('../src/data/packSprites.js');
+  const { MONSTER_TYPES, BOSSES } = await import('../src/data/monsters.js');
+  const seen = new Map();
+  for (const def of [...MONSTER_TYPES, ...BOSSES]) {
+    const v = MONSTER_MAP[def.id];
+    if (v == null) continue; // 손그림(MONSTER_MAPS)으로 그리는 종류
+    const key = typeof v === 'string' ? 'pack:' + v : v.tiny != null ? 'tiny:' + v.tiny : null;
+    if (!key) continue;
+    assert.equal(seen.get(key), undefined, `${def.id} 와 ${seen.get(key)} 가 같은 그림(${key})을 쓴다`);
+    seen.set(key, def.id);
+  }
+  assert.ok(seen.size >= 25, `고유 그림이 너무 적다 (${seen.size})`);
+});
