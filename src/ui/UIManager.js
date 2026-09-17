@@ -61,6 +61,8 @@ export class UIManager {
 
   // ----------------------------------------------------------------- bind --
   /** Column letters across the whole sheet width and row numbers down its height (8 tall canvas rows, then 22px rows). */
+  /** 메인_전투의 행 번호 개수: 캔버스 8행 아래로 '들어가는 만큼만'. 고정 하한이 있으면 시트가 화면보다 길어진다. */
+  #homeRowCount(H) { return Math.max(4, Math.floor((H - 28 - GRID.rows * GRID.cellH) / 22)); }
   #buildGridHeaders() {
     const sheets = $('.sheets'); const W = sheets.clientWidth || 900, H = sheets.clientHeight || 640;
     const colCount = Math.max(GRID.cols, Math.ceil((W - 28) / GRID.cellW) + 1);
@@ -68,7 +70,7 @@ export class UIManager {
     const cols = $('#col-headers'), rows = $('#row-headers'); cols.innerHTML = ''; rows.innerHTML = '';
     for (let c = 0; c < colCount; c++) cols.append(el('span', {}, letters(c)));
     for (let r = 0; r < GRID.rows; r++) rows.append(el('span', { class: 'tall' }, String(r + 1)));
-    const small = Math.max(14, Math.ceil((H - 28 - GRID.rows * GRID.cellH) / 22) + 1);
+    const small = this.#homeRowCount(H);
     for (let r = 0; r < small; r++) rows.append(el('span', {}, String(GRID.rows + 1 + r)));
     // other sheets: same worksheet frame (letters + numbers) around their content
     for (const sec of document.querySelectorAll('.sheet:not(.ws)')) {
@@ -85,8 +87,10 @@ export class UIManager {
     const colCount = Math.max(GRID.cols, Math.ceil((W - 28) / GRID.cellW) + 1);
     const letters = (i) => (i < 26 ? String.fromCharCode(65 + i) : String.fromCharCode(64 + Math.floor(i / 26)) + String.fromCharCode(65 + (i % 26)));
     for (const wc of document.querySelectorAll('.ws-cols')) { const sel = [...wc.children].findIndex((s) => s.classList.contains('sel')); wc.innerHTML = ''; for (let c = 0; c < colCount; c++) wc.append(el('span', { class: c === sel ? 'sel' : '' }, letters(c))); }
-    const rows = $('#row-headers'); const need = GRID.rows + Math.max(14, Math.ceil((H - 28 - GRID.rows * GRID.cellH) / 22) + 1);
+    const rows = $('#row-headers'); const need = GRID.rows + this.#homeRowCount(H);
     while (rows.children.length < need) rows.append(el('span', {}, String(rows.children.length + 1)));
+    while (rows.children.length > need) rows.lastChild.remove(); // 창이 줄면 행도 줄어야 한다 — 안 그러면 시트가 세로로 넘친다
+    this.#buildLog(); // 남는 높이가 달라졌으니 로그 줄 수도 다시 잡는다
   }
 
   #bind() {
@@ -635,6 +639,7 @@ export class UIManager {
       if (v.inParty) wrap.append(el('span', { class: 'card-badge' }, '배치'));
       if (e.owned && v.affection.level >= BALANCE.AFFECTION.unlockSecret) wrap.append(el('span', { class: 'card-heart', title: `호감도 Lv ${v.affection.level}` }, `♥${v.affection.level}`));
       if (v.isMain) wrap.append(el('span', { class: 'card-badge main' }, '메인'));
+      if (v.canPromote) wrap.append(el('span', { class: 'card-star-up', title: `조각 ${v.promoteCost}개로 ★${v.star + 1} — 레벨 상한이 열립니다` }, '★↑'));
       grid.append(wrap);
       const partyBtn = e.owned && !v.isMain
         ? btn(v.inParty ? '해제' : '배치', () => this.game.toggleParty(id), `small ${v.inParty ? '' : 'primary'}`, !v.inParty && this.game.state.party.length >= BALANCE.PARTY_SIZE)
@@ -649,9 +654,12 @@ export class UIManager {
         el('td', { class: 'num', style: 'font-weight:700' }, e.owned ? fmt(v.power) : '-'),
         el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${e.owned ? Math.max(2, Math.round((v.atk / maxAtk) * 96)) : 0}%` }), el('span', {}, e.owned ? fmt(v.atk) : '-')),
         el('td', { class: 'num', style: 'color:#e84393' }, e.owned ? `♥${v.affection.level}` : '-'),
-        el('td', { class: 'num' }, e.owned ? e.shards : '-'),
+        el('td', { class: `num shard-td ${v.canPromote ? 'can-star' : ''}`, title: v.canPromote ? `조각 ${v.promoteCost}개로 ★${v.star + 1} 돌파 가능` : '' },
+          e.owned ? (v.canPromote ? `▲ ${e.shards} / ${v.promoteCost}` : String(e.shards)) : '-'),
         el('td', { class: 'ctl' }, partyBtn)));
     }
+    const upCount = HEROES.filter((h) => this.game.heroView(h.id).canPromote).length;
+    const upBox = $('#star-ready'); if (upBox) { upBox.hidden = upCount === 0; upBox.textContent = `★ 한계 돌파 가능 ${upCount}장`; }
     $('#party-count').textContent = `${this.game.state.party.length} / ${BALANCE.PARTY_SIZE}`;
     this.#refreshSynergy();
     const col = this.game.collection();
@@ -749,10 +757,26 @@ export class UIManager {
   #showSplash(r) {
     const url = cardArtUrl(r.heroId); if (!url || /\.svg$/i.test(url)) return;
     const p = profileOf(r.heroId); const modal = $('#modal .dialog');
-    const sp = el('div', { class: 'splash', onclick: () => sp.remove() }, el('img', { src: url, alt: r.def.name }),
-      el('div', { class: 'cap' }, el('b', {}, 'S · LEGENDARY'), el('div', { class: 'nm' }, `${r.def.name}${p ? ` · ${p.nick}` : ''}`), p ? el('div', { class: 'q' }, `"${p.line}"`) : null),
+    const dust = el('div', { class: 'dust' }, ...Array.from({ length: 26 }, (_, k) =>
+      el('i', { style: `--x:${(k * 37) % 100}%; --d:${2.2 + (k % 5) * 0.6}s; --w:${0.1 * (k % 9)}s; --s:${2 + (k % 4)}px` })));
+    const formula = el('div', { class: 'splash-formula' }, el('span', { class: 'fx-name' }, 'A1'), el('span', { class: 'fx-fx' }, 'fx'), el('code', {}, ''));
+    const sp = el('div', { class: 'splash legend', onclick: () => sp.remove() },
+      el('div', { class: 'shock' }), el('div', { class: 'beams' }), dust,
+      el('img', { src: url, alt: r.def.name }),
+      el('div', { class: 'ribbon' }, el('b', {}, 'S'), el('span', {}, 'LEGENDARY')),
+      formula,
+      el('div', { class: 'cap' }, el('div', { class: 'nm' }, `${r.def.name}${p ? ` · ${p.nick}` : ''}`), p ? el('div', { class: 'q' }, `"${p.line}"`) : null),
       el('div', { class: 'hint' }, '클릭하여 닫기'));
-    modal.append(sp); setTimeout(() => { if (sp.isConnected) sp.remove(); }, 3600);
+    modal.append(sp);
+    // 이름이 수식으로 조회되어 나온다 — 화려함을 이 게임의 언어로 번역하는 부분
+    const code = formula.querySelector('code');
+    const text = `=VLOOKUP("${r.def.name}", 인사_명단, 2, FALSE)`;
+    let i = 0;
+    const type = setInterval(() => {
+      code.textContent = text.slice(0, ++i);
+      if (i >= text.length) { clearInterval(type); setTimeout(() => { code.classList.add('done'); code.textContent = `${r.def.name} · S · ${r.def.title ?? '전설'}`; sp.classList.add('resolved'); }, 260); }
+    }, 26);
+    setTimeout(() => { clearInterval(type); if (sp.isConnected) sp.remove(); }, 4800);
   }
 
   /** 오류_도감 sheet: one row per monster type (+ bosses), thumbnails greyed out until first kill. */
@@ -1497,11 +1521,19 @@ export class UIManager {
   }
 
   // --------------------------------------------------------------- log --
-  #buildLog() { const tb = $('#log-table tbody'); tb.innerHTML = ''; for (const r of this.game.logs.slice(-12)) this.#appendLog(r); }
+  /**
+   * 로그는 '남는 높이만큼만' 쌓는다. 고정 14줄이면 짧은 화면에서 시트가 세로로 넘쳐 스크롤바가 생겼다.
+   * 캔버스(8행)와 상태 행을 뺀 나머지를 22px로 나눈 값. 최소 3줄은 남겨 로그가 사라지지는 않게 한다.
+   */
+  #logCapacity() {
+    const h = ($('.sheets')?.clientHeight ?? 640) - 28 - GRID.rows * GRID.cellH - 22; // 헤더 · 캔버스 · 상태 행
+    return Math.max(3, Math.min(20, Math.floor(h / 22)));
+  }
+  #buildLog() { const tb = $('#log-table tbody'); tb.innerHTML = ''; for (const r of this.game.logs.slice(-this.#logCapacity())) this.#appendLog(r); }
   #appendLog(row) {
     const tb = $('#log-table tbody');
     tb.prepend(el('tr', { class: `k-${row.kind}`, title: new Date(row.t).toLocaleTimeString('ko-KR') }, el('td', {}, `#${row.row}`), el('td', {}, row.text)));
-    while (tb.children.length > 14) tb.lastChild.remove();
+    while (tb.children.length > this.#logCapacity()) tb.lastChild.remove();
   }
 
   // ------------------------------------------------------------- dialogs --
