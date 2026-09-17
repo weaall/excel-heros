@@ -29,6 +29,15 @@ export const BALANCE = Object.freeze({
   AFFECTION: { maxLevel: 10, xpBase: 60, xpGrowth: 1.45, xpPerKill: 1, xpPerBoss: 15, giftXp: 45, giftGoldKills: 40, bonusPerLevel: 0.01, unlockSecret: 3, unlockLine: 5 },
   // 사내 메신저: first read of an episode pays gems
   STORY: { gems: 30 },
+  // 비품: office supplies that drop from stage clears. Four slots per hero; a full S set is about +64% on one stat,
+  // less than ★ or 각성 give, so 비품 supplements the existing axes instead of replacing them.
+  EQUIP: {
+    dropChance: 0.35, bossDropChance: 1, bossRolls: 2, // boss clears roll twice and keep the better item
+    maxLevel: 10, pctPerLevel: 0.12,                   // +12% of the base value per level (S 키보드: 16% → 35%)
+    upgradeGoldKills: 12, upgradeGrowth: 1.35,         // cost in "kills worth of gold" at the hero's stage, per level
+    dismantleGoldKills: { D: 2, C: 4, B: 8, A: 16, S: 32 },
+    inventoryMax: 120,
+  },
   // 야근 모드: once a day, 60 s of dense waves from (max stage + offset) with a high elite rate; gems per kill, no stage progress
   OVERTIME: { duration: 60, stageOffset: 3, count: 7, elite: 0.35, gemsPerKill: 2, gemsPerElite: 6, maxGems: 400, cardsPerPhase: 2, travel: 0.4 },
 

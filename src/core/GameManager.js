@@ -25,6 +25,7 @@ import { skinsOf, skinById } from '../data/skins.js';
 import { PROFILES } from '../data/profiles.js';
 import { localDateKey } from './state.js';
 import { relativeGold } from '../config/balance.js';
+import { SLOTS, SLOT_ORDER, itemPct, itemLabel, rollItem, itemBasePct } from '../data/equipment.js';
 import { sanitizeName } from './plausibility.js';
 import { migrate } from './state.js';
 
@@ -219,16 +220,18 @@ export class GameManager extends Emitter {
     const aff = this.affectionOf(id); const affMult = 1 + aff.level * BALANCE.AFFECTION.bonusPerLevel;
     const skillLv = entry.skillLv | 0;
     const skillPower = (boosted ? BALANCE.SKILL_BOOST_MULT : 1) * (awakened ? BALANCE.AWAKEN.skill : 1) * (1 + syn.perks.skill) * (1 + skillLv * BALANCE.SKILL_LEVEL.powerPerLevel);
+    const eq = this.equipStats(id); // 비품 (percentages)
     const view = {
       id, def, entry, isMain, grade: GRADES[def.grade], star,
-      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus() + syn.atk) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1) * affMult),
-      hp: Math.floor(heroHP(base.hp, entry.level, star, this.hpBonus() + syn.hp, entry.enhance) * (awakened ? 1 + BALANCE.AWAKEN.hp : 1) * affMult),
+      atk: Math.floor(heroATK(base.atk, entry.level, star, entry.enhance) * (1 + this.collection().atk + this.prestigeBonus() + syn.atk) * (awakened ? 1 + BALANCE.AWAKEN.atk : 1) * affMult * (1 + eq.atk / 100)),
+      hp: Math.floor(heroHP(base.hp, entry.level, star, this.hpBonus() + syn.hp, entry.enhance) * (awakened ? 1 + BALANCE.AWAKEN.hp : 1) * affMult * (1 + eq.hp / 100)),
       affection: aff, awakened, traitMult: awakened ? BALANCE.AWAKEN.trait : (!isMain && star >= BALANCE.STAR_TRAIT_BOOST.star ? BALANCE.STAR_TRAIT_BOOST.mult : 1), awakenCost,
       canAwaken: !isMain && entry.owned && !awakened && star >= BALANCE.AWAKEN.star && this.state.cards >= awakenCost,
-      interval: base.interval, range: base.range,
+      interval: base.interval / (1 + eq.speed / 100), range: base.range,
+      equip: eq,
       cost: upgradeCost(entry.level),
       inParty: this.state.party.includes(id),
-      skillUnlocked, skillPower, skillLv, skillCdMult: 1 - skillLv * BALANCE.SKILL_LEVEL.cooldownPerLevel,
+      skillUnlocked, skillPower: skillPower * (1 + eq.skill / 100), skillLv, skillCdMult: 1 - skillLv * BALANCE.SKILL_LEVEL.cooldownPerLevel,
       skillName: def.skill.name ?? SKILLS[def.skill.type].name,
       skillDesc: SKILLS[def.skill.type].desc.replace('{p}', +(def.skill.power * skillPower).toFixed(2)),
       traitName: TRAITS[def.trait].name, traitDesc: TRAITS[def.trait].desc,
@@ -245,6 +248,92 @@ export class GameManager extends Emitter {
     };
     if (isMain) view.mainPromo = this.mainPromotionInfo();
     return view;
+  }
+
+  // ---------------------------------------------------------------- 비품 --
+  /** Every item in the bag, newest first, with its live percentage and who is wearing it. */
+  equipItems() {
+    const E = BALANCE.EQUIP; const wornBy = new Map();
+    for (const [heroId, h] of Object.entries(this.state.heroes)) for (const itemId of Object.values(h.equip ?? {})) wornBy.set(itemId, heroId);
+    return [...(this.state.equipment?.items ?? [])].reverse().map((it) => ({ ...it, pct: itemPct(it, E.pctPerLevel), label: itemLabel(it), slotName: SLOTS[it.slot].name, stat: SLOTS[it.slot].stat, wornBy: wornBy.get(it.id) ?? null }));
+  }
+  equipItemById(itemId) { return (this.state.equipment?.items ?? []).find((it) => it.id === itemId) ?? null; }
+  /** Percentages a hero currently gets from 비품, by stat. */
+  equipStats(heroId) {
+    const E = BALANCE.EQUIP; const out = { atk: 0, hp: 0, skill: 0, speed: 0 };
+    const worn = this.state.heroes[heroId]?.equip ?? {};
+    for (const slot of SLOT_ORDER) {
+      const it = this.equipItemById(worn[slot]); if (!it) continue;
+      out[SLOTS[slot].stat] += itemPct(it, E.pctPerLevel);
+    }
+    for (const k of Object.keys(out)) out[k] = +out[k].toFixed(2);
+    return out;
+  }
+  /** What a hero is wearing, slot by slot (null where the slot is empty). */
+  equipOf(heroId) {
+    const E = BALANCE.EQUIP; const worn = this.state.heroes[heroId]?.equip ?? {};
+    return SLOT_ORDER.map((slot) => {
+      const it = this.equipItemById(worn[slot]);
+      return { slot, ...SLOTS[slot], item: it ? { ...it, pct: itemPct(it, E.pctPerLevel), label: itemLabel(it) } : null };
+    });
+  }
+  /** Gold to take an item from its level to the next (scales with the player's stage, like every other gold sink). */
+  equipUpgradeCost(item) {
+    const E = BALANCE.EQUIP; if (!item || item.lv >= E.maxLevel) return null;
+    return relativeGold(this.state.maxStage, E.upgradeGoldKills * E.upgradeGrowth ** item.lv, 1);
+  }
+  equipDismantleGold(item) { return relativeGold(this.state.maxStage, BALANCE.EQUIP.dismantleGoldKills[item.grade] ?? 2, 1); }
+
+  /** Roll a drop for a cleared stage. Bosses roll twice and keep the better item. Returns the item or null. */
+  dropEquipment(stage, boss = false, rnd = Math.random) {
+    const E = BALANCE.EQUIP; const s = this.state;
+    if (rnd() >= (boss ? E.bossDropChance : E.dropChance)) return null;
+    if ((s.equipment.items?.length ?? 0) >= E.inventoryMax) { this.log('비품 창고가 가득 찼습니다 — 상세 창 비품 탭에서 분해하세요', 'warn'); return null; }
+    const phase = Math.floor((Math.max(1, stage) - 1) / BALANCE.BOSS_EVERY);
+    let best = null;
+    for (let i = 0; i < (boss ? E.bossRolls : 1); i++) { const r = rollItem(phase, rnd); if (!best || itemBasePct(r.grade) > itemBasePct(best.grade)) best = r; }
+    const item = { id: s.equipment.nextId++, ...best };
+    s.equipment.items.push(item);
+    this.log(`비품 획득: ${itemLabel(item)} (${SLOTS[item.slot].name})`, 'info');
+    if (s.equipment.items.length === 1) this.toast('첫 비품을 받았습니다 — 카드를 눌러 「비품」 탭에서 착용하세요'); // first item: the tab is otherwise easy to miss
+    this.emit('equipment');
+    return item;
+  }
+  /** Equip an item on a hero; whatever was in that slot goes back to the bag. Items are never worn by two heroes. */
+  equipItem(heroId, itemId) {
+    const h = this.state.heroes[heroId]; const it = this.equipItemById(itemId);
+    if (!h?.owned || !it) return false;
+    for (const other of Object.values(this.state.heroes)) for (const [slot, worn] of Object.entries(other.equip ?? {})) if (worn === itemId) delete other.equip[slot];
+    h.equip = { ...h.equip, [it.slot]: itemId };
+    this.entities.refreshHeroStats(); this.emit('equipment'); this.emit('roster'); this.emit('party');
+    return true;
+  }
+  unequipItem(heroId, slot) {
+    const h = this.state.heroes[heroId]; if (!h?.equip?.[slot]) return false;
+    delete h.equip[slot];
+    this.entities.refreshHeroStats(); this.emit('equipment'); this.emit('roster'); this.emit('party');
+    return true;
+  }
+  upgradeEquip(itemId) {
+    const it = this.equipItemById(itemId); const cost = this.equipUpgradeCost(it);
+    if (cost === null || this.state.gold < cost) return false;
+    this.state.gold -= cost; it.lv += 1;
+    this.entities.refreshHeroStats(); this.emit('gold'); this.emit('equipment'); this.emit('roster'); this.emit('party');
+    return true;
+  }
+  /** Dismantle unequipped items back into gold. Returns the gold paid (0 when nothing matched). */
+  dismantleEquip(itemIds) {
+    const ids = new Set(Array.isArray(itemIds) ? itemIds : [itemIds]);
+    const worn = new Set();
+    for (const h of Object.values(this.state.heroes)) for (const w of Object.values(h.equip ?? {})) worn.add(w);
+    const gone = this.state.equipment.items.filter((it) => ids.has(it.id) && !worn.has(it.id));
+    if (!gone.length) return 0;
+    const gold = gone.reduce((a, it) => a + this.equipDismantleGold(it), 0);
+    this.state.equipment.items = this.state.equipment.items.filter((it) => !gone.includes(it));
+    this.state.gold += gold; this.state.stats.totalGold += gold;
+    this.log(`비품 ${gone.length}개 분해 +${gold}g`, 'info');
+    this.emit('gold'); this.emit('equipment');
+    return gold;
   }
 
   /** Requirements for the main hero's next job tier. */
@@ -772,9 +861,10 @@ export class GameManager extends Emitter {
     const lucky = this.partyTraitCount('lucky') * TRAITS.lucky.value;
     const cards = first ? (Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1) * BALANCE.CARDS_FIRST_CLEAR_PER_PHASE : 0;
     s.gems += gems + lucky; s.cards += cards; s.maxCleared = Math.max(s.maxCleared, s.stage);
+    const drop = this.dropEquipment(s.stage, boss);
     this.checkMilestones();
     Quests.addProgress(s, 'clears', 1);
-    this.log(`${this.stageLabel()} 마감 +${gems + lucky} 보석${cards ? ` +${cards} 강화 카드` : ''}`, 'stage');
+    this.log(`${this.stageLabel()} 마감 +${gems + lucky} 보석${cards ? ` +${cards} 강화 카드` : ''}${drop ? ` · 비품 ${itemLabel(drop)}` : ''}`, 'stage');
     s.kills = 0; s.challenging = false;
     this.emit('cleared', { stage: s.stage, boss, first });
     if (boss || first) this.sayLine();

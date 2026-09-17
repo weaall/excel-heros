@@ -10,7 +10,7 @@ export const localDateKey = (now = Date.now()) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0, awakened: false, skillLv: 0 });
+export const emptyHero = () => ({ owned: false, star: 0, shards: 0, level: 1, enhance: 0, awakened: false, skillLv: 0, equip: {} });
 
 export function createInitialState(now = Date.now()) {
   const heroes = {};
@@ -35,7 +35,8 @@ export function createInitialState(now = Date.now()) {
     recruit: { points: 0 },
     affection: {},        // hero id -> { xp, gift: 'YYYY-MM-DD' of the last 간식 }
     skins: {},            // hero id -> { owned: [skinId], active: skinId | null }
-    dispatch: { heroIds: [], startedAt: 0, endsAt: 0, date: null, count: 0 }, // 출장 in progress + today's count
+    dispatch: { heroIds: [], startedAt: 0, endsAt: 0, date: null, count: 0 },
+    equipment: { items: [], nextId: 1 }, // 비품 가방: { id, slot, grade, lv } // 출장 in progress + today's count
     storyRead: {},        // episode id -> true (first read rewarded) // 모집 포인트: +1 per row pulled, spend SPARK_COST on the current pickup card
     team: { coffee: 0, payroll: 0, chairs: 0, sales: 0 },
     settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true, safeAdvance: true, cloud: { url: '', name: '' }, coachDone: false, prologueSeen: false },
@@ -57,7 +58,13 @@ export function migrate(raw) {
   if (!raw || typeof raw !== 'object' || (raw.version | 0) < 2) return fresh;
   const s = { ...fresh, ...raw };
   s.heroes = { ...fresh.heroes, ...(raw.heroes ?? {}) };
-  for (const id of Object.keys(s.heroes)) s.heroes[id] = { ...emptyHero(), ...s.heroes[id] };
+  for (const id of Object.keys(s.heroes)) s.heroes[id] = { ...emptyHero(), ...s.heroes[id], equip: { ...(s.heroes[id]?.equip ?? {}) } };
+  s.equipment = { items: [], nextId: 1, ...(raw.equipment ?? {}) };
+  s.equipment.items = (s.equipment.items ?? []).filter((it) => it && it.slot && it.grade).map((it) => ({ id: it.id | 0, slot: it.slot, grade: it.grade, lv: Math.max(0, it.lv | 0) }));
+  { // drop references to items that are no longer in the bag (hand-edited or trimmed saves)
+    const have = new Set(s.equipment.items.map((it) => it.id));
+    for (const h of Object.values(s.heroes)) for (const [slot, itemId] of Object.entries(h.equip ?? {})) if (!have.has(itemId)) delete h.equip[slot];
+  }
   s.main = { ...fresh.main, ...(raw.main ?? {}) };
   if (LEGACY_MAIN_JOB[s.main.job]) s.main.job = LEGACY_MAIN_JOB[s.main.job]; // pre-track saves: 대리/과장 were melee strike → 영업 트랙
   s.pity = { ...fresh.pity, ...(raw.pity ?? {}) };

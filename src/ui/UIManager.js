@@ -11,6 +11,7 @@ import { MILESTONES, milestoneValue } from '../data/milestones.js';
 import { profileOf, PROFILES } from '../data/profiles.js';
 import { extraOf } from '../data/profilesExtra.js';
 import { PROLOGUE } from '../data/prologue.js';
+import { SLOT_ORDER, gradeColor } from '../data/equipment.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
 import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite, heroSprite } from '../data/sprites.js';
@@ -150,6 +151,7 @@ export class UIManager {
     this.game.on('cloud', () => this.#refreshCloud()); this.game.on('board', () => this.#refreshBoard());
     this.game.on('affection', ({ id, level }) => { if (level === BALANCE.AFFECTION.unlockSecret || level === BALANCE.AFFECTION.unlockLine || level === BALANCE.AFFECTION.maxLevel) this.toast(`♥ ${this.game.heroDef(id).name} 호감도 Lv ${level}${level === BALANCE.AFFECTION.unlockLine ? ' · 개인 메시지가 사내 메신저에 도착' : level === BALANCE.AFFECTION.maxLevel ? ' · MAX' : ' · 사무실 비화 해금'}`); this.#refreshDetail(); });
     this.game.on('gacha-art', () => { const box = $('#pickup-cards'); if (box) box.dataset.key = ''; this.#refreshGacha(); if (document.querySelector('#sheet-album.active')) this.#buildAlbum(); });
+    this.game.on('equipment', () => this.#refreshDetail());
     this.game.on('dispatch', () => this.#refreshDispatch()); this.game.on('skin', () => { if (document.querySelector('#sheet-album.active')) this.#buildAlbum(); });
     $('#btn-dispatch').addEventListener('click', () => { const ids = [...document.querySelectorAll('#dispatch-pick input:checked')].map((i) => i.value); if (!ids.length) { this.toast('출장 보낼 대기 사원을 선택하세요 (파티 밖 카드)'); return; } if (this.game.startDispatch(ids)) this.toast(`출장 출발 · ${BALANCE.DISPATCH.hours}시간 후 복귀`); else this.toast('출장을 시작할 수 없습니다 (하루 2회, 진행 중이면 대기)'); });
     $('#btn-prologue')?.addEventListener('click', () => this.showPrologue());
@@ -823,15 +825,55 @@ export class UIManager {
         ms(A.unlockLine, '개인 메시지 (사내 메신저)', x ? `"${x.line2}"` : '', a.lineUnlocked),
         ms(A.maxLevel, '절친 칭호 · 사복 스킨 · 핑크 프레임', '스킨 탭에서 「퇴근 사복」을 장착할 수 있습니다', a.maxed))));
     }
-    // tabs: 정보 · 스킬 · 스킨 · 프로필 · 호감도 — remembered across refreshes (old 'growth' key → 스킬)
+    // --- 비품 pane: the four slots, then the bag filtered to the slot being filled
+    const equipPane = el('div', { class: 'dt-sections pane-equip' });
+    if (!e.owned) equipPane.append(el('p', { class: 'muted small' }, '미보유 카드입니다. 획득하면 비품을 착용할 수 있습니다.'));
+    else {
+      const eq = g.equipOf(id); const stats = v.equip;
+      const slotRows = el('table', { class: 'dt-table' },
+        ...eq.map((sl) => row(`${sl.icon} ${sl.name}`,
+          sl.item ? el('span', { style: `color:${gradeColor(sl.item.grade)}; font-weight:700` }, sl.item.label) : el('span', { class: 'muted' }, '비어 있음'),
+          sl.item ? el('div', { class: 'ctl-group' },
+            (() => { const c = g.equipUpgradeCost(sl.item); return sb(c === null ? 'MAX' : `강화 +${sl.item.lv + 1} (${fmt(c)}g)`, () => { if (g.upgradeEquip(sl.item.id)) this.toast(`${sl.item.label} 강화`); else this.toast('골드가 부족합니다'); }, c !== null && s.gold >= c ? 'primary' : '', c === null || s.gold < c); })(),
+            sb('해제', () => { g.unequipItem(id, sl.slot); })) : null,
+          sl.item ? `${sl.label} +${sl.item.pct}% · ${sl.item.grade}급 · Lv ${sl.item.lv}/${BALANCE.EQUIP.maxLevel}` : `${sl.label}을(를) 올려 줍니다 · 아래에서 착용`)),
+        row('합계', `ATK +${stats.atk}% · HP +${stats.hp}%`, null, `스킬 위력 +${stats.skill}% · 공격 속도 +${stats.speed}%`));
+      equipPane.append(slotRows);
+      // bag: pick the slot to browse, newest first, worn items marked
+      this.equipSlot ??= 'keyboard';
+      const bag = g.equipItems();
+      const tabs = el('div', { class: 'eq-slots' }, ...eq.map((sl) => el('button', { class: `eq-slot ${this.equipSlot === sl.slot ? 'active' : ''}`, onclick: () => { this.equipSlot = sl.slot; this.#renderDetail(); } }, `${sl.icon} ${sl.name}`, el('small', {}, ` ${bag.filter((it) => it.slot === sl.slot).length}`))));
+      const list = bag.filter((it) => it.slot === this.equipSlot);
+      const tbody = el('tbody');
+      for (const it of list) {
+        const worn = it.wornBy ? g.heroDef(it.wornBy).name : null;
+        const here = it.wornBy === id;
+        tbody.append(el('tr', { class: here ? 'done' : '' },
+          el('td', { class: 'name', style: `color:${gradeColor(it.grade)}` }, it.label, el('div', { class: 'sub' }, `${it.grade}급 · Lv ${it.lv}${worn ? ` · ${worn} 착용 중` : ''}`)),
+          el('td', { class: 'num' }, `+${it.pct}%`),
+          el('td', { class: 'ctl' }, here ? sb('해제', () => g.unequipItem(id, it.slot)) : sb('착용', () => { g.equipItem(id, it.id); }, 'primary'),
+            worn ? null : sb('분해', () => { const gold = g.dismantleEquip(it.id); if (gold) this.toast(`분해 +${fmt(gold)} 골드`); }, 'danger'))));
+      }
+      if (!list.length) tbody.append(el('tr', {}, el('td', { colspan: '3', class: 'muted small' }, '이 슬롯의 비품이 없습니다. 스테이지를 마감하면 나옵니다 (보스는 확정).')));
+      equipPane.append(el('div', { class: 'dt-sec equip-bag' }, el('b', {}, '창고'),
+        el('span', { class: 'ds small' }, `${bag.length} / ${BALANCE.EQUIP.inventoryMax}개 · 착용 중인 비품은 분해되지 않습니다`),
+        sb('D·C급 일괄 분해', () => {
+          const junk = bag.filter((it) => !it.wornBy && (it.grade === 'D' || it.grade === 'C')).map((it) => it.id);
+          if (!junk.length) { this.toast('분해할 D·C급 비품이 없습니다'); return; }
+          const gold = g.dismantleEquip(junk); this.toast(`${junk.length}개 분해 +${fmt(gold)} 골드`);
+        }, 'danger')));
+      equipPane.append(tabs, el('table', { class: 'xl-table compact eq-table' }, el('thead', {}, el('tr', {}, el('th', {}, '비품'), el('th', { class: 'num' }, '효과'), el('th', {}, ''))), tbody));
+    }
+
+    // tabs: 정보 · 스킬 · 비품 · 스킨 · 프로필 · 호감도 — remembered across refreshes (old 'growth' key → 스킬)
     this.detailTab ??= 'info'; if (this.detailTab === 'growth') this.detailTab = 'skill';
-    const panes = { info: table, skill: skillPane, skin: skinPane, profile: profilePane, affection: affPane };
+    const panes = { info: table, skill: skillPane, equip: equipPane, skin: skinPane, profile: profilePane, affection: affPane };
     if (!panes[this.detailTab]) this.detailTab = 'info';
-    const tabDefs = [['info', '정보', ''], ['skill', '스킬', e.owned && v.skillUnlocked ? `Lv ${sl.level}` : ''], ['skin', '스킨', activeSkin ? activeSkin.name : ''], ['profile', '프로필', ''], ['affection', '호감도', e.owned ? `♥${v.affection.level}` : '']];
+    const tabDefs = [['info', '정보', ''], ['skill', '스킬', e.owned && v.skillUnlocked ? `Lv ${sl.level}` : ''], ['equip', '비품', e.owned ? `${g.equipOf(id).filter((x) => x.item).length}/${SLOT_ORDER.length}` : ''], ['skin', '스킨', activeSkin ? activeSkin.name : ''], ['profile', '프로필', ''], ['affection', '호감도', e.owned ? `♥${v.affection.level}` : '']];
     const tabs = el('div', { class: 'dt-tabs' }, ...tabDefs.map(([k, label, badge]) =>
       el('button', { class: `dt-tab ${this.detailTab === k ? 'active' : ''}`, onclick: () => { this.detailTab = k; this.#renderDetail(); } }, label, badge ? el('small', {}, badge) : null)));
     for (const [k, pane] of Object.entries(panes)) pane.hidden = k !== this.detailTab;
-    body.append(el('div', { class: 'dt' }, portrait, el('div', { class: 'dt-info' }, head, tabs, table, skillPane, skinPane, profilePane, affPane)));
+    body.append(el('div', { class: 'dt' }, portrait, el('div', { class: 'dt-info' }, head, tabs, table, skillPane, equipPane, skinPane, profilePane, affPane)));
     // --- action bar
     if (e.owned) {
       body.append(el('div', { class: 'dt-actions' },

@@ -666,3 +666,13 @@ body.stealth #roster-table { display: table; }
 .pl-dots { margin-left: auto; display: flex; gap: 6px; }
 .pl-dots i { width: 7px; height: 7px; background: #3a3f4c; display: block; }
 .pl-dots i.on { background: var(--xl-green); }
+
+/* 비품 (equipment) tab */
+.eq-slots { display: flex; gap: 4px; margin: 10px 0 4px; }
+.eq-slot { flex: 1; background: #f3f3f3; border: 1px solid var(--line-dark); padding: 4px 6px; font: inherit; font-size: 12px; color: #444; cursor: pointer; }
+.eq-slot small { color: #888; }
+.eq-slot.active { background: #fff; color: var(--xl-green); font-weight: 700; border-bottom-color: #fff; }
+.eq-table td.ctl { text-align: right; white-space: nowrap; }
+.eq-table td.ctl .xl-btn { margin-left: 4px; }
+.eq-table tr.done td { background: var(--xl-green-light); }
+.dt-sec.equip-bag { gap: 8px; }

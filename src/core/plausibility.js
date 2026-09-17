@@ -44,6 +44,7 @@ export function checkSave(state, now = Date.now()) {
   if ((st.totalKills ?? 0) < normalStages * BALANCE.KILLS_PER_STAGE * 0.9 - 100) reasons.push('stage progress exceeds kills');
   if ((st.bossKills ?? 0) < Math.floor(cleared / BALANCE.BOSS_EVERY) * 0.9 - 2) reasons.push('boss stages cleared without boss kills');
   if (JSON.stringify(state).length > MAX_SAVE_BYTES) reasons.push('save too large');
+  checkEquipment(state, reasons);
   return { ok: reasons.length === 0, reasons };
 }
 
@@ -56,6 +57,17 @@ export function sanitizeName(raw) {
   n = n.slice(0, 16);
   return n || '익명 사원';
 }
+/** Bounds for the 비품 bag: a save cannot carry more items than the cap, nor levels past the ceiling. */
+function checkEquipment(state, reasons) {
+  const eq = state.equipment; if (!eq) return;
+  const items = Array.isArray(eq.items) ? eq.items : [];
+  if (items.length > BALANCE.EQUIP.inventoryMax) reasons.push('equipment bag over the cap');
+  if (items.some((it) => !it || typeof it.slot !== 'string' || (it.lv | 0) < 0 || (it.lv | 0) > BALANCE.EQUIP.maxLevel)) reasons.push('equipment item out of bounds');
+  // items only drop from clears, and at most one per clear (bosses roll twice but still keep one)
+  const clears = Math.max(0, (state.maxCleared | 0)) + (state.stats?.totalKills | 0) / BALANCE.KILLS_PER_STAGE;
+  if (items.length > clears + 20) reasons.push('more equipment than stages cleared');
+}
+
 /** Leaderboard row derived from a save (what the server actually ranks). */
 export function boardEntry(state, name, dps = 0) {
   return {
