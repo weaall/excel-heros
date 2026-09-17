@@ -13,6 +13,7 @@ import { extraOf } from '../data/profilesExtra.js';
 import { PROLOGUE } from '../data/prologue.js';
 import { artVersion } from '../data/cardArt.js';
 import { SLOT_ORDER, gradeColor } from '../data/equipment.js';
+import { STEALTH_TEXT, STEALTH_HIDE, stealthStatus } from '../data/stealthLabels.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
 import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite, heroSprite } from '../data/sprites.js';
@@ -272,6 +273,7 @@ export class UIManager {
     if (this.acc >= 0.25) {
       this.acc = 0;
       this.#refreshStatus();
+      this.#refreshNowDoing(); // 0.25s tick: the line must follow the game, not wait for a stage event
       this.#refreshHeroTable(true);
       { const el$ = $('#daily-reset'); if (el$ && document.querySelector('#sheet-quests.active')) { const now = new Date(); const mid = new Date(now); mid.setHours(24, 0, 0, 0); const sec = Math.max(0, Math.floor((mid - now) / 1000)); el$.textContent = `· 초기화까지 ${String(Math.floor(sec / 3600)).padStart(2, '0')}:${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')}`; } }
       if (document.querySelector('#sheet-quests.active') && this.game.dispatchInfo().active) this.#refreshDispatch(true);
@@ -1340,10 +1342,21 @@ export class UIManager {
 
   /** Show the 회사 이전 suggestion only while the player is actually walled, and never nag more than once per 15 min. */
   /** One plain sentence in the status bar: what the game is doing right now, and what it is waiting for. */
+  /** What the game is doing right now, as data — the plain and disguised lines are two renderings of this. */
+  #nowDoing() {
+    const g = this.game, s = g.state;
+    if (g.paused) return { kind: 'paused' };
+    if (g.overtime) return { kind: 'overtime', seconds: Math.ceil(g.overtime.t) };
+    if (g.entities.traveling) return { kind: 'travel' };
+    if (g.isChallenging()) return isBossStage(s.stage) ? { kind: 'boss', seconds: BALANCE.BOSS_TIME_LIMIT } : { kind: 'challenge', done: s.kills, total: BALANCE.KILLS_PER_STAGE };
+    if (g.waitingAdvance) return { kind: 'waiting' };
+    return { kind: 'farm' };
+  }
   #refreshNowDoing() {
     const box = $('#now-doing'); if (!box) return;
     const g = this.game, s = g.state;
     let txt;
+    if (s.settings.excel) { box.textContent = stealthStatus(this.#nowDoing()); return; } // 위장 중에는 재계산 진행 상황으로 읽힌다
     if (g.paused) txt = '⏸ 로그인 대기';
     else if (g.overtime) txt = `🌙 야근 모드 — 남은 ${Math.ceil(g.overtime.t)}초, 처치할수록 보석`;
     else if (g.entities.traveling) txt = `🚶 ${stageLabel(g.combatStage())}(으)로 이동 중`;
@@ -1403,6 +1416,7 @@ export class UIManager {
   /** Boss key: only the play area changes (canvas → text rows); the layout stays identical. */
   applyStealth(on, silent = false) {
     document.body.classList.toggle('stealth', on);
+    this.#applyStealthLabels(on);
     $('#canvas-wrap').hidden = on; $('#stealth-view').hidden = !on;
     $('#status-ready').textContent = on ? '계산 중 (4개 프로세서): 37%' : '준비';
     $('#set-stealth').checked = on;
@@ -1411,6 +1425,28 @@ export class UIManager {
     this.#refreshFormulaBar();
     if (on) { this.#refreshStealth(); this.closeModal(); }
     if (!silent) this.toast(on ? '페이지 레이아웃 보기 (Esc: 기본 보기)' : '기본 보기');
+  }
+  /**
+   * Swap the UI's wording in and out of disguise. The play area was already text; what still gave the game away was
+   * the vocabulary — a sheet tab called 메인_전투, a ribbon button called 파티 자동 편성, a status line saying 사냥 중.
+   * Only the first text node of each element is touched, so icons and sub-labels keep their place, and the original
+   * is parked in data-real so turning the disguise off restores it exactly.
+   */
+  #applyStealthLabels(on) {
+    const firstText = (host) => [...host.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
+    for (const [sel, spec] of Object.entries(STEALTH_TEXT)) {
+      const host = document.querySelector(sel); if (!host) continue;
+      const node = firstText(host); if (!node) continue;
+      const text = typeof spec === 'string' ? spec : spec.text;
+      if (on) { if (host.dataset.real === undefined) host.dataset.real = node.textContent; node.textContent = text; }
+      else if (host.dataset.real !== undefined) { node.textContent = host.dataset.real; delete host.dataset.real; }
+      const small = host.querySelector('small');
+      if (small && typeof spec === 'object' && spec.sub !== undefined) {
+        if (on) { if (small.dataset.real === undefined) small.dataset.real = small.textContent; small.textContent = spec.sub; }
+        else if (small.dataset.real !== undefined) { small.textContent = small.dataset.real; delete small.dataset.real; }
+      }
+    }
+    for (const sel of STEALTH_HIDE) document.querySelector(sel)?.classList.toggle('stealth-hidden', on);
   }
   #refreshStealth() {
     const em = this.game.entities; const tbody = $('#stealth-table tbody'); tbody.innerHTML = '';

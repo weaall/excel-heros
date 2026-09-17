@@ -731,3 +731,5 @@ body.stealth #roster-table { display: table; }
 /* 상태 표시줄: 지금 무슨 일이 일어나는지 (자동 진행이라도 관전할 거리는 있어야 한다) */
 .statusbar .now-doing { color: var(--xl-green); font-weight: 600; margin-right: auto; }
 body.stealth .statusbar .now-doing { color: #444; font-weight: 400; }
+
+body.stealth .stealth-hidden { display: none !important; }
