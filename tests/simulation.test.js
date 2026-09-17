@@ -152,9 +152,43 @@ test('enhance cards: convert shards, enhance, dismiss benched card', () => {
   assert.ok(g.enhance(MAIN_ID));
   assert.ok(g.heroView(MAIN_ID).atk > atkBefore);
   assert.ok(!g.dismiss(MAIN_ID), 'main hero cannot be dismissed');
+  assert.equal(g.dismiss('cfo'), 0, '조각이 없는 카드(한 번만 뽑은 카드)는 방출되지 않는다');
+  g.state.heroes.cfo.shards = 2; // pulled again → now it is a spare
   const before = g.state.cards;
   assert.ok(g.dismiss('cfo') > 0);
   assert.ok(!g.state.heroes.cfo.owned && g.state.cards > before);
+});
+
+test('방출 guards and 일괄 방출: spares only, never the party or a favourite, grade and below', () => {
+  const s = createInitialState();
+  for (const id of ['parttime', 'barista', 'vlookup', 'cfo', 'ceo']) { own(s, id); s.heroes[id].shards = 3; }
+  const g = new GameManager({ state: s, save: memSave() });
+  g.toggleParty('parttime');                       // in the party
+  g.toggleFavorite('barista');                     // favourited
+  g.state.heroes.vlookup.shards = 0;               // only ever pulled once
+  const v = (id) => g.heroView(id);
+  assert.equal(v('parttime').canDismiss, false); assert.match(v('parttime').dismissBlockedReason, /파티/);
+  assert.equal(v('barista').canDismiss, false); assert.match(v('barista').dismissBlockedReason, /즐겨찾기/);
+  assert.equal(v('vlookup').canDismiss, false); assert.match(v('vlookup').dismissBlockedReason, /조각/);
+  assert.equal(v('cfo').canDismiss, true);
+  // C급 이하 일괄 방출: only the C-grade spare qualifies (parttime/barista are D but protected, vlookup has no spare)
+  const ids = g.dismissCandidates('C').map((x) => x.id);
+  assert.ok(!ids.includes('cfo') && !ids.includes('ceo'), 'A and S are above the threshold');
+  assert.ok(!ids.includes('parttime') && !ids.includes('barista') && !ids.includes('vlookup'), 'protected cards are skipped');
+  const r = g.dismissAll('A');
+  assert.ok(r.count >= 1 && r.cards > 0, 'A급 이하 일괄 방출 released the CFO spare');
+  assert.ok(g.state.heroes.ceo.owned, 'S is above the threshold and survives');
+  assert.ok(g.state.heroes.parttime.owned && g.state.heroes.barista.owned && g.state.heroes.vlookup.owned);
+});
+
+test('전투력: one number that ranks across grade and star (A★3 beats S★1)', () => {
+  const s = createInitialState();
+  own(s, 'cfo'); own(s, 'ceo');
+  s.heroes.cfo.star = 3; s.heroes.ceo.star = 1;
+  const g = new GameManager({ state: s, save: memSave() });
+  assert.ok(g.heroView('cfo').power > g.heroView('ceo').power, 'A★3 outranks S★1');
+  g.state.heroes.ceo.star = 4;
+  assert.ok(g.heroView('ceo').power > g.heroView('cfo').power, 'S★4 pulls back ahead');
 });
 
 test('autosave fires every 10 seconds of play', () => {

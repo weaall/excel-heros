@@ -676,3 +676,15 @@ body.stealth #roster-table { display: table; }
 .eq-table td.ctl .xl-btn { margin-left: 4px; }
 .eq-table tr.done td { background: var(--xl-green-light); }
 .dt-sec.equip-bag { gap: 8px; }
+
+/* ------------------------------------------------- 삽입 (gacha) sheet -- */
+/* The pickup banner is the point of this sheet, so it gets the centre stage and the pull buttons sit right under it. */
+.gacha-stage { max-width: 760px; margin: 10px auto 14px; padding: 0 10px; }
+.gacha-stage .pickup-box { margin: 0; border: 2px solid #d4a017; box-shadow: 0 2px 10px rgba(212,160,23,.18); background: linear-gradient(135deg, #fdf6e3, #fff 55%, #fdf6e3); }
+.gacha-stage .pickup-head { justify-content: center; text-align: center; padding: 7px 12px; font-size: 13.5px; letter-spacing: .5px; background: linear-gradient(90deg, rgba(212,160,23,.10), rgba(212,160,23,.22), rgba(212,160,23,.10)); border-bottom: 1px solid #e3cc8a; }
+.gacha-stage .pickup-head .spacer { flex: 0 0 auto; width: 10px; }
+.gacha-stage .pickup-cards { justify-content: center; padding: 14px 10px 10px; gap: 18px; }
+.gacha-stage .pickup-foot { text-align: center; padding: 0 14px 10px; }
+.gacha-stage .gacha-actions { justify-content: center; padding: 12px 0 0; gap: 14px; }
+.gacha-stage .gacha-actions .xl-btn.big { min-width: 200px; justify-content: center; }
+.gacha-layout .section-title { margin-top: 0; }

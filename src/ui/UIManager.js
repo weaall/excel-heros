@@ -140,6 +140,14 @@ export class UIManager {
     this.filter = { grade: '', role: '', div: '', owned: '', sort: 'grade' };
     const divSel = $('#rf-div'); for (const d of Object.values(DIVISIONS)) divSel.append(el('option', { value: d.id }, d.name));
     for (const k of ['grade', 'role', 'div', 'owned', 'sort']) $(`#rf-${k}`).addEventListener('change', (e) => { this.filter[k] = e.target.value; this.#buildCards(); });
+    $('#btn-dismiss-all')?.addEventListener('click', () => {
+      const grade = $('#rf-dismiss-grade').value; const list = this.game.dismissCandidates(grade);
+      if (!list.length) { this.toast(grade + '급 이하에 방출할 여분 카드가 없습니다 (파티·즐겨찾기·조각 없는 카드는 제외)'); return; }
+      const names = list.slice(0, 6).map((v) => v.def.name).join(', ') + (list.length > 6 ? ' 외 ' + (list.length - 6) + '장' : '');
+      if (!confirm(grade + '급 이하 여분 ' + list.length + '장을 방출합니다.\n' + names + '\n\n파티·즐겨찾기·조각이 없는 카드는 제외됩니다. 되돌릴 수 없습니다.')) return;
+      const r = this.game.dismissAll(grade);
+      this.toast(r.count + '장 방출 → 강화 카드 ' + fmt(r.cards) + '장' + (r.gold ? ', 골드 ' + fmt(r.gold) : ''));
+    });
     $('#rf-clear').addEventListener('click', () => { this.filter = { grade: '', role: '', div: '', owned: '', sort: 'grade' }; for (const k of ['grade', 'role', 'div', 'owned']) $(`#rf-${k}`).value = ''; $('#rf-sort').value = 'grade'; this.#buildCards(); });
     // account / cloud save (Google sign-in → backend session)
     $('#cloud-url').addEventListener('change', (e) => { this.game.setCloud({ url: e.target.value }); this.#refreshCloud(); });
@@ -555,6 +563,7 @@ export class UIManager {
     const view = (id) => this.game.heroView(id);
     const sorters = {
       grade: (a, b) => rank(b) - rank(a),
+      power: (a, b) => (s.heroes[b].owned ? view(b).power : -1) - (s.heroes[a].owned ? view(a).power : -1) || rank(b) - rank(a),
       atk: (a, b) => (s.heroes[b].owned ? view(b).atk : -1) - (s.heroes[a].owned ? view(a).atk : -1) || rank(b) - rank(a),
       level: (a, b) => (s.heroes[b].owned ? s.heroes[b].level : -1) - (s.heroes[a].owned ? s.heroes[a].level : -1) || rank(b) - rank(a),
       star: (a, b) => (s.heroes[b].owned ? s.heroes[b].star : -1) - (s.heroes[a].owned ? s.heroes[a].star : -1) || rank(b) - rank(a),
@@ -596,6 +605,7 @@ export class UIManager {
       tbody.append(el('tr', { class: e.owned ? '' : 'locked' },
         el('td', {}, v.def.name), el('td', { style: `color:${v.grade.color}` }, v.def.grade), el('td', {}, ROLES[v.def.role].name), el('td', { style: `color:${DIVISIONS[divisionOf(v.isMain ? 'main' : id)].color}` }, divisionName(v.isMain ? 'main' : id)), el('td', {}, v.traitName),
         el('td', {}, v.isMain ? v.def.title : (e.owned ? stars(e.star) : '미보유')), el('td', { class: 'num' }, e.owned ? e.level : '-'),
+        el('td', { class: 'num', style: 'font-weight:700' }, e.owned ? fmt(v.power) : '-'),
         el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${e.owned ? Math.max(2, Math.round((v.atk / maxAtk) * 96)) : 0}%` }), el('span', {}, e.owned ? fmt(v.atk) : '-')),
         el('td', { class: 'num', style: 'color:#e84393' }, e.owned ? `♥${v.affection.level}` : '-'),
         el('td', { class: 'num' }, e.owned ? e.shards : '-')));
@@ -751,6 +761,7 @@ export class UIManager {
         sb('+10', () => { if (!g.upgradeHeroMany(id, 10)) this.toast('골드가 부족합니다'); }, 'primary', s.gold < v.cost, '레벨 +10 (골드가 되는 만큼)'),
         sb('초기화', () => { const r = g.resetHeroLevel(id); this.toast(r ? `레벨 초기화: 골드 ${fmt(r)} 환급` : '레벨 1입니다'); }, 'danger', e.level <= 1, '레벨 1로 되돌리고 전액 환급')),
         `다음 레벨 골드 ${fmt(v.cost)} · 되돌리면 ${fmt(v.refundPerLevel)} 환급`));
+      table.append(row('전투력', fmt(v.power), null, '등급·★·레벨·강화·비품을 합친 비교값 (ATK×2 + HP÷10) — 등급이 낮아도 이 숫자가 높으면 더 셉니다'));
       table.append(row('공격력 ATK', fmt(v.atk)));
       table.append(row('체력 HP', fmt(v.hp)));
       if (!v.isMain && v.star < BALANCE.MAX_STAR) { const k = starMult(v.star + 1) / starMult(v.star); table.append(row(`★${v.star + 1} 미리보기`, `ATK ${fmt(Math.floor(v.atk * k))} · HP ${fmt(Math.floor(v.hp * k))}`, null, `한계 돌파 시 ×${k.toFixed(2)} · 강화 한계 ${BALANCE.ENHANCE_CAP_BY_STAR[v.star] ?? v.enhanceCap}`)); }
@@ -880,7 +891,8 @@ export class UIManager {
       body.append(el('div', { class: 'dt-actions' },
         btn(v.inParty ? '파티 해제' : '파티 배치', () => g.toggleParty(id), v.inParty ? '' : 'primary', v.isMain && v.inParty && s.party.length === 1),
         el('span', { class: 'spacer' }),
-        v.isMain ? null : btn(`카드 방출 (+${v.dismissCards}장)`, () => { if (confirm(`${v.def.name} 카드를 방출하고 강화 카드 ${v.dismissCards}장을 받을까요? 되돌릴 수 없습니다.`)) g.dismiss(id); }, 'danger', !v.canDismiss)));
+        v.isMain ? null : (() => { const b = btn(`카드 방출 (+${v.dismissCards}장)`, () => { if (confirm(`${v.def.name} 카드를 방출하고 강화 카드 ${v.dismissCards}장을 받을까요? 되돌릴 수 없습니다.`)) g.dismiss(id); }, 'danger', !v.canDismiss); if (!v.canDismiss && v.dismissBlockedReason) b.title = v.dismissBlockedReason; return b; })(),
+        v.canDismiss || v.isMain ? null : el('span', { class: 'muted small' }, v.dismissBlockedReason)));
     }
     if (v.isMain) body.append(this.#mainPromoPanel(v.mainPromo));
     $('#modal-actions').innerHTML = ''; $('#modal-actions').append(el('span', { class: 'muted small', style: 'margin-right:auto' }, `골드 ${fmt(s.gold)} · 강화 카드 ${fmt(s.cards)}장`), btn('닫기', () => this.closeModal(), 'primary'));

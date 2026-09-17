@@ -191,13 +191,16 @@
           <label>역할 <select id="rf-role"><option value="">(모두)</option><option value="tank">탱커</option><option value="melee">근접</option><option value="ranged">원거리</option><option value="healer">힐러</option></select></label>
           <label>부문 <select id="rf-div"><option value="">(모두)</option></select></label>
           <label>보유 <select id="rf-owned"><option value="">(모두)</option><option value="1">보유만</option><option value="0">미보유만</option><option value="party">파티만</option></select></label>
-          <label>정렬 <select id="rf-sort"><option value="grade">등급순</option><option value="atk">ATK 높은순</option><option value="level">Lv 높은순</option><option value="star">★ 많은순</option><option value="name">이름순</option></select></label>
+          <label>정렬 <select id="rf-sort"><option value="grade">등급순</option><option value="power">전투력순</option><option value="atk">ATK 높은순</option><option value="level">Lv 높은순</option><option value="star">★ 많은순</option><option value="name">이름순</option></select></label>
           <button id="rf-clear" class="xl-btn small">지우기</button>
+          <span class="filter-label" style="margin-left:auto">▼ 정리</span>
+          <label>일괄 방출 <select id="rf-dismiss-grade"><option value="D">D급 이하</option><option value="C" selected>C급 이하</option><option value="B">B급 이하</option><option value="A">A급 이하</option><option value="S">S급 이하 (전부)</option></select></label>
+          <button id="btn-dismiss-all" class="xl-btn small danger">여분 방출</button>
           <span class="muted small" id="rf-count"></span>
         </div>
         <div class="card-grid" id="card-grid"></div>
         <table class="xl-table compact" id="roster-table">
-          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>부문</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">ATK</th><th class="num">호감</th><th class="num">조각</th></tr></thead>
+          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>부문</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">전투력</th><th class="num">ATK</th><th class="num">호감</th><th class="num">조각</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>
@@ -209,17 +212,20 @@
           <span class="muted">누적 가져오기: <b id="total-pulls">0</b>회</span>
           <span class="muted small" id="pull-grades"></span>
         </div>
-        <div class="gacha-layout">
-          <div>
-            <div class="pickup-box" id="pickup-box">
+        <div class="gacha-stage">
+          <div class="pickup-box" id="pickup-box">
               <div class="pickup-head">픽업 모집 <span class="muted small" id="pickup-period">3일 배너</span><span class="spacer"></span><span class="small" id="recruit-points" title="1행 가져올 때마다 모집 포인트 +1 · 만료 없음 · 픽업 카드와 교환">모집 포인트 <b>0</b></span></div>
               <div class="pickup-cards" id="pickup-cards"></div>
               <div class="pickup-foot muted small">해당 등급이 나오면 50%는 픽업 카드 · 모집 포인트 <b>150</b>(S) / <b>60</b>(A)으로 픽업 카드와 직접 교환 가능</div>
             </div>
-            <div class="gacha-actions">
-              <button id="pull1" class="xl-btn big">1행 가져오기<small>보석 100</small></button>
-              <button id="pull10" class="xl-btn big primary">10행 가져오기<small>보석 900</small></button>
-            </div>
+          <div class="gacha-actions">
+            <button id="pull1" class="xl-btn big">1행 가져오기<small>보석 100</small></button>
+            <button id="pull10" class="xl-btn big primary">10행 가져오기<small>보석 900</small></button>
+          </div>
+        </div>
+        <div class="gacha-layout">
+          <div>
+            <h3 class="section-title">확률 및 보장</h3>
             <table class="xl-table compact">
               <thead><tr><th>등급</th><th class="num">확률</th><th>보장</th></tr></thead>
               <tbody>

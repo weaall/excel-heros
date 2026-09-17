@@ -14,7 +14,7 @@ import * as Quests from './QuestManager.js';
 import * as Achievements from './AchievementManager.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import * as Milestones from './MilestoneManager.js';
-import { HEROES, ROLES } from '../data/heroes.js';
+import { HEROES, ROLES, GRADE_ORDER } from '../data/heroes.js';
 import { DIVISIONS, SYNERGY, PERKS, divisionOf } from '../data/divisions.js';
 import { Emitter } from '../utils/events.js';
 import { createRng } from '../utils/rng.js';
@@ -243,9 +243,18 @@ export class GameManager extends Emitter {
       canEnhance: entry.owned && entry.enhance < enhanceCap(star, awakened, isMain ? def.tier : null) && this.state.cards >= eCost,
       refundPerLevel: entry.level > 1 ? Math.floor(upgradeCost(entry.level - 1) * BALANCE.LEVEL_REFUND) : 0,
       shardCardValue: BALANCE.SHARD_CARD_VALUE[def.grade],
-      canDismiss: !isMain && entry.owned && !this.state.party.includes(id),
+      power: 0, // filled in below (needs atk/hp)
+      // 방출은 여분을 정리하는 기능이다: 조각이 하나도 없는 카드(한 번만 뽑은 카드)는 실수로 날리지 않게 막는다
+      canDismiss: !isMain && entry.owned && entry.shards >= 1 && !this.state.party.includes(id) && !this.state.favorites?.[id],
+      dismissBlockedReason: isMain ? '주인공은 방출할 수 없습니다'
+        : !entry.owned ? '미보유 카드입니다'
+        : this.state.party.includes(id) ? '파티에 배치된 카드는 방출할 수 없습니다'
+        : this.state.favorites?.[id] ? '즐겨찾기한 카드는 방출할 수 없습니다'
+        : entry.shards < 1 ? '조각이 1개 이상일 때만 방출할 수 있습니다 (한 번만 뽑은 카드는 보호)'
+        : '',
       dismissCards: !isMain ? (BALANCE.DISMISS_CARD_BONUS + entry.shards) * BALANCE.SHARD_CARD_VALUE[def.grade] : 0,
     };
+    view.power = Math.round(view.atk * 2 + view.hp / 10); // 전투력: ATK를 2배 가중, HP는 1/10 — 등급·★·레벨·강화·비품이 모두 반영된 단일 비교값
     if (isMain) view.mainPromo = this.mainPromotionInfo();
     return view;
   }
@@ -524,6 +533,24 @@ export class GameManager extends Emitter {
     this.emit('cards'); this.emit('gold'); this.emit('roster'); this.emit('party');
     return cards;
   }
+  /** Cards a 일괄 방출 at `grade` would release (grade and everything below it), newest-weakest first. */
+  dismissCandidates(grade = 'C') {
+    const order = GRADE_ORDER; const cut = order.indexOf(grade); if (cut < 0) return []; // GRADE_ORDER is D→S, so 이하 = index <= cut
+    return Object.keys(this.state.heroes)
+      .filter((id) => !this.isMain(id) && order.indexOf(this.heroDef(id).grade) <= cut)
+      .map((id) => this.heroView(id))
+      .filter((v) => v.canDismiss)
+      .sort((a, b) => a.power - b.power);
+  }
+  /** Release every spare at or below `grade`. Returns { count, cards, gold }. */
+  dismissAll(grade = 'C') {
+    const list = this.dismissCandidates(grade);
+    let cards = 0, gold = 0;
+    for (const v of list) { const before = this.state.cards, g0 = this.state.gold; if (this.dismiss(v.id)) { cards += this.state.cards - before; gold += this.state.gold - g0; } }
+    if (list.length) this.log(`${grade}급 이하 여분 ${list.length}장 일괄 방출 → 강화 카드 ${cards}장${gold ? `, 골드 ${gold}` : ''}`, 'info');
+    return { count: list.length, cards, gold };
+  }
+
   /** Everything claimable on the 검토 sheet in one click: done quests, all-clear bonus, achievements, a finished 출장. */
   claimableSummary() {
     const s = this.state; const quests = Quests.activeQuests(s).filter((q) => Quests.questDone(s, q.id) && !Quests.questClaimed(s, q.id)).length;
