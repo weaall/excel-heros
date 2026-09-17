@@ -192,13 +192,14 @@ if (isMain && process.argv.includes('--manifest')) {
     // ZeroGPU quota: the Space answers "You have exceeded your free ZeroGPU quota (90s requested vs. Ns left). Try again in H:MM:SS" — wait that long.
     // Each image needs 90 s of quota; the account quota and the anonymous per-IP quota (HF_ANON=1) are separate pools.
     const maxAttempts = Number(process.env.MAX_ATTEMPTS ?? 12), quotaWait = Number(process.env.QUOTA_WAIT_MS ?? 240000);
+    let soonestReset = Infinity; // ms until the first pool refills, across the pools tried in this rotation
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const buf = await callGenerate(text, seed + id.length, sceneMode ? { width: 1216, height: 832, neg: SCENE_NEG } : {});
         fs.writeFileSync(target, buf);
         if (!sceneMode) { manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n'); }
         console.log(`ok   ${id} ${(buf.length / 1024).toFixed(0)} KB  ${new Date().toLocaleTimeString()}`); ok++; break;
-      } catch (e) { const quota = /quota|event error/i.test(e.message); const m = e.message.match(/Try again in (\d+):(\d\d):(\d\d)/); const asked = m ? ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) + 30) * 1000 : 0; const rotated = quota && rotatePool(); const wait = rotated ? 2000 : quota ? (asked || quotaWait) : 15000; console.log(`retry ${id} (${attempt}): ${e.message}${rotated ? ` — switching to ${poolName()}` : quota ? ` — waiting ${(wait / 60000).toFixed(1)} min for GPU quota` : ''}`); if (quota && !rotated) poolIdx = 0, AUTH = TOKEN_POOL[0] ? { authorization: `Bearer ${TOKEN_POOL[0]}` } : {}; await new Promise((r) => setTimeout(r, wait)); } // (was: 15000)); }
+      } catch (e) { const quota = /quota|event error/i.test(e.message); const m = e.message.match(/Try again in (\d+):(\d\d):(\d\d)/); const asked = m ? ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) + 30) * 1000 : 0; if (asked) soonestReset = Math.min(soonestReset, asked); const rotated = quota && rotatePool(); const wait = rotated ? 2000 : quota ? (Number.isFinite(soonestReset) ? soonestReset : quotaWait) : 15000; if (!rotated) soonestReset = Infinity; console.log(`retry ${id} (${attempt}): ${e.message}${rotated ? ` — switching to ${poolName()}` : quota ? ` — every pool is short of the 90 s an image costs; waiting ${(wait / 60000).toFixed(0)} min for the first one to refill` : ''}`); if (quota && !rotated) poolIdx = 0, AUTH = TOKEN_POOL[0] ? { authorization: `Bearer ${TOKEN_POOL[0]}` } : {}; await new Promise((r) => setTimeout(r, wait)); } // (was: 15000)); }
     }
     await new Promise((r) => setTimeout(r, 3000));
   }
