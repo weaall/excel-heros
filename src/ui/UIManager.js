@@ -248,7 +248,7 @@ export class UIManager {
 
   #subscribe() {
     const g = this.game;
-    g.on('roster', () => { this.#refreshHeroTable(); this.#refreshTeamTable(); this.#buildCards(); this.#refreshDetail(); });
+    g.on('roster', () => { this.#refreshHeroTable(); this.#refreshTeamTable(); this.#buildCards(); this.#refreshDetail(); this.#refreshBenchGold(); });
     g.on('party', () => { this.#buildHeroTable(); this.#buildCards(); this.#refreshDetail(); });
     g.on('cards', () => { $('#cards-cell').textContent = fmt(g.state.cards); $('#cards-top').textContent = fmt(g.state.cards); this.#refreshDetail(); });
     g.on('main', (job) => this.openModal('승진 발표', `<p><b>김인턴</b>이(가) <b>${job.title}</b>(${job.grade}급)으로 승진했습니다!</p><p class="muted">${job.desc ?? '스탯과 스킬이 강화되었습니다.'}</p>`));
@@ -1423,6 +1423,19 @@ export class UIManager {
     this.tutTarget = sel;
     if (sel) document.querySelector(sel)?.classList.add('tut-point');
   }
+  /**
+   * 대기 카드에 잠긴 골드. 낮은 등급을 골드로 키운 게 낭비처럼 느껴지는 건 그 돈이 어디 갔는지 안 보이기 때문이다.
+   * 얼마가 어디 잠겨 있고 한 번에 꺼낼 수 있다는 걸 숫자와 버튼으로 같이 보여 준다.
+   */
+  #refreshBenchGold() {
+    const box = $('#bench-gold'); if (!box) return;
+    const { gold, heroes } = this.game.benchGold();
+    if (!heroes || gold <= 0) { box.hidden = true; return; }
+    box.hidden = false; box.innerHTML = '';
+    box.append(
+      el('span', {}, `대기 사원 ${heroes}명에 골드 `), el('b', {}, fmt(gold)), el('span', {}, ' 잠김'),
+      btn('회수', () => { const r = this.game.reclaimBenchLevels(); this.toast(`골드 +${fmt(r.gold)} 회수`); }, 'small primary', false, '대기 중인 카드의 레벨을 되돌려 골드를 전액 돌려받습니다 (등급과 무관하게 레벨 값 그대로)'));
+  }
   #refreshPrestigeHint() {
     const box = $('#prestige-hint'); if (!box) return;
     if (this.prestigeHintSnooze && Date.now() < this.prestigeHintSnooze) { box.hidden = true; return; }
@@ -1439,6 +1452,7 @@ export class UIManager {
     $('#shares-top').textContent = info.shares;
     this.#refreshPrestigeHint();
     this.#refreshTutorial();
+    this.#refreshBenchGold();
   }
   #buildFormulaSheet() {
     // the 게임 공식 table was hidden from the backstage by request; keep the builder harmless if the element is absent

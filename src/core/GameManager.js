@@ -172,6 +172,16 @@ export class GameManager extends Emitter {
    * and the refund is 100%, so moving an investment from a levelled D card to an A card is lossless — this just does
    * it without making the player open every card and press 초기화.
    */
+  /** 지금 회수 버튼 하나로 돌려받을 수 있는 골드 — 대기·비즐겨찾기 카드에 잠긴 레벨 값. */
+  benchGold() {
+    let gold = 0, heroes = 0;
+    for (const [id, e] of Object.entries(this.state.heroes)) {
+      if (!e.owned || (e.level | 0) <= 1) continue;
+      if (this.isMain(id) || this.state.party.includes(id) || this.isDispatched(id) || this.state.favorites?.[id]) continue;
+      const g = this.levelGold(id); if (g > 0) { gold += g; heroes++; }
+    }
+    return { gold, heroes };
+  }
   reclaimBenchLevels({ keep = [] } = {}) {
     let gold = 0, heroes = 0;
     for (const [id, e] of Object.entries(this.state.heroes)) {
@@ -181,7 +191,11 @@ export class GameManager extends Emitter {
       const back = this.resetHeroLevel(id);
       if (back > 0) { gold += back; heroes++; }
     }
-    if (heroes) this.log(`대기 사원 ${heroes}명 레벨 회수 → 골드 +${Math.round(gold).toLocaleString()}`, 'info');
+    if (heroes) {
+      this.log(`대기 사원 ${heroes}명 레벨 회수 → 골드 +${Math.round(gold).toLocaleString()}`, 'info');
+      // 로그 한 줄로는 아무도 못 본다. 골드가 돌아왔다는 건 토스트로 알려야 "낮은 등급에 쓴 골드가 아깝다"가 안 남는다.
+      this.emit('toast', `대기 사원 ${heroes}명 레벨 회수 — 골드 +${Math.round(gold).toLocaleString()} (전액 환급)`);
+    }
     return { heroes, gold };
   }
 

@@ -808,3 +808,11 @@ body.stealth .tutorial { display: none; }
 /* 메인_전투는 한 화면에 들어간다. 나머지 시트는 표가 길 수 있으니 지금처럼 스크롤한다. */
 #sheet-home.ws { height: 100%; min-height: 0; grid-template-rows: var(--hdr) minmax(0, 1fr); }
 #sheet-home .ws-rows, #sheet-home .ws-body { overflow: hidden; min-height: 0; }
+
+/* 대기 카드에 잠긴 골드: 낭비가 아니라 '옮길 수 있는 돈'이라는 걸 보이게 */
+.bench-gold { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; padding: 5px 8px; font-size: 12px;
+  background: #fffbe8; border: 1px solid #e0c85a; color: #6b5700; }
+.bench-gold[hidden] { display: none; }
+.bench-gold b { color: #8a6d00; }
+.bench-gold .xl-btn { margin-left: auto; }
+.refund-tag { font-weight: 400; font-size: 10px; color: #1b5e3a; background: #e8f7ee; border: 1px solid #a8d8bb; padding: 0 3px; }

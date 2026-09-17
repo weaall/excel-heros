@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createInitialState, migrate } from '../src/core/state.js';
 import { GameManager } from '../src/core/GameManager.js';
 import { TUTORIAL, TUTORIAL_BONUS, stepById } from '../src/data/tutorial.js';
+import { HEROES } from '../src/data/heroes.js';
 
 const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
 
@@ -80,4 +81,43 @@ test('교육: an old save without a tutorial block still loads', () => {
   const s = migrate(raw);
   assert.deepEqual(s.tutorial.done, {});
   assert.equal(s.tutorial.bonus, false);
+});
+
+// ------------------------------------------------------------- 잠긴 골드 --
+// "D를 230레벨까지 올린 골드가 아깝다"에 대한 답: 아깝지 않다는 걸 코드가 보증해야 한다.
+// 레벨 비용은 등급과 무관하게 레벨에만 달려 있고 환급이 100%이므로, 낮은 등급에 넣은 골드는 손실 없이 옮겨진다.
+test('잠긴 골드: benchGold counts only reclaimable cards and reclaim returns every coin', () => {
+  const g = new GameManager({ save: memSave() });
+  g.state.gold = 1e9;
+  const owned = Object.keys(g.state.heroes).filter((id) => !g.isMain(id)).slice(0, 4);
+  for (const id of owned) { g.state.heroes[id].owned = true; g.state.heroes[id].star = 3; }
+  const [inParty, benched, fav, plain] = owned;
+  g.state.party = [...g.state.party.filter((id) => g.isMain(id)), inParty];
+  g.state.favorites = { [fav]: true };
+  for (const id of owned) g.upgradeHeroMany(id, 12);
+
+  const locked = g.benchGold();
+  assert.equal(locked.heroes, 2, '파티원과 즐겨찾기는 잠긴 골드로 세지 않는다');
+  assert.ok(locked.gold > 0);
+  assert.equal(locked.gold, g.levelGold(benched) + g.levelGold(plain));
+
+  const gold0 = g.state.gold;
+  const got = g.reclaimBenchLevels();
+  assert.equal(got.gold, locked.gold, '표시한 만큼 정확히 돌아온다');
+  assert.equal(g.state.gold, gold0 + locked.gold);
+  assert.equal(g.state.heroes[benched].level, 1);
+  assert.ok(g.state.heroes[inParty].level > 1, '싸우는 카드는 건드리지 않는다');
+  assert.ok(g.state.heroes[fav].level > 1, '즐겨찾기도 건드리지 않는다');
+  assert.deepEqual(g.benchGold(), { gold: 0, heroes: 0 });
+});
+
+test('잠긴 골드: a level costs the same on a D and on an S, so moving gold between grades is lossless', () => {
+  const g = new GameManager({ save: memSave() });
+  g.state.gold = 1e12;
+  const d = HEROES.find((h) => h.grade === 'D' && !g.isMain(h.id));
+  const s = HEROES.find((h) => h.grade === 'S');
+  for (const h of [d, s]) { g.state.heroes[h.id].owned = true; g.state.heroes[h.id].star = 3; }
+  g.upgradeHeroMany(d.id, 30);
+  g.upgradeHeroMany(s.id, 30);
+  assert.equal(g.levelGold(d.id), g.levelGold(s.id), '레벨 값은 등급이 아니라 레벨만 본다 — 그래서 옮겨도 손해가 없다');
 });
