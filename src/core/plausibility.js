@@ -2,7 +2,7 @@
 // A single-player idle game cannot stop a player from editing localStorage; these bounds only keep obviously
 // impossible saves off the shared leaderboard / cloud store. Every bound is deliberately generous so a legit
 // save never trips it — see docs/BALANCE.md 6-19.
-import { BALANCE, upgradeCost, prestigeShares } from '../config/balance.js';
+import { BALANCE, upgradeCost, prestigeShares, levelCap } from '../config/balance.js';
 import { MAX_CODE_GEMS } from '../data/codes.js';
 
 const DAY = 86400000;
@@ -51,6 +51,12 @@ export function checkSave(state, now = Date.now()) {
   if ((st.totalKills ?? 0) < normalStages * BALANCE.KILLS_PER_STAGE * 0.9 - 100) reasons.push('stage progress exceeds kills');
   if ((st.bossKills ?? 0) < Math.floor(cleared / BALANCE.BOSS_EVERY) * 0.9 - 2) reasons.push('boss stages cleared without boss kills');
   if (JSON.stringify(state).length > MAX_SAVE_BYTES) reasons.push('save too large');
+  // 레벨 상한은 ★로만 열린다 — 손으로 고친 저장이 이 선을 넘을 수 없다
+  for (const [id, e] of Object.entries(state.heroes ?? {})) {
+    if (!e?.owned) continue;
+    const cap = levelCap(e.star ?? 1, !!e.awakened, id === 'main' ? 4 : null) + 5;
+    if ((e.level | 0) > cap) { reasons.push('hero level above the ★ ceiling'); break; }
+  }
   checkEquipment(state, reasons);
   checkPrestige(state, reasons);
   return { ok: reasons.length === 0, reasons };

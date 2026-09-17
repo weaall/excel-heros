@@ -56,6 +56,11 @@ export const BALANCE = Object.freeze({
   ENHANCE_CAP_BY_STAR: [10, 20, 30, 40, 50], // cap per ★ (index star-1); 각성 adds ENHANCE_CAP_AWAKEN
   ENHANCE_CAP_AWAKEN: 10,
   ENHANCE_CAP_BY_TIER: [10, 20, 30, 40, 50],  // main hero: cap per job tier
+  // 레벨 상한: ★로만 열린다. 골드는 벽까지만 데려다주고, 그다음은 중복 카드(조각)의 몫.
+  // 스테이지 1단계에 약 1.74레벨이 필요하므로 ★1 ≈ 34단계 · ★3 ≈ 92단계 · ★5 ≈ 149단계 · ★5+각성 ≈ 172단계.
+  LEVEL_CAP_BY_STAR: [80, 140, 200, 260, 320],
+  LEVEL_CAP_AWAKEN: 50,
+  MAIN_LEVEL_CAP_BY_TIER: [80, 140, 200, 260, 320], // 주인공은 ★ 대신 직급으로 열린다
   LEVEL_REFUND: 1.0,        // levels can be undone; gold is refunded at this rate so it can move between cards
   ENHANCE_COST_BASE: 10, ENHANCE_COST_GROWTH: 1.2, // enhance cards
   SHARD_CARD_VALUE: { D: 1, C: 2, B: 4, A: 8, S: 16 }, // enhance cards per shard when converting
@@ -218,3 +223,8 @@ export const gemsForClear = (stage, { first = false, boss = false } = {}) => {
 
 /** Gems per drop at a given stage. Flat drops made deep farming pay the same as phase 1; see docs/BALANCE.md 6-59. */
 export const gemDropAmount = (stage) => B.GEM_DROP.amount + Math.floor(Math.floor((Math.max(1, stage) - 1) / B.BOSS_EVERY) * B.GEM_DROP.amountPerPhase);
+
+/** Highest level a card may reach: ★ (or the main hero's job tier) is what raises the ceiling, never gold. */
+export const levelCap = (star, awakened = false, tier = null) => (tier !== null
+  ? B.MAIN_LEVEL_CAP_BY_TIER[Math.min(tier, B.MAIN_LEVEL_CAP_BY_TIER.length - 1)]
+  : B.LEVEL_CAP_BY_STAR[Math.max(0, Math.min(Math.max(1, star) - 1, B.LEVEL_CAP_BY_STAR.length - 1))]) + (awakened ? B.LEVEL_CAP_AWAKEN : 0);

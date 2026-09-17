@@ -552,7 +552,7 @@ export class UIManager {
     const gold = this.game.state.gold;
     for (const [id, row] of this.heroRows) {
       const v = this.game.heroView(id);
-      if (!light) { $('.lvl', row).textContent = v.entry.level; $('.atk', row).textContent = fmt(v.atk); $('.cost', row).textContent = fmt(v.cost);
+      if (!light) { $('.lvl', row).textContent = v.entry.level; $('.atk', row).textContent = fmt(v.atk); $('.cost', row).textContent = v.atLevelCap ? '상한' : fmt(v.cost); $('.cost', row).classList.toggle('bad', !!v.atLevelCap); $('.cost', row).title = v.atLevelCap ? v.levelCapHint : '';
         const eqCell = $('.eq', row); if (eqCell) { const n = this.game.equipOf(v.id).filter((x) => x.item).length; eqCell.textContent = `${n}/4`; eqCell.className = `num eq ${n === 4 ? 'ok' : n ? '' : 'bad'}`; eqCell.title = v.equip.setName ? `${v.equip.setName} · 모든 능력치 +${v.equip.setPct}%` : '비품 탭에서 착용하거나 자동 장착을 누르세요'; } }
       $('.up', row).disabled = gold < v.cost; $('.up10', row).disabled = gold < v.cost; row.classList.toggle('affordable', gold >= v.cost);
     }
@@ -810,13 +810,13 @@ export class UIManager {
     const table = el('table', { class: 'dt-table' });
     if (!e.owned) table.append(row('상태', '미보유', null, '삽입 › 데이터 가져오기에서 획득'));
     else {
-      table.append(row('레벨', `Lv ${e.level}`, el('div', { class: 'ctl-group' },
+      table.append(row('레벨', `Lv ${e.level} / ${v.levelCap}`, el('div', { class: 'ctl-group' },
         sb('-10', () => { if (!g.downgradeHero(id, 10)) this.toast('레벨 1입니다'); }, '', e.level <= 1, `레벨 -10 · 골드 환급`),
         sb('-1', () => { if (!g.downgradeHero(id, 1)) this.toast('레벨 1입니다'); }, '', e.level <= 1, `레벨 -1 · 골드 ${fmt(v.refundPerLevel)} 환급`),
         sb('+1', () => { if (!g.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'primary', s.gold < v.cost, `레벨 +1 · 골드 ${fmt(v.cost)}`),
         sb('+10', () => { if (!g.upgradeHeroMany(id, 10)) this.toast('골드가 부족합니다'); }, 'primary', s.gold < v.cost, '레벨 +10 (골드가 되는 만큼)'),
         sb('초기화', () => { const r = g.resetHeroLevel(id); this.toast(r ? `레벨 초기화: 골드 ${fmt(r)} 환급` : '레벨 1입니다'); }, 'danger', e.level <= 1, '레벨 1로 되돌리고 전액 환급')),
-        `다음 레벨 골드 ${fmt(v.cost)} · 되돌리면 ${fmt(v.refundPerLevel)} 환급`));
+        v.atLevelCap ? `레벨 상한 도달 — ${v.levelCapHint}` : `다음 레벨 골드 ${fmt(v.cost)} · 되돌리면 ${fmt(v.refundPerLevel)} 환급`));
       table.append(row('전투력', fmt(v.power), null, '등급·★·레벨·강화·비품을 합친 비교값 (ATK×2 + HP÷10) — 등급이 낮아도 이 숫자가 높으면 더 셉니다'));
       table.append(row('공격력 ATK', fmt(v.atk)));
       table.append(row('체력 HP', fmt(v.hp)));

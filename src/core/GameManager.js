@@ -1,7 +1,7 @@
 // Global game state, economy, stage flow and player actions. Emits events for the UI.
 import {
   BALANCE, upgradeCost, baseGold, bossGold, isBossStage, stageLabel, heroATK, heroHP,
-  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, enhanceCap, offlineGold, prestigeShares,
+  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, enhanceCap, levelCap, offlineGold, prestigeShares,
 } from '../config/balance.js';
 import { HERO_BY_ID, GRADES, SKILLS, TRAITS, heroBaseStats, MAIN_ID, MAIN_JOBS } from '../data/heroes.js';
 import { pullOnce, promoteCost } from './GachaManager.js';
@@ -324,6 +324,9 @@ export class GameManager extends Emitter {
       canAwaken: !isMain && entry.owned && !awakened && star >= BALANCE.AWAKEN.star && this.state.cards >= awakenCost,
       interval: base.interval / (1 + eq.speed / 100), range: base.range,
       equip: eq,
+      levelCap: levelCap(star, awakened, isMain ? def.tier : null),
+      atLevelCap: entry.level >= levelCap(star, awakened, isMain ? def.tier : null),
+      levelCapHint: isMain ? '직급 승진으로 상한이 올라갑니다' : '★ 한계 돌파로 상한이 올라갑니다 (같은 카드를 더 뽑아 조각을 모으세요)',
       cost: upgradeCost(entry.level),
       inParty: this.state.party.includes(id),
       skillUnlocked, skillPower: skillPower * (1 + eq.skill / 100), skillLv, skillCdMult: 1 - skillLv * BALANCE.SKILL_LEVEL.cooldownPerLevel,
@@ -524,6 +527,7 @@ export class GameManager extends Emitter {
   upgradeHero(id) {
     const v = this.heroView(id);
     if (!v.entry.owned || this.state.gold < v.cost) return false;
+    if (v.atLevelCap) return false; // 골드로는 여기까지 — 상한은 ★(또는 승진)만 올린다
     this.state.gold -= v.cost; v.entry.level += 1;
     Quests.addProgress(this.state, 'upgrades', 1); this.emit('sfx', 'upgrade');
     this.entities.refreshHeroStats(); this.entities.levelUpFx(id);
@@ -545,15 +549,16 @@ export class GameManager extends Emitter {
   /** Level a hero up to `n` times in one click (stops when gold runs out). Returns levels bought. */
   upgradeHeroMany(id, n = 10) {
     const entry = this.state.heroes[id]; if (!entry?.owned) return 0;
+    const cap = this.heroView(id).levelCap;
     let bought = 0;
-    for (let i = 0; i < n; i++) { const cost = upgradeCost(entry.level); if (this.state.gold < cost) break; this.state.gold -= cost; entry.level += 1; bought++; }
+    for (let i = 0; i < n; i++) { if (entry.level >= cap) break; const cost = upgradeCost(entry.level); if (this.state.gold < cost) break; this.state.gold -= cost; entry.level += 1; bought++; }
     if (bought) { Quests.addProgress(this.state, 'upgrades', bought); this.entities.refreshHeroStats(); this.entities.levelUpFx(id); this.emit('gold'); this.emit('roster'); this.emit('quests'); this.emit('sfx', 'levelup'); }
     return bought;
   }
   /** Level every party member up to `n` times (round-robin so gold is shared fairly). Returns total levels bought. */
   upgradeAllMany(n = 5) {
     let total = 0;
-    for (let round = 0; round < n; round++) for (const id of this.state.party) { const cost = upgradeCost(this.state.heroes[id].level); if (this.state.gold < cost) continue; this.state.gold -= cost; this.state.heroes[id].level += 1; total++; }
+    for (let round = 0; round < n; round++) for (const id of this.state.party) { const v = this.heroView(id); if (v.atLevelCap) continue; const cost = upgradeCost(this.state.heroes[id].level); if (this.state.gold < cost) continue; this.state.gold -= cost; this.state.heroes[id].level += 1; total++; }
     if (total) { Quests.addProgress(this.state, 'upgrades', total); this.entities.refreshHeroStats(); this.emit('gold'); this.emit('roster'); this.emit('quests'); this.emit('sfx', 'levelup'); }
     return total;
   }
@@ -562,7 +567,8 @@ export class GameManager extends Emitter {
   upgradeCheapestLoop(max = 200) {
     let n = 0;
     while (n < max) {
-      const cheapest = this.state.party.map((id) => this.heroView(id)).sort((a, b) => a.cost - b.cost)[0];
+      // 상한에 닿은 카드는 후보에서 빠진다 — 골드는 여기서 멈추고, 그다음은 ★(조각)의 몫
+      const cheapest = this.state.party.map((id) => this.heroView(id)).filter((v) => !v.atLevelCap).sort((a, b) => a.cost - b.cost)[0];
       if (!cheapest || this.state.gold < cheapest.cost) break;
       this.state.gold -= cheapest.cost; cheapest.entry.level += 1; n++;
     }

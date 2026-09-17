@@ -83,3 +83,29 @@ test('회사 업그레이드: payroll raises gem drop chance (not gold), team co
   }
   for (const k of Object.keys(BALANCE.TEAM_UPGRADES)) assert.ok(teamUpgradeCost(k, 0) > upgradeCost(30), k);
 });
+
+test('레벨 상한은 ★로만 열린다 — 골드로는 넘을 수 없다', async () => {
+  const { levelCap, BALANCE } = await import('../src/config/balance.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { createInitialState } = await import('../src/core/state.js');
+  const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
+  // 상한은 ★마다 올라가고, 각성이 한 번 더 올린다
+  for (let st = 2; st <= 5; st++) assert.ok(levelCap(st) > levelCap(st - 1), `★${st} 상한이 더 높다`);
+  assert.equal(levelCap(5, true), levelCap(5) + BALANCE.LEVEL_CAP_AWAKEN);
+  const s = createInitialState();
+  s.heroes.parttime = { owned: true, star: 1, shards: 0, level: 1, enhance: 0, equip: {} };
+  s.gold = 1e18;
+  const g = new GameManager({ state: s, save: memSave() });
+  g.toggleParty('parttime');
+  // 골드가 무한이어도 상한에서 멈춘다 — 단일·일괄·자동 강화 경로 모두
+  g.upgradeHeroMany('parttime', 10_000);
+  assert.equal(g.state.heroes.parttime.level, levelCap(1), '★1 상한에서 멈춘다');
+  assert.equal(g.upgradeHero('parttime'), false, '한 단계도 더 못 올린다');
+  g.upgradeAllMany(50); g.upgradeCheapestLoop(200);
+  assert.equal(g.state.heroes.parttime.level, levelCap(1), '일괄·자동 경로도 상한을 지킨다');
+  assert.ok(g.state.gold > 1e17, '골드는 남아돈다 — 벽은 돈으로 여는 게 아니다');
+  // ★을 올리면 그만큼 열린다
+  s.heroes.parttime.star = 2;
+  assert.ok(g.upgradeHero('parttime'), '★2가 되면 다시 올라간다');
+  assert.equal(g.heroView('parttime').levelCap, levelCap(2));
+});
