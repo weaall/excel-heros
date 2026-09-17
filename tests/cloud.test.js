@@ -5,7 +5,7 @@ import { GameManager } from '../src/core/GameManager.js';
 import { checkSave, checkDelta, goldInLevels, boardEntry, boardScore, sanitizeName, maxPlausibleDps } from '../src/core/plausibility.js';
 import { CloudSync } from '../src/core/CloudSync.js';
 import { Auth } from '../src/core/Auth.js';
-import worker, { verifyGoogleToken } from '../backend/worker.js';
+import worker, { verifyGoogleToken, hashToken } from '../backend/worker.js';
 import { upgradeCost, prestigeShares } from '../src/config/balance.js';
 
 const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
@@ -82,6 +82,8 @@ function fakeDB() {
       if (sql.startsWith('INSERT INTO users')) t.users.set(a[0], { id: a[0], google_sub: a[1], email: a[2], name: a[3], picture: a[4] });
       else if (sql.startsWith('UPDATE users')) { const u = t.users.get(a[4]); Object.assign(u, { name: a[0], picture: a[1], email: a[2] }); }
       else if (sql.startsWith('INSERT INTO sessions')) t.sessions.set(a[0], { user_id: a[1], expires_at: a[3] });
+      else if (sql.startsWith('UPDATE sessions SET token')) { const row = t.sessions.get(a[1]); if (row) { t.sessions.delete(a[1]); t.sessions.set(a[0], row); } }
+      else if (sql.startsWith('DELETE FROM sessions WHERE user_id')) { /* pruning: the fake keeps every row, which is the stricter case for these tests */ }
       else if (sql.startsWith('DELETE FROM sessions')) t.sessions.delete(a[0]);
       else if (sql.startsWith('INSERT INTO saves')) t.saves.set(a[0], { save: a[1], updated_at: a[2] });
       else if (sql.startsWith('INSERT INTO board')) t.board.set(a[0], { id: a[0], name: a[1], picture: a[2], max_cleared: a[3], shares: a[4], prestige: a[5], dps: a[6], play_seconds: a[7], collection: a[8], score: a[9], updated_at: a[10] });
@@ -233,4 +235,26 @@ test('보안: the client reports its own DPS, so the board clamps it to what the
   assert.equal(boardEntry(s, '사원', -50).dps, 0, 'negative DPS becomes zero');
   const real = Math.round(cap / 1000);
   assert.equal(boardEntry(s, '사원', real).dps, real, 'a realistic DPS passes through untouched');
+});
+
+test('보안: the sessions table stores only a hash, and pre-hash rows keep working once then migrate', async () => {
+  const db = fakeDB();
+  const env = { DB: db, GOOGLE_CLIENT_ID: CLIENT_ID, fetchFn: tokeninfo(goodClaims()), SAVE_MIN_GAP_MS: 0 };
+  const r = await worker.fetch(new Request('https://x/v1/auth/google', { method: 'POST', body: JSON.stringify({ credential: 'x'.repeat(40) }) }), env);
+  const { token } = await r.json();
+  assert.match(token, /^[a-f0-9]{64}$/);
+  const stored = [...db.tables.sessions.keys()];
+  assert.ok(!stored.includes(token), 'the raw token is never written to the table');
+  assert.ok(stored.includes(await hashToken(token)), 'the hash is');
+  // the token the client holds still authenticates
+  const me = await worker.fetch(new Request('https://x/v1/me', { headers: { authorization: `Bearer ${token}` } }), env);
+  assert.equal(me.status, 200);
+  // a row written before this change (plaintext) authenticates once and is rewritten as a hash
+  const legacy = 'a'.repeat(64);
+  const userId = [...db.tables.sessions.values()][0].user_id;
+  db.tables.sessions.set(legacy, { user_id: userId, expires_at: Date.now() + 86400000 });
+  const old = await worker.fetch(new Request('https://x/v1/me', { headers: { authorization: `Bearer ${legacy}` } }), env);
+  assert.equal(old.status, 200, 'an existing session is not dropped by the upgrade');
+  assert.ok(!db.tables.sessions.has(legacy), 'and it is stored hashed afterwards');
+  assert.ok(db.tables.sessions.has(await hashToken(legacy)));
 });

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   last_login  INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS sessions (
-  token      TEXT PRIMARY KEY,       -- 64 hex chars, sent as `authorization: Bearer`
+  token      TEXT PRIMARY KEY,       -- SHA-256 of the 64-hex session token (never the token itself)
   user_id    TEXT NOT NULL REFERENCES users(id),
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL

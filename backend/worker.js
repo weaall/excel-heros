@@ -4,6 +4,7 @@
 // Identity: Google sign-in. The client gets an ID token from Google Identity Services and posts it to
 // /v1/auth/google; the Worker verifies it (Google tokeninfo, audience = GOOGLE_CLIENT_ID), upserts the user and
 // returns an opaque session token (30 days). Every other route takes `authorization: Bearer <session>`.
+// The sessions table stores only SHA-256(token), so a database leak cannot be replayed as a login.
 //
 // Routes (JSON):
 //   GET  /v1/ping                          → { ok, time, google: bool }
@@ -24,6 +25,9 @@ const pickOrigin = (env, req) => { const list = String(env.ALLOW_ORIGIN ?? '*').
 const json = (body, status = 200, origin = '*') => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(origin) } });
 const cors = (origin) => ({ 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,PUT,POST,OPTIONS', 'access-control-allow-headers': 'content-type,authorization', 'access-control-max-age': '86400' });
 const randomToken = () => { const a = new Uint8Array(32); crypto.getRandomValues(a); return [...a].map((b) => b.toString(16).padStart(2, '0')).join(''); };
+const toHex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+/** SHA-256 of a session token. The table stores this; the client keeps the token itself. */
+export async function hashToken(token) { return toHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))); }
 
 /** Verify a Google ID token via Google's tokeninfo endpoint. Returns the claims or throws. `fetchFn` is injectable for tests. */
 export async function verifyGoogleToken(credential, clientId, fetchFn = fetch) {
@@ -42,10 +46,17 @@ export async function verifyGoogleToken(credential, clientId, fetchFn = fetch) {
 async function auth(req, env, origin) {
   const m = /^Bearer\s+([a-f0-9]{64})$/i.exec(req.headers.get('authorization') ?? '');
   if (!m) return json({ error: 'login required' }, 401, origin);
-  const row = await env.DB.prepare('SELECT s.user_id AS id, s.expires_at, u.name, u.picture FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?').bind(m[1]).first();
+  const raw = m[1].toLowerCase(), hashed = await hashToken(raw);
+  const find = (t) => env.DB.prepare('SELECT s.user_id AS id, s.expires_at, u.name, u.picture FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?').bind(t).first();
+  let stored = hashed, row = await find(hashed);
+  if (!row) { // a session issued before tokens were hashed: accept it once, then rewrite the row as a hash
+    row = await find(raw);
+    if (row) { await env.DB.prepare('UPDATE sessions SET token = ? WHERE token = ?').bind(hashed, raw).run(); }
+    else stored = null;
+  }
   if (!row) return json({ error: 'unknown session' }, 401, origin);
-  if (row.expires_at < Date.now()) { await env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(m[1]).run(); return json({ error: 'session expired' }, 401, origin); }
-  return { id: row.id, name: row.name, picture: row.picture, token: m[1] };
+  if (row.expires_at < Date.now()) { await env.DB.prepare('DELETE FROM sessions WHERE token = ?').bind(stored).run(); return json({ error: 'session expired' }, 401, origin); }
+  return { id: row.id, name: row.name, picture: row.picture, token: stored };
 }
 
 /** Hard cap on stored ad views per user per day — the endpoint is only a counter, but an open INSERT is free DB growth. */
@@ -83,7 +94,7 @@ export default {
         const token = randomToken(), expiresAt = now + SESSION_DAYS * 86400000;
         await env.DB.prepare('DELETE FROM sessions WHERE user_id = ? AND expires_at < ?').bind(user.id, now).run(); // expired tokens are dead weight and extra attack surface
         await env.DB.prepare('DELETE FROM sessions WHERE user_id = ? AND token NOT IN (SELECT token FROM sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 9)').bind(user.id, user.id).run(); // keep the 9 newest, this login makes 10
-        await env.DB.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').bind(token, user.id, now, expiresAt).run();
+        await env.DB.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').bind(await hashToken(token), user.id, now, expiresAt).run(); // the row holds the hash; the client holds the token
         return json({ token, user: userView(user), expiresAt }, 200, origin);
       }
 
