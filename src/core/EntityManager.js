@@ -22,6 +22,8 @@ const RANGED_SHAPES = { sheet: 'paper', chart: 'bar', cursor: 'arrow', cloud: 'd
 /** What each ranged/healer hero throws (office supplies). Unlisted heroes fire a plain shot. */
 const HERO_SHOT = { parttime: 'drop', contract: 'paper', vlookup: 'bar', acct_lead: 'bar', cfo: 'sand', ceo: 'arrow', helpdesk: 'bar', pm_lead: 'paper', cmo: 'paper', barista: 'drop', hr_jung: 'paper', welfare: 'drop', design_lead: 'arrow', cleaner: 'drop' };
 const ENRAGE = { at: 0.5, atk: 1.2, speed: 1.3, interval: 0.7 }; // bosses enrage under 50% HP
+// 스킬 연출이 겹치지 않도록 두는 최소 간격. 필살기는 컷인이 길어 조금 더 쉰다.
+const CAST_GAP = 1.1, CAST_GAP_ULT = 2.0;
 const TRAVEL_TIME = 1.6;      // seconds of scrolling between waves
 const SCROLL_SPEED = 150;     // px/s background scroll while travelling
 const MELEE_REACH = 9;        // melee heroes dash to any monster that has reached the line, wherever they stand
@@ -36,6 +38,7 @@ export class EntityManager {
     this.boss = null; this.bossTimer = 0;
     this.atkBuff = { mult: 1, until: 0 }; this.hasteBuff = { mult: 1, until: 0 }; this.barrier = { hp: 0, max: 0, until: 0 }; this.slow = { mult: 1, until: 0 }; // slow: boss debuff on party attack speed
     this.taunt = null; // { heroId, reduce, until } — 도발: every monster swings at this hero and it hurts less
+    this.castLock = 0; // 스킬 순차 발동: 남은 잠금 시간(초). 한 번에 하나씩만 터지게 한다
     this.time = 0; this.dmgLog = []; this.rallyMult = 1; this.shake = 0;
     this.scroll = 0;            // background scroll offset (px)
     this.traveling = false; this.travelT = 0;
@@ -170,6 +173,7 @@ export class EntityManager {
     if (this.barrier.until < this.time) this.barrier.hp = 0;
     if (this.slow.until < this.time) this.slow.mult = 1;
     if (this.taunt && this.taunt.until < this.time) this.taunt = null;
+    if (this.castLock > 0) this.castLock = Math.max(0, this.castLock - dt);
     const speedMult = this.game.speedMult() * this.hasteBuff.mult * this.slow.mult * (stageModifier(this.game.combatStage())?.heroSpeed ?? 1);
 
     // --- travel between waves: scroll the dungeon, party runs in place
@@ -220,7 +224,7 @@ export class EntityManager {
         }
       }
       if (!target) { if (h.anim !== 'attack') h.anim = 'idle'; continue; }
-      if (h.skillUnlocked && h.skillCd <= 0) {
+      if (h.skillUnlocked && h.skillCd <= 0 && this.castLock <= 0) { // 순서대로: 앞 스킬 연출이 끝난 뒤에 다음 스킬
         const type = h.skill.type;
         const worth = type === 'heal' ? heroes.some((a) => a.hp < a.maxHp * 0.75)
           : type === 'buff' || type === 'haste' ? (monsters.length >= 2 || !!this.boss)
@@ -534,6 +538,7 @@ export class EntityManager {
         break;
     }
     h.anim = 'attack'; h.animT = 0;
+    this.castLock = type === 'ult' ? CAST_GAP_ULT : CAST_GAP;
     if (type !== 'ult') { if (!h.say) { const q = skillQuip(type, Math.random()); if (q) h.say = { text: q, t: 1.8 }; } this.game.emit('skill-cast', { hero: h, type }); }
     this.game.emit('sfx', type === 'ult' ? 'ult' : 'skill');
     this.floaters.push({ x: h.x, y: h.y - 58, text: h.skillName ?? type.toUpperCase(), color: '#8e44ad', t: 0, big: true });

@@ -144,3 +144,25 @@ test('taunt: monsters hit the taunting hero instead, for reduced damage, until i
   if (em.taunt) { em.taunt.until = em.time - 1; g.tick(0.1); }
   assert.equal(em.taunt, null, 'taunt expires');
 });
+
+test('스킬은 순서대로: 같은 순간에 두 개가 겹쳐 터지지 않는다', () => {
+  const { g, em } = setup('cfo');
+  // 파티 전원의 스킬을 동시에 준비시킨다 — 예전에는 이 프레임에 전부 터졌다
+  for (const h of em.heroes) { h.skillUnlocked = true; h.skillCd = 0; }
+  const casts = [];
+  const real = em.castSkill.bind(em);
+  em.castSkill = (h, ...rest) => { casts.push({ id: h.heroId, t: em.time }); return real(h, ...rest); };
+  em.castLock = 0;
+  for (let i = 0; i < 40 && casts.length === 0; i++) g.tick(0.05); // 첫 스킬이 나갈 때까지
+  assert.equal(casts.length, 1, '여러 명이 동시에 준비돼 있어도 한 번에 하나만 발동한다');
+  assert.ok(em.castLock > 0, '다음 스킬은 잠금이 풀린 뒤에');
+  // 잠금이 도는 동안에는 준비된 동료가 있어도 추가 발동이 없다
+  for (let i = 0; i < 8; i++) g.tick(0.05);
+  assert.equal(casts.length, 1, '연출 중에는 겹치지 않는다');
+  // 잠금이 풀리면 다음 스킬이 이어서 나간다
+  for (const h of em.heroes) { h.skillUnlocked = true; h.skillCd = 0; }
+  em.castLock = 0;
+  for (let i = 0; i < 40 && casts.length < 2; i++) g.tick(0.05);
+  assert.ok(casts.length >= 2, '잠금이 풀리면 다음 스킬이 나간다');
+  assert.ok(casts[1].t > casts[0].t, '두 스킬은 같은 순간이 아니라 시간차를 두고 나간다');
+});
