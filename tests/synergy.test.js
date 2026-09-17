@@ -9,6 +9,7 @@ import { HEROES, MAIN_ID } from '../src/data/heroes.js';
 import { PROFILES } from '../src/data/profiles.js';
 import { MONSTER_TYPES, BOSSES } from '../src/data/monsters.js';
 import * as Achievements from '../src/core/AchievementManager.js';
+import { ACHIEVEMENTS } from '../src/data/achievements.js';
 
 const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
 const DAY = 24 * 3600 * 1000;
@@ -73,7 +74,8 @@ test('오류 도감: kills are counted per base type, bosses separately, elites 
   assert.equal(g.bestiaryCount(BOSSES[0].id), 1);
   assert.equal(g.bestiaryDiscovered(), 3);
   assert.equal(Achievements.achievementValue(g.state, { stat: 'bestiary' }), 3);
-  assert.equal(MONSTER_TYPES.length + BOSSES.length, 29, 'achievement top tier equals every type + boss');
+  const bestiary = ACHIEVEMENTS.find((a) => a.stat === 'bestiary');
+  assert.equal(bestiary.tiers.at(-1), MONSTER_TYPES.length + BOSSES.length, '도감 업적의 최고 티어는 전체 종류 수와 같아야 한다');
   const m = migrate(JSON.parse(JSON.stringify(g.state)));
   assert.equal(m.bestiary.circ, 2);
 });

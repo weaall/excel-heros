@@ -55,8 +55,10 @@ test('collection bonus raises party ATK and gold multiplier as heroes are collec
 });
 
 test('bosses rotate by phase, have pack sprites, and patterns spawn with their own stats', () => {
-  assert.equal(BOSSES.length, 3);
-  assert.equal(bossForStage(10).id, 'boss'); assert.equal(bossForStage(20).id, 'boss_zombie'); assert.equal(bossForStage(30).id, 'boss_ogre'); assert.equal(bossForStage(40).id, 'boss');
+  assert.ok(BOSSES.length >= 3, '보스가 적으면 같은 보스를 금방 다시 만난다');
+  // 페이즈마다 순서대로 돌고, 한 바퀴를 돌면 처음으로 — 개수를 박지 않고 순환 자체를 본다
+  for (let i = 0; i < BOSSES.length; i++) assert.equal(bossForStage((i + 1) * 10).id, BOSSES[i].id, `페이즈 ${i + 1}`);
+  assert.equal(bossForStage((BOSSES.length + 1) * 10).id, BOSSES[0].id, '한 바퀴 뒤에 처음으로 돌아온다');
   for (const b of BOSSES) assert.ok(MONSTER_MAP[b.id], `sprite for ${b.id}`);
   const s = createInitialState(); s.stage = 20; s.maxStage = 20; s.maxCleared = 19; s.heroes[MAIN_ID].level = 30; s.challenging = true;
   const g = new GameManager({ state: s, save: memSave() });
@@ -140,7 +142,7 @@ test('경제: 매출 인센티브 raises gold mildly, dismiss refunds level gold
 test('boss specials: every boss has named Nth-attack specials, distinct sprites and a matching codex line', async () => {
   const { BOSSES } = await import('../src/data/monsters.js');
   const { MONSTER_MAP } = await import('../src/data/packSprites.js');
-  assert.equal(BOSSES.length, 3);
+  assert.ok(BOSSES.length >= 3);
   const kinds = new Set();
   for (const b of BOSSES) {
     assert.ok(Array.isArray(b.specials) && b.specials.length >= 1, b.id);
@@ -148,7 +150,8 @@ test('boss specials: every boss has named Nth-attack specials, distinct sprites 
     assert.ok(b.desc.length > 10);
   }
   assert.ok(kinds.size >= 5, 'five different special kinds across the three bosses');
-  assert.equal(new Set(BOSSES.map((b) => MONSTER_MAP[b.id])).size, 3, 'each boss uses its own creature');
+  const creatureKey = (id) => { const v = MONSTER_MAP[id]; return typeof v === 'string' ? 'pack:' + v : v?.tiny != null ? 'tiny:' + v.tiny : null; };
+  assert.equal(new Set(BOSSES.map((b) => creatureKey(b.id))).size, BOSSES.length, 'each boss uses its own creature');
 });
 
 test('stage modifiers: bosses have none, phases lay them out differently, and every one pays extra gold', async () => {

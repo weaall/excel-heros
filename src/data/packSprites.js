@@ -73,6 +73,8 @@ export const MONSTER_MAP = {
   monkey: { tiny: 21 }, bull: { tiny: 122, big: true }, mushroom: { tiny: 14 }, eyeball: { tiny: 5 }, hand: { tiny: 6 }, golem: { tiny: 47, big: true }, flame: { tiny: 45 },
   orb: { tiny: 89 }, rabbit: { tiny: 177 }, chicken: { tiny: 150 }, cat: { tiny: 157 }, rat: { tiny: 92 }, snake: { tiny: 41 }, robot: { tiny: 80, big: true },
   boss: 'big_demon', boss_zombie: 'big_zombie', boss_ogre: 'ogre',
+  // Tiny Creatures 를 보스 배율로 — 팩의 큰 생물이 셋뿐이라 보스가 3종에 묶여 있었다
+  boss_audit: { tiny: 148, boss: true }, boss_target: { tiny: 165, boss: true }, boss_approval: { tiny: 158, boss: true },
   // props: [x, y] of frame 0 on the sheet, 16x16 frames laid out to the right
   chest: { rect: [304, 416], frames: 3 }, mimic: { rect: [304, 432], frames: 3 },
 };
@@ -175,15 +177,17 @@ export function packMonsterFrame(mon, frame = 0, hueShift = 0) {
     ctx.filter = 'none';
   } else if (typeof spec === 'object' && spec.tiny != null) {
     if (!tiny) return null;
-    [c, ctx] = canvas(64, 64);
+    // 0x72 팩에는 큰 생물이 셋뿐이라 보스를 더 못 만든다. Tiny Creatures 격자를 6배로 그리면 같은 크기
+    // (96px)의 보스가 되고, 정체는 어차피 소품이 만든다(6-73).
+    const sc = spec.boss ? 4 : spec.big ? 3 : 2, size = 16 * sc;
+    const W = spec.boss ? 128 : 64, H = spec.boss ? 116 : 64;
+    [c, ctx] = canvas(W, H);
     const sx = (spec.tiny % 10) * 16, sy = Math.floor(spec.tiny / 10) * 16;
-    const bob = [0, -1, 0, 1][fi] * 2;
-    // mirrored like the 0x72 creatures so every monster faces the party on the left; "big" types draw at 3× (48px)
-    // so silhouettes differ in size as well as shape — always whole-number scales to keep pixels even
-    const sc = spec.big ? 3 : 2, size = 16 * sc;
-    ctx.save(); ctx.translate(64, 0); ctx.scale(-1, 1);
+    const bob = spec.boss ? 0 : [0, -1, 0, 1][fi] * 2;
+    // mirrored like the 0x72 creatures so every monster faces the party on the left; whole-number scales keep pixels even
+    ctx.save(); ctx.translate(W, 0); ctx.scale(-1, 1);
     ctx.filter = hueShift ? `hue-rotate(${hueShift}deg)` : 'none';
-    ctx.drawImage(thinTinyTile(spec.tiny, sx, sy), 0, 0, 16, 16, (64 - size) / 2, 58 - size + bob, size, size);
+    ctx.drawImage(thinTinyTile(spec.tiny, sx, sy), 0, 0, 16, 16, (W - size) / 2, H - 4 - size + bob, size, size);
     ctx.filter = 'none'; ctx.restore();
   } else {
     const small = SMALL[spec], big = BIG[spec];
@@ -234,6 +238,35 @@ export const BOSS_PROPS = {
     fill(ctx, '#3b2b1a', [36, 84, 11, 4]);                                   // 식은 커피
     fill(ctx, '#f7f7f5', [31, 86, 3, 3], [29, 88, 3, 4], [31, 91, 3, 3]);    // 손잡이
     fill(ctx, '#b9c2c6', [38, 74, 2, 6], [44, 72, 2, 8]);                    // 김
+  },
+  /** 감사팀 악어: 목에 건 감사 배지와, 이빨 사이에 물린 영수증 뭉치. 물면 안 놓는다. */
+  boss_audit(ctx) {
+    fill(ctx, '#f7f4ea', [38, 56, 24, 15]);                                  // 물린 영수증
+    fill(ctx, '#9aa0a6', [42, 60, 16, 2], [42, 64, 11, 2], [42, 68, 14, 2]); // 인쇄된 줄
+    fill(ctx, '#f7f4ea', [39, 71, 5, 3], [47, 71, 5, 4], [56, 71, 5, 3]);    // 톱니 절취선
+    fill(ctx, '#2b2b2b', [66, 52, 3, 20]);                                   // 배지 끈
+    fill(ctx, '#1f5fa8', [58, 72, 19, 13]);                                  // 감사 배지
+    fill(ctx, '#e8eef7', [61, 76, 12, 3], [61, 81, 8, 2]);
+  },
+  /** 실적 고릴라: 가슴을 치는 대신 실적 그래프 판을 들었다. 빨간 화살표는 언제나 아래를 향한다. */
+  boss_target(ctx) {
+    fill(ctx, '#f4f1e6', [72, 44, 32, 26]);                                  // 실적 판
+    fill(ctx, '#c9ccd1', [72, 44, 32, 4]);
+    fill(ctx, '#c0392b', [76, 50, 4, 4], [80, 54, 4, 4], [84, 58, 4, 4], [88, 62, 4, 4]); // 우하향 꺾은선
+    fill(ctx, '#c0392b', [92, 58, 9, 3], [98, 58, 3, 9]);                    // 아래를 가리키는 화살표
+    fill(ctx, '#2b2b2b', [50, 66, 20, 5]);                                   // 사원증 줄
+    fill(ctx, '#eceff1', [52, 71, 15, 11]); fill(ctx, '#9aa0a6', [55, 75, 9, 2], [55, 78, 6, 2]);
+  },
+  /** 결재 코끼리: 코 대신 도장. 반려 도장이 이미 세 번 찍혀 있다. */
+  boss_approval(ctx) {
+    fill(ctx, '#8d6e63', [32, 50, 12, 26]);                                  // 도장 손잡이
+    fill(ctx, '#5d4037', [30, 74, 16, 9]);                                   // 도장 몸통
+    fill(ctx, '#c0392b', [30, 82, 16, 4]);                                   // 인주
+    for (const [x, y] of [[62, 84], [76, 90], [88, 80]]) {                   // 이미 찍힌 반려 도장
+      fill(ctx, '#c0392b', [x, y, 12, 2], [x, y + 10, 12, 2], [x, y, 2, 12], [x + 10, y, 2, 12]);
+    }
+    fill(ctx, '#f4f1e6', [58, 52, 28, 19]);                                  // 결재 서류
+    fill(ctx, '#9aa0a6', [62, 56, 19, 2], [62, 60, 13, 2], [62, 64, 17, 2]);
   },
   /** 갑질 거래처 오우거: 금색 넥타이와, 몽둥이 대신 말아 쥔 계약서. 때리는 건 주먹이 아니라 서류다. */
   boss_ogre(ctx) {

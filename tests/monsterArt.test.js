@@ -21,8 +21,11 @@ test('every boss carries its own creature AND its own office props', async () =>
   const { MONSTER_MAP, BOSS_PROPS } = await import('../src/data/packSprites.js');
   const creatures = new Set();
   for (const b of BOSSES) {
-    const creature = MONSTER_MAP[b.id];
-    assert.ok(typeof creature === 'string', `${b.id}: 전용 생물이 없다`);
+    const spec = MONSTER_MAP[b.id];
+    // 0x72 팩의 큰 생물(문자열)이거나, 보스 배율로 그리는 Tiny Creatures({ tiny, boss })이거나.
+    const creature = typeof spec === 'string' ? 'pack:' + spec : spec?.tiny != null ? 'tiny:' + spec.tiny : null;
+    assert.ok(creature, `${b.id}: 전용 생물이 없다`);
+    assert.ok(spec?.tiny == null || spec.boss, `${b.id}: 보스는 보스 배율(boss: true)로 그려야 일반 몬스터와 크기가 구분된다`);
     assert.ok(!creatures.has(creature), `${b.id}: ${creature}를 다른 보스와 공유한다 — 색만 다른 보스는 보스가 아니다`);
     creatures.add(creature);
     assert.equal(typeof BOSS_PROPS[b.id], 'function', `${b.id}: 사무실 소품이 없다`);
