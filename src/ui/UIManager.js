@@ -224,19 +224,6 @@ export class UIManager {
         const r = this.game.prestige(); if (r) this.openModal('회사 이전 완료', `<p>새 사옥으로 이전했습니다. <b>지분 +${r.gain}</b> (총 ${r.total})</p><p class="muted">파티 ATK·골드 영구 +${Math.round(r.total * r.perShare * 100)}%. Phase 1-1부터 다시 시작합니다.</p>`);
       });
     });
-    $('#btn-refound')?.addEventListener('click', () => {
-      const r = this.game.refoundInfo(); if (!r.eligible) return;
-      this.#askConfirm('재창업 (법인 청산)', `창업 경험 +${r.gain} — 이후 지분 1주의 값이 ×${r.nextSharePower.toFixed(2)}, 조각 +${Math.round(((1 + (r.xp + r.gain) * BALANCE.REFOUND.shardBonus) - 1) * 100)}%, 뽑기 -${Math.round(Math.min(BALANCE.REFOUND.maxDiscount, (r.xp + r.gain) * BALANCE.REFOUND.pullDiscount) * 100)}%
-
-반납: 보유 카드 ${r.owned}종 (★ 합계 ${r.stars}) · 강화 카드 ${fmt(r.cards)}장 · 지분 ${r.shares}주 · 주인공 직급 · 스테이지 · 골드 · 회사 업그레이드
-유지: 보석 · 업적 · 도감 · 호감도 · 코드 이력
-
-되돌릴 수 없습니다.`, { ok: '재창업하기', danger: true }).then((yes) => {
-        if (!yes) return;
-        const res = this.game.refound();
-        if (res) this.openModal('재창업 완료', `<p>법인을 청산하고 <b>창업 경험 +${res.gain}</b>을 얻었습니다 (총 ${res.total}).</p><p class="muted">이제 지분 1주의 값이 ×${this.game.refoundSharePower().toFixed(2)}입니다. 조각이 더 나오고 뽑기가 싸지므로, 다시 올라오는 속도는 지난번보다 빠릅니다.</p>`);
-      });
-    });
     $('#set-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
     $('#set-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#set-stealth').addEventListener('change', (e) => this.game.toggleExcel(e.target.checked));
@@ -253,7 +240,21 @@ export class UIManager {
       try { this.game.importSave($('#save-text').value); this.toast('저장 데이터를 불러왔습니다'); }
       catch { this.toast('가져오기 실패: 올바르지 않은 문자열'); }
     });
-    $('#btn-reset').addEventListener('click', () => { this.#askConfirm('통합 문서 삭제', '이 통합 문서를 삭제하고 처음부터 시작할까요?\n\n보유 영웅·보석·업적까지 모두 사라집니다. 되돌릴 수 없습니다.', { ok: '삭제하고 새로 시작', danger: true }).then((yes) => { if (yes) this.game.reset(); }); });
+    // 완전 초기화는 저장을 비우는 게 아니라 **처음부터 다시 하는 것**이다. 그래서 오프닝을 다시 틀고
+    // 신입 사원 교육 목록도 1번 항목부터 되살린다. 그러지 않으면 저장만 비워진 채 게임 한가운데에 서 있게 된다.
+    $('#btn-reset').addEventListener('click', () => {
+      const msg = '이 통합 문서를 삭제하고 처음부터 시작할까요?\n\n'
+        + '보유 영웅·보석·강화 카드·업적·직급·지분까지 모두 사라지고, 오프닝과 신입 사원 교육을 처음부터 다시 보게 됩니다.\n'
+        + '되돌릴 수 없습니다.';
+      this.#askConfirm('통합 문서 삭제', msg, { ok: '삭제하고 새로 시작', danger: true }).then(async (yes) => {
+        if (!yes) return;
+        this.game.reset();
+        this.switchSheet('home'); this.showRibbon('home');
+        await this.showPrologue();   // 오프닝부터 다시 (showPrologue 가 prologueSeen 을 다시 세운다)
+        this.#refreshTutorial();     // 교육 목록은 1번 항목부터
+        this.toast('새 통합 문서에서 다시 시작합니다');
+      });
+    });
     $('#modal-ok').addEventListener('click', () => this.closeModal());
     $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') this.closeModal(); });
 
@@ -1476,23 +1477,12 @@ export class UIManager {
     $('#prestige-hint-text').textContent = a.text;
     box.hidden = false;
   }
-  /** 재창업 현황. 잃는 것을 숫자로 먼저 쓰고, 얻는 것을 그다음에 쓴다. */
-  #refreshRefound() {
-    const box = $('#refound-info'); if (!box) return;
-    const r = this.game.refoundInfo();
-    box.innerHTML = r.count || r.xp
-      ? `창업 경험 <b>${r.xp}</b> · 재창업 ${r.count}회 — 지분 효율 ×${r.sharePower.toFixed(2)} · 조각 +${Math.round((r.shardMult - 1) * 100)}% · 뽑기 -${Math.round(r.pullDiscount * 100)}%<br>` +
-        (r.eligible ? `지금 재창업하면 창업 경험 <b>+${r.gain}</b> (지분 효율 ×${r.nextSharePower.toFixed(2)})` : `지분 ${r.shares} / ${r.minShares} — 지분이 ${r.minShares}주 이상일 때 재창업할 수 있습니다`)
-      : (r.eligible ? `지금 재창업하면 창업 경험 <b>+${r.gain}</b> — 지분 1주의 값이 ×${r.nextSharePower.toFixed(2)}가 됩니다` : `지분 ${r.shares} / ${r.minShares} — 지분이 ${r.minShares}주 이상일 때 재창업할 수 있습니다`);
-    const btn$ = $('#btn-refound'); if (btn$) btn$.disabled = !r.eligible;
-  }
   #refreshPrestige() {
     const info = this.game.prestigeInfo(); const el$ = $('#prestige-info'); if (!el$) return;
     el$.innerHTML = `현재 지분 <b>${info.shares}</b> (파티 ATK·골드 +${Math.round(info.bonus * 100)}%) · 이전 ${info.count}회<br>` +
       (info.eligible ? `지금 이전하면 지분 <b>+${info.gain}</b> (+${Math.round(info.gain * info.perShare * 100)}%)` : `Phase ${info.minCleared / BALANCE.BOSS_EVERY}-10 클리어(스테이지 ${info.minCleared}) 후 이전 가능 · 현재 최고 클리어 ${this.game.state.maxCleared}`);
     $('#btn-prestige').disabled = !info.eligible;
     $('#shares-top').textContent = info.shares;
-    this.#refreshRefound();
     this.#refreshPromoHint();
     this.#refreshPrestigeHint();
     this.#refreshTutorial();

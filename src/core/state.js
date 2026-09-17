@@ -46,7 +46,6 @@ export function createInitialState(now = Date.now()) {
     stats: { totalKills: 0, totalGold: 0, totalPulls: 0, pullGrades: { D: 0, C: 0, B: 0, A: 0, S: 0 }, bossKills: 0, bossFails: 0, playSeconds: 0, enhances: 0 },
     achievements: {},     // achievement id -> claimed tier count
     prestige: { shares: 0, count: 0 }, // 회사 이전: permanent 지분 and how many times
-    refound: { xp: 0, count: 0 },      // 재창업: 카드까지 반납하고 얻는 창업 경험
     milestones: {},       // milestone id -> granted
     favorites: {},        // hero id -> true (♥ 즐겨찾기: sorted first in the roster)
     bestiary: {},         // monster type id -> kills (id + '!' = elite kills) — 오류_도감 sheet
@@ -77,7 +76,6 @@ export function migrate(raw) {
   s.dispatch = { ...fresh.dispatch, ...(raw.dispatch ?? {}) }; s.dispatch.heroIds = (s.dispatch.heroIds ?? []).filter((id) => s.heroes[id]?.owned);
   s.storyRead = { ...(raw.storyRead ?? {}) };
   s.redeemed = { ...(raw.redeemed ?? {}) };
-  s.refound = { xp: 0, count: 0, ...(raw.refound ?? {}) };
   s.tutorial = { done: {}, flags: {}, bonus: false, hidden: false, ...(raw.tutorial ?? {}) };
   s.tutorial.done = { ...(raw.tutorial?.done ?? {}) }; s.tutorial.flags = { ...(raw.tutorial?.flags ?? {}) };
   s.team = { ...fresh.team, ...(raw.team ?? {}) };

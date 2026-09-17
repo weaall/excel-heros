@@ -92,9 +92,6 @@ export const BALANCE = Object.freeze({
   CHEST: { chance: 0.06, mimicChance: 0.3, hpMult: 0.6, gemsMin: 3, gemsMax: 8, cardsPerPhase: 1 },
   // 회사 이전 (prestige): reset progression for permanent 지분 (+3% ATK & gold each). Needs Phase 3 cleared.
   PRESTIGE: { minCleared: 30, bonusPerShare: 0.03 },
-  // 재창업: 카드까지 반납하는 두 번째 초기화. 지분이 minShares 이상이어야 하고, 얻는 '창업 경험'은
-  // 이후의 지분을 더 값지게 만든다(그래서 한 사이클 뒤부터 이득이 된다).
-  REFOUND: { minShares: 150, sharePower: 0.25, shardBonus: 0.20, pullDiscount: 0.03, maxDiscount: 0.4 },
   // 각성 (awakening): a ★5 card can be awakened with 강화 카드 — permanent +25% ATK/HP, trait ×1.5, skill ×1.25, gold frame
   AWAKEN: { star: 5, cards: { D: 60, C: 100, B: 160, A: 260, S: 400 }, atk: 0.25, hp: 0.25, trait: 1.5, skill: 1.25 },
   COMBO: { perHit: 0.005, max: 0.25, decay: 3 },
@@ -241,5 +238,3 @@ export const scoutCost = (grade, star, cap) => {
   return Math.max(B.SCOUT.minCost, Math.floor(sunk * B.SCOUT.costPct * (B.SCOUT.gradeMult[grade] ?? 1)));
 };
 
-/** 재창업으로 얻는 창업 경험 점수: 반납하는 지분이 많을수록 크되, 제곱근이라 무한히 커지지는 않는다. */
-export const refoundGain = (shares) => (shares < B.REFOUND.minShares ? 0 : Math.max(1, Math.floor(Math.sqrt(shares / B.REFOUND.minShares) * 2)));

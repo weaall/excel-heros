@@ -18,10 +18,7 @@
       "thumb": "thumb/barista.webp"
     },
     "courier": "courier.png",
-    "contract": {
-      "file": "contract.png",
-      "thumb": "thumb/contract.webp"
-    },
+    "contract": "contract.png",
     "vlookup": {
       "file": "vlookup.png",
       "thumb": "thumb/vlookup.webp"
@@ -78,10 +75,7 @@
       "file": "chairman.png",
       "thumb": "thumb/chairman.webp"
     },
-    "helpdesk": {
-      "file": "helpdesk.png",
-      "thumb": "thumb/helpdesk.webp"
-    },
+    "helpdesk": "helpdesk.png",
     "cleaner": {
       "file": "cleaner.png",
       "thumb": "thumb/cleaner.webp"
@@ -702,93 +696,27 @@
       "file": "chairwoman__formal.png",
       "thumb": "thumb/chairwoman__formal.webp"
     },
-    "intern__casual": {
-      "file": "intern__casual.png",
-      "thumb": "thumb/intern__casual.webp"
-    },
-    "intern__formal": {
-      "file": "intern__formal.png",
-      "thumb": "thumb/intern__formal.webp"
-    },
-    "staff__casual": {
-      "file": "staff__casual.png",
-      "thumb": "thumb/staff__casual.webp"
-    },
-    "staff__formal": {
-      "file": "staff__formal.png",
-      "thumb": "thumb/staff__formal.webp"
-    },
-    "sales_senior__casual": {
-      "file": "sales_senior__casual.png",
-      "thumb": "thumb/sales_senior__casual.webp"
-    },
-    "sales_senior__formal": {
-      "file": "sales_senior__formal.png",
-      "thumb": "thumb/sales_senior__formal.webp"
-    },
-    "sales_manager__casual": {
-      "file": "sales_manager__casual.png",
-      "thumb": "thumb/sales_manager__casual.webp"
-    },
-    "sales_manager__formal": {
-      "file": "sales_manager__formal.png",
-      "thumb": "thumb/sales_manager__formal.webp"
-    },
-    "sales__casual": {
-      "file": "sales__casual.png",
-      "thumb": "thumb/sales__casual.webp"
-    },
-    "sales__formal": {
-      "file": "sales__formal.png",
-      "thumb": "thumb/sales__formal.webp"
-    },
-    "finance_senior__casual": {
-      "file": "finance_senior__casual.png",
-      "thumb": "thumb/finance_senior__casual.webp"
-    },
-    "finance_senior__formal": {
-      "file": "finance_senior__formal.png",
-      "thumb": "thumb/finance_senior__formal.webp"
-    },
-    "finance_manager__casual": {
-      "file": "finance_manager__casual.png",
-      "thumb": "thumb/finance_manager__casual.webp"
-    },
-    "finance_manager__formal": {
-      "file": "finance_manager__formal.png",
-      "thumb": "thumb/finance_manager__formal.webp"
-    },
-    "finance__casual": {
-      "file": "finance__casual.png",
-      "thumb": "thumb/finance__casual.webp"
-    },
-    "finance__formal": {
-      "file": "finance__formal.png",
-      "thumb": "thumb/finance__formal.webp"
-    },
-    "admin_senior__casual": {
-      "file": "admin_senior__casual.png",
-      "thumb": "thumb/admin_senior__casual.webp"
-    },
-    "admin_senior__formal": {
-      "file": "admin_senior__formal.png",
-      "thumb": "thumb/admin_senior__formal.webp"
-    },
-    "admin_manager__casual": {
-      "file": "admin_manager__casual.png",
-      "thumb": "thumb/admin_manager__casual.webp"
-    },
-    "admin_manager__formal": {
-      "file": "admin_manager__formal.png",
-      "thumb": "thumb/admin_manager__formal.webp"
-    },
-    "admin__casual": {
-      "file": "admin__casual.png",
-      "thumb": "thumb/admin__casual.webp"
-    },
-    "admin__formal": {
-      "file": "admin__formal.png",
-      "thumb": "thumb/admin__formal.webp"
-    }
+    "intern__casual": "intern__casual.png",
+    "intern__formal": "intern__formal.png",
+    "staff__casual": "staff__casual.png",
+    "staff__formal": "staff__formal.png",
+    "sales_senior__casual": "sales_senior__casual.png",
+    "sales_senior__formal": "sales_senior__formal.png",
+    "sales_manager__casual": "sales_manager__casual.png",
+    "sales_manager__formal": "sales_manager__formal.png",
+    "sales__casual": "sales__casual.png",
+    "sales__formal": "sales__formal.png",
+    "finance_senior__casual": "finance_senior__casual.png",
+    "finance_senior__formal": "finance_senior__formal.png",
+    "finance_manager__casual": "finance_manager__casual.png",
+    "finance_manager__formal": "finance_manager__formal.png",
+    "finance__casual": "finance__casual.png",
+    "finance__formal": "finance__formal.png",
+    "admin_senior__casual": "admin_senior__casual.png",
+    "admin_senior__formal": "admin_senior__formal.png",
+    "admin_manager__casual": "admin_manager__casual.png",
+    "admin_manager__formal": "admin_manager__formal.png",
+    "admin__casual": "admin__casual.png",
+    "admin__formal": "admin__formal.png"
   }
 }

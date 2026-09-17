@@ -258,76 +258,35 @@ test('승진 안내: the last job has nothing to advise', async () => {
   assert.equal(g.mainPromoAdvice(), null, '최종 직급에서는 안내할 게 없다');
 });
 
-// ------------------------------------------------------------- 재창업 --
-// 회사 이전은 카드를 남긴다. 재창업은 카드까지 반납하는 대신, 이후의 지분 1주를 더 값지게 만든다.
-// 이 거래가 성립하려면 세 가지가 동시에 참이어야 한다: 실제로 전부 반납한다 · 보상이 영구히 붙는다 ·
-// 한 사이클 뒤에는 이득이다.
-test('재창업: hands back the whole collection and pays permanent 창업 경험', async () => {
+
+// --------------------------------------------------------- 완전 초기화 --
+// "처음부터 다시"는 저장을 비우는 것 이상이다. 오프닝과 신입 교육까지 되살아나야 진짜 새 시작이다.
+test('완전 초기화: everything goes back, including the prologue and the tutorial', async () => {
   const { createInitialState } = await import('../src/core/state.js');
   const { GameManager } = await import('../src/core/GameManager.js');
-  const { BALANCE, refoundGain } = await import('../src/config/balance.js');
   const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
   const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
 
-  assert.equal(g.refoundInfo().eligible, false, '지분이 모자라면 못 한다');
-  assert.equal(g.refound(), null);
+  // 한참 진행한 계정을 만든다
+  g.state.gems = 50000; g.state.cards = 900; g.state.gold = 1e9;
+  g.state.maxCleared = 120; g.state.prestige = { shares: 400, count: 9 };
+  g.state.main.job = 'sales_manager';
+  g.state.settings.prologueSeen = true;
+  g.markTutorial('stealth'); g.markTutorial('detail');
+  for (const h of HEROES.slice(0, 15)) Object.assign(g.state.heroes[h.id], { owned: true, star: 4, shards: 9, level: 90 });
 
-  // 충분히 깊은 계정을 만든다
-  g.state.prestige.shares = BALANCE.REFOUND.minShares * 4;
-  g.state.cards = 5000; g.state.gems = 1234; g.state.main.job = 'sales_manager';
-  for (const h of HEROES.slice(0, 20)) Object.assign(g.state.heroes[h.id], { owned: true, star: 3, shards: 7, level: 40, enhance: 5 });
-  const gems0 = g.state.gems;
+  g.reset();
 
-  const info = g.refoundInfo();
-  assert.equal(info.eligible, true);
-  assert.equal(info.gain, refoundGain(g.state.prestige.shares));
-  assert.ok(info.owned > 0 && info.stars > 0, '무엇을 잃는지 숫자로 알려 준다');
-
-  const res = g.refound();
-  assert.equal(res.gain, info.gain);
-  assert.equal(g.state.refound.xp, info.gain);
-  assert.equal(g.state.refound.count, 1);
-  // 반납한 것
-  assert.equal(g.state.prestige.shares, 0, '지분도 반납한다');
-  assert.equal(g.state.cards, 0);
-  assert.equal(g.state.main.job, 'intern', '직급도 처음으로');
-  assert.equal(g.state.maxCleared, 0);
-  const others = Object.entries(g.state.heroes).filter(([id]) => id !== MAIN_ID);
-  assert.ok(others.every(([, e]) => !e.owned && !e.star && !e.shards && !e.enhance), '보유 카드가 전부 사라진다');
-  assert.equal(g.state.heroes[MAIN_ID].owned, true, '주인공은 남는다');
-  // 남긴 것
-  assert.equal(g.state.gems, gems0, '보석은 남는다');
-});
-
-test('재창업: the reward is what makes the trade pay off a cycle later', async () => {
-  const { createInitialState } = await import('../src/core/state.js');
-  const { GameManager } = await import('../src/core/GameManager.js');
-  const { BALANCE } = await import('../src/config/balance.js');
-  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
-  const shares = BALANCE.REFOUND.minShares * 4;
-
-  g.state.prestige.shares = shares;
-  const bonusBefore = g.prestigeBonus();
-  const pull10Before = g.pullCost(10);
-
-  g.refound();
-  assert.ok(g.refoundSharePower() > 1, '지분 효율이 올라간다');
-  assert.ok(g.refoundShardMult() > 1, '조각이 더 나온다');
-  assert.ok(g.pullCost(10) < pull10Before, '뽑기가 싸진다');
-  assert.ok(g.pullCost(10) >= BALANCE.GACHA_TEN_COST * (1 - BALANCE.REFOUND.maxDiscount), '할인에는 바닥이 있다');
-
-  // 같은 지분까지 다시 올라오면 이전보다 세다 — 그래야 반납할 이유가 있다
-  g.state.prestige.shares = shares;
-  assert.ok(g.prestigeBonus() > bonusBefore, `한 사이클 뒤에는 이득이어야 한다 (${bonusBefore} → ${g.prestigeBonus()})`);
-});
-
-test('재창업: a hand-edited 창업 경험 does not pass the save check', async () => {
-  const { createInitialState } = await import('../src/core/state.js');
-  const { checkSave } = await import('../src/core/plausibility.js');
-  const s = createInitialState();
-  s.stats.totalKills = 500; s.maxCleared = 40;
-  s.refound = { xp: 9999, count: 1 };
-  const r = checkSave(s);
-  assert.equal(r.ok, false, '순위표 점수를 곱하는 값은 검증되어야 한다');
-  assert.ok(r.reasons.some((x) => /refound/.test(x)), r.reasons.join(' / '));
+  const s = g.state;
+  assert.equal(s.maxCleared, 0);
+  assert.equal(s.prestige.shares, 0);
+  assert.equal(s.cards, 0);
+  assert.equal(s.main.job, 'intern', '직급도 인턴으로');
+  assert.equal(Object.entries(s.heroes).filter(([id, e]) => e.owned && id !== MAIN_ID).length, 0, '보유 카드가 전부 사라진다');
+  assert.equal(s.settings.prologueSeen, false, '오프닝을 다시 본다');
+  assert.deepEqual(s.tutorial.done, {}, '신입 교육이 1번 항목부터 되살아난다');
+  assert.deepEqual(s.tutorial.flags, {});
+  assert.equal(s.tutorial.bonus, false);
+  assert.equal(s.tutorial.hidden, false);
+  assert.equal(g.tutorialState().current.id, (await import('../src/data/tutorial.js')).TUTORIAL[0].id);
 });

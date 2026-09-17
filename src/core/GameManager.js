@@ -1,7 +1,7 @@
 // Global game state, economy, stage flow and player actions. Emits events for the UI.
 import {
   BALANCE, upgradeCost, baseGold, bossGold, isBossStage, stageLabel, heroATK, heroHP,
-  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, enhanceCap, levelCap, scoutCost, refoundGain, offlineGold, prestigeShares,
+  teamUpgradeCost, teamUpgradeBonus, estimateGoldPerSec, enhanceCost, enhanceCap, levelCap, scoutCost, offlineGold, prestigeShares,
 } from '../config/balance.js';
 import { HERO_BY_ID, GRADES, SKILLS, TRAITS, heroBaseStats, MAIN_ID, MAIN_JOBS } from '../data/heroes.js';
 import { pullOnce, promoteCost } from './GachaManager.js';
@@ -55,51 +55,7 @@ export class GameManager extends Emitter {
   stageLabel() { return stageLabel(this.state.stage); }
   goldMult() { return 1 + teamUpgradeBonus('sales', this.state.team.sales ?? 0) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus() + this.synergy().perks.gold; }
   /** Permanent bonus from 지분 (prestige shares): +3% ATK and gold each. */
-  prestigeBonus() { return (this.state.prestige?.shares ?? 0) * BALANCE.PRESTIGE.bonusPerShare * this.refoundSharePower(); }
-  /** 창업 경험은 지분 1개의 값을 올린다 — 재창업이 이득이 되는 지점이 바로 여기다. */
-  refoundSharePower() { return 1 + (this.state.refound?.xp ?? 0) * BALANCE.REFOUND.sharePower; }
-  /** 중복 카드에서 나오는 조각에 붙는 보너스 (다시 모으는 속도). */
-  refoundShardMult() { return 1 + (this.state.refound?.xp ?? 0) * BALANCE.REFOUND.shardBonus; }
-  /** 뽑기 비용 할인 (0 ~ maxDiscount). */
-  refoundPullDiscount() { return Math.min(BALANCE.REFOUND.maxDiscount, (this.state.refound?.xp ?? 0) * BALANCE.REFOUND.pullDiscount); }
-  /** 재창업 현황: 무엇을 잃고 무엇을 얻는지 UI가 그대로 읽을 수 있게. */
-  refoundInfo() {
-    const s = this.state; const shares = s.prestige?.shares ?? 0;
-    const gain = refoundGain(shares);
-    const owned = Object.entries(s.heroes).filter(([id, e]) => e.owned && !this.isMain(id)).length;
-    const stars = Object.entries(s.heroes).reduce((a, [id, e]) => a + (this.isMain(id) ? 0 : (e.owned ? (e.star | 0) : 0)), 0);
-    return {
-      xp: s.refound?.xp ?? 0, count: s.refound?.count ?? 0, shares, gain,
-      eligible: gain > 0, minShares: BALANCE.REFOUND.minShares,
-      owned, stars, cards: s.cards,
-      sharePower: this.refoundSharePower(), shardMult: this.refoundShardMult(), pullDiscount: this.refoundPullDiscount(),
-      nextSharePower: 1 + ((s.refound?.xp ?? 0) + gain) * BALANCE.REFOUND.sharePower,
-    };
-  }
-  /**
-   * 재창업: 회사 이전이 지우는 것 전부 + **보유 카드·별·조각·강화·각성·강화 카드·직급·지분**까지 반납한다.
-   * 남는 것: 보석 · 업적 · 도감 · 호감도 · 코드 이력 · 통계. 사람과의 관계와 기록은 회사가 바뀌어도 남는다.
-   */
-  refound() {
-    const info = this.refoundInfo(); if (!info.eligible) return null;
-    const s = this.state;
-    s.refound.xp += info.gain; s.refound.count += 1;
-    s.prestige.shares = 0; s.prestige.count = 0;
-    s.stage = 1; s.maxStage = 1; s.maxCleared = 0; s.kills = 0; s.gold = 0; s.cards = 0; s.challenging = true;
-    for (const [id, e] of Object.entries(s.heroes)) {
-      if (this.isMain(id)) { Object.assign(e, { owned: true, star: 1, shards: 0, level: 1, enhance: 0, awakened: false, equip: {} }); continue; }
-      Object.assign(e, { owned: false, star: 0, shards: 0, level: 1, enhance: 0, skillLv: 0, awakened: false, equip: {} });
-    }
-    s.main.job = 'intern';
-    s.party = [MAIN_ID];
-    s.equipment = { items: [], nextId: 1 };
-    for (const k of Object.keys(s.team)) s.team[k] = 0;
-    this.logs = [];
-    this.log(`재창업 완료: 창업 경험 +${info.gain} (총 ${s.refound.xp}) — 지분 1개의 값이 ×${this.refoundSharePower().toFixed(2)}가 되었습니다`, 'stage');
-    this.entities = new EntityManager(this); this.entities.rebuildParty(); this.entities.startStage();
-    this.persist(); this.emit('refound', info); this.emit('reset'); this.emit('roster');
-    return { ...info, total: s.refound.xp };
-  }
+  prestigeBonus() { return (this.state.prestige?.shares ?? 0) * BALANCE.PRESTIGE.bonusPerShare; }
   prestigeInfo() {
     const s = this.state; const gain = prestigeShares(s.maxCleared);
     return { shares: s.prestige.shares, count: s.prestige.count, bonus: this.prestigeBonus(), gain, eligible: gain > 0, minCleared: BALANCE.PRESTIGE.minCleared, perShare: BALANCE.PRESTIGE.bonusPerShare };
@@ -751,11 +707,8 @@ export class GameManager extends Emitter {
     this.emit('roster'); this.emit('party'); this.emit('gacha', [r]); this.emit('gems');
     return r;
   }
-  /** 뽑기 값: 창업 경험이 있으면 그만큼 싸다(재창업 뒤 다시 모으는 속도를 위한 보상). */
-  pullCost(count) {
-    const base = count === 10 ? BALANCE.GACHA_TEN_COST : BALANCE.GACHA_SINGLE_COST * count;
-    return Math.max(1, Math.floor(base * (1 - this.refoundPullDiscount())));
-  }
+  /** 뽑기 값. 한 곳에서만 계산해 표시와 판정이 어긋나지 않게 한다. */
+  pullCost(count) { return count === 10 ? BALANCE.GACHA_TEN_COST : BALANCE.GACHA_SINGLE_COST * count; }
   pull(count) {
     const cost = this.pullCost(count);
     if (this.state.gems < cost) { this.toast('보석이 부족합니다'); return null; }
@@ -770,10 +723,6 @@ export class GameManager extends Emitter {
       if (force) r.guaranteed = true;
       this.state.pity = r.pity; this.state.stats.totalPulls++; this.state.stats.pullGrades[r.grade] = (this.state.stats.pullGrades[r.grade] ?? 0) + 1; this.state.recruit.points++;
       results.push({ ...r, def: HERO_BY_ID[r.heroId] });
-      if (r.shards > 0 && !r.isNew) { // 창업 경험: 중복 카드의 조각이 더 나온다 — 재창업 뒤 컬렉션을 다시 세우는 속도
-        const extra = Math.round(r.shards * (this.refoundShardMult() - 1));
-        if (extra > 0) { this.state.heroes[r.heroId].shards += extra; r.shards += extra; }
-      }
       if (r.isNew && this.state.party.length < BALANCE.PARTY_SIZE) this.state.party.push(r.heroId); // 빈 자리에 자동 배치
     }
     Quests.addProgress(this.state, 'pull', count);
