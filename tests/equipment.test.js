@@ -94,3 +94,45 @@ test('a boss first clear always hands over an item of at least the floor grade',
     g.state.equipment.items = [];
   }
 });
+
+test('세트 효과: filling four slots pays, matching the grades pays more', () => {
+  const g = game((s) => { s.heroes.staff_park = { ...s.heroes.staff_park, owned: true, level: 60, equip: {} }; });
+  const E = BALANCE.EQUIP;
+  const give = (slot, grade) => { const it = { id: g.state.equipment.nextId++, slot, grade, lv: 0 }; g.state.equipment.items.push(it); return it; };
+  const mixed = SLOT_ORDER.map((slot, i) => give(slot, ['D', 'C', 'B', 'A'][i]));
+  for (const it of mixed) g.equipItem('staff_park', it.id);
+  let st = g.equipStats('staff_park');
+  assert.equal(st.setPct, E.setAny, '4부위 착용 bonus');
+  assert.equal(st.setName, '4부위 착용');
+  // swap to a matching S set
+  const sSet = SLOT_ORDER.map((slot) => give(slot, 'S'));
+  for (const it of sSet) g.equipItem('staff_park', it.id);
+  st = g.equipStats('staff_park');
+  assert.equal(st.setPct, E.setSame.S, 'S 풀세트 bonus');
+  assert.match(st.setName, /S급 풀세트/);
+  assert.ok(st.atk > E.setSame.S, 'the items themselves still count on top of the set');
+});
+
+test('자동 장착: picks the stronger of best-in-slot and a matching set, and never steals from another hero', () => {
+  const g = game((s) => {
+    for (const id of ['staff_park', 'parttime']) s.heroes[id] = { ...s.heroes[id], owned: true, level: 40, equip: {} };
+    s.party = ['main', 'staff_park', 'parttime'];
+  });
+  const give = (slot, grade, lv = 0) => { const it = { id: g.state.equipment.nextId++, slot, grade, lv }; g.state.equipment.items.push(it); return it; };
+  // a full B set plus one better A keyboard: the set bonus should win over the single strong item
+  for (const slot of SLOT_ORDER) give(slot, 'B');
+  const loneA = give('keyboard', 'A');
+  g.autoEquip('staff_park');
+  const worn = g.equipOf('staff_park').map((x) => x.item);
+  assert.ok(worn.every(Boolean), 'all four slots filled');
+  assert.equal(g.equipStats('staff_park').setName, 'B급 풀세트', 'the matching set beat the lone A keyboard');
+  // the second hero can still take what is left, and cannot take the first hero's items
+  const before = JSON.stringify(g.state.heroes.staff_park.equip);
+  g.autoEquip('parttime');
+  assert.equal(JSON.stringify(g.state.heroes.staff_park.equip), before, 'the first hero keeps everything it wore');
+  assert.equal(g.equipOf('parttime').find((x) => x.slot === 'keyboard').item?.id, loneA.id, 'the spare A keyboard went to the second hero');
+  // running it again changes nothing
+  assert.equal(g.autoEquip('staff_park'), 0, 'already optimal');
+  const r = g.autoEquipParty();
+  assert.equal(r.changed, 0, 'the whole party is already optimal');
+});

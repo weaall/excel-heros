@@ -269,14 +269,68 @@ export class GameManager extends Emitter {
   equipItemById(itemId) { return (this.state.equipment?.items ?? []).find((it) => it.id === itemId) ?? null; }
   /** Percentages a hero currently gets from 비품, by stat. */
   equipStats(heroId) {
-    const E = BALANCE.EQUIP; const out = { atk: 0, hp: 0, skill: 0, speed: 0 };
+    const E = BALANCE.EQUIP; const out = { atk: 0, hp: 0, skill: 0, speed: 0, setName: '', setPct: 0 };
     const worn = this.state.heroes[heroId]?.equip ?? {};
+    const items = [];
     for (const slot of SLOT_ORDER) {
       const it = this.equipItemById(worn[slot]); if (!it) continue;
-      out[SLOTS[slot].stat] += itemPct(it, E.pctPerLevel);
+      items.push(it); out[SLOTS[slot].stat] += itemPct(it, E.pctPerLevel);
     }
-    for (const k of Object.keys(out)) out[k] = +out[k].toFixed(2);
+    if (items.length === SLOT_ORDER.length) { // 세트 효과
+      const same = items.every((it) => it.grade === items[0].grade);
+      out.setPct = same ? (E.setSame[items[0].grade] ?? E.setAny) : E.setAny;
+      out.setName = same ? `${items[0].grade}급 풀세트` : '4부위 착용';
+      for (const k of ['atk', 'hp', 'skill', 'speed']) out[k] += out.setPct;
+    }
+    for (const k of ['atk', 'hp', 'skill', 'speed']) out[k] = +out[k].toFixed(2);
     return out;
+  }
+  /**
+   * Best 비품 loadout for one hero. Two candidates are compared and the stronger total wins:
+   *   1. best percentage per slot, ignoring grades
+   *   2. the strongest complete same-grade set (which unlocks the bigger 세트 보너스)
+   * Items worn by *other* heroes are off limits, so this never quietly strips a teammate.
+   */
+  bestLoadout(heroId) {
+    const E = BALANCE.EQUIP;
+    const taken = new Set();
+    for (const [hid, h] of Object.entries(this.state.heroes)) { if (hid === heroId) continue; for (const w of Object.values(h.equip ?? {})) taken.add(w); }
+    const pool = (this.state.equipment?.items ?? []).filter((it) => !taken.has(it.id));
+    const pct = (it) => itemPct(it, E.pctPerLevel);
+    const bySlot = (slot, list) => list.filter((it) => it.slot === slot).sort((a, b) => pct(b) - pct(a))[0] ?? null;
+
+    const best = {}; let bestSum = 0;
+    for (const slot of SLOT_ORDER) { const it = bySlot(slot, pool); if (it) { best[slot] = it.id; bestSum += pct(it); } }
+    if (Object.keys(best).length === SLOT_ORDER.length) bestSum += E.setAny;
+
+    let setBest = null, setSum = -1;
+    for (const grade of Object.keys(E.setSame)) {
+      const picks = {}; let sum = 0, complete = true;
+      for (const slot of SLOT_ORDER) { const it = bySlot(slot, pool.filter((x) => x.grade === grade)); if (!it) { complete = false; break; } picks[slot] = it.id; sum += pct(it); }
+      if (!complete) continue;
+      sum += E.setSame[grade];
+      if (sum > setSum) { setSum = sum; setBest = picks; }
+    }
+    return setBest && setSum > bestSum ? setBest : best;
+  }
+  /** Apply bestLoadout to a hero. Returns the number of slots that changed. */
+  autoEquip(heroId) {
+    const h = this.state.heroes[heroId]; if (!h?.owned) return 0;
+    const want = this.bestLoadout(heroId); let changed = 0;
+    for (const slot of SLOT_ORDER) {
+      const now = h.equip?.[slot] ?? null, next = want[slot] ?? null;
+      if (now === next) continue;
+      if (next) this.equipItem(heroId, next); else this.unequipItem(heroId, slot);
+      changed++;
+    }
+    return changed;
+  }
+  /** Auto-equip the whole party, in party order (the front of the list gets first pick). */
+  autoEquipParty() {
+    let changed = 0, heroes = 0;
+    for (const id of this.state.party) { const n = this.autoEquip(id); if (n) { changed += n; heroes++; } }
+    if (changed) this.log(`비품 자동 장착: ${heroes}명 · ${changed}부위`, 'info');
+    return { changed, heroes };
   }
   /** What a hero is wearing, slot by slot (null where the slot is empty). */
   equipOf(heroId) {

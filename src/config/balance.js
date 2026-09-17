@@ -38,6 +38,10 @@ export const BALANCE = Object.freeze({
     upgradeGoldKills: 12, upgradeGrowth: 1.35,         // cost in "kills worth of gold" at the hero's stage, per level
     dismantleGoldKills: { D: 2, C: 4, B: 8, A: 16, S: 32 },
     inventoryMax: 120,
+    // 세트: filling all four slots is worth something on its own; matching grades is worth more. Percentages are
+    // added to every stat, so a full S set is +24% on top of the items themselves.
+    setAny: 3,
+    setSame: { D: 4, C: 7, B: 11, A: 16, S: 24 },
   },
   // 야근 모드: once a day, 60 s of dense waves from (max stage + offset) with a high elite rate; gems per kill, no stage progress
   OVERTIME: { duration: 60, stageOffset: 3, count: 7, elite: 0.35, gemsPerKill: 2, gemsPerElite: 6, maxGems: 400, cardsPerPhase: 2, travel: 0.4 },

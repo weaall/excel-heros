@@ -12,6 +12,7 @@ export const ACHIEVEMENTS = [
   { id: 'chests',     name: '보물 사냥꾼',      desc: '보물 상자 개봉',        stat: 'chests',     tiers: [1, 10, 50, 200],                    gems: [20, 50, 120, 300] },
   { id: 'bestiary',   name: '오류 도감',        desc: '처치한 오류 종류',      stat: 'bestiary',   tiers: [5, 12, 20, 29],                     gems: [30, 80, 200, 500] },
   { id: 'overtime',   name: '야근 수당',        desc: '야근 모드 참여',        stat: 'overtimes',  tiers: [1, 7, 30, 100],                     gems: [30, 100, 300, 800] },
+  { id: 'equipment',  name: '비품 관리대장',    desc: '보유한 비품 개수',      stat: 'equipment',  tiers: [4, 20, 60, 120],                    gems: [30, 80, 200, 400] },
   { id: 'collection', name: '인재 도감',        desc: '보유 영웅 종류',        stat: 'collection', tiers: [5, 15, 25, 40, 50],                 gems: [50, 100, 200, 500, 800] },
 ];
 export const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));

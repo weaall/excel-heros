@@ -688,3 +688,8 @@ body.stealth #roster-table { display: table; }
 .gacha-stage .gacha-actions { justify-content: center; padding: 12px 0 0; gap: 14px; }
 .gacha-stage .gacha-actions .xl-btn.big { min-width: 200px; justify-content: center; }
 .gacha-layout .section-title { margin-top: 0; }
+
+.dt-sec.equip-auto { gap: 8px; flex-wrap: wrap; }
+.dt-sec.equip-auto .ds { flex-basis: 100%; }
+#hero-table td.eq.ok { color: var(--xl-green); font-weight: 700; }
+#hero-table td.eq.bad { color: #b03a2e; }

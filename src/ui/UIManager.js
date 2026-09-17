@@ -511,7 +511,7 @@ export class UIManager {
         el('td', { class: 'name clickable', onclick: () => this.openDetail(id), title: `${v.traitName}: ${v.traitDesc}` },
           el('img', { src: heroIconDataURL(v.def), class: 'icon', alt: '' }), el('span', {}, v.def.name),
           el('div', { class: 'sub', style: `color:${v.grade.color}` }, v.isMain ? `${v.def.grade} · ${v.def.title}` : `${v.def.grade} · ${stars(v.star)}`)),
-        el('td', { class: 'num lvl' }), el('td', { class: 'num atk' }), el('td', { class: 'num cost' }),
+        el('td', { class: 'num lvl' }), el('td', { class: 'num atk' }), el('td', { class: 'num eq' }), el('td', { class: 'num cost' }),
         el('td', { class: 'act' }, btn('+1', () => { if (!this.game.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'up'), btn('+10', () => { const n = this.game.upgradeHeroMany(id, 10); if (!n) this.toast('골드가 부족합니다'); }, 'up10')),
       );
       tbody.append(row); this.heroRows.set(id, row);
@@ -522,7 +522,8 @@ export class UIManager {
     const gold = this.game.state.gold;
     for (const [id, row] of this.heroRows) {
       const v = this.game.heroView(id);
-      if (!light) { $('.lvl', row).textContent = v.entry.level; $('.atk', row).textContent = fmt(v.atk); $('.cost', row).textContent = fmt(v.cost); }
+      if (!light) { $('.lvl', row).textContent = v.entry.level; $('.atk', row).textContent = fmt(v.atk); $('.cost', row).textContent = fmt(v.cost);
+        const eqCell = $('.eq', row); if (eqCell) { const n = this.game.equipOf(v.id).filter((x) => x.item).length; eqCell.textContent = `${n}/4`; eqCell.className = `num eq ${n === 4 ? 'ok' : n ? '' : 'bad'}`; eqCell.title = v.equip.setName ? `${v.equip.setName} · 모든 능력치 +${v.equip.setPct}%` : '비품 탭에서 착용하거나 자동 장착을 누르세요'; } }
       $('.up', row).disabled = gold < v.cost; $('.up10', row).disabled = gold < v.cost; row.classList.toggle('affordable', gold >= v.cost);
     }
     if (light) return;
@@ -849,8 +850,13 @@ export class UIManager {
             (() => { const c = g.equipUpgradeCost(sl.item); return sb(c === null ? 'MAX' : `강화 +${sl.item.lv + 1} (${fmt(c)}g)`, () => { if (g.upgradeEquip(sl.item.id)) this.toast(`${sl.item.label} 강화`); else this.toast('골드가 부족합니다'); }, c !== null && s.gold >= c ? 'primary' : '', c === null || s.gold < c); })(),
             sb('해제', () => { g.unequipItem(id, sl.slot); })) : null,
           sl.item ? `${sl.label} +${sl.item.pct}% · ${sl.item.grade}급 · Lv ${sl.item.lv}/${BALANCE.EQUIP.maxLevel}` : `${sl.label}을(를) 올려 줍니다 · 아래에서 착용`)),
+        row('세트', stats.setName || '미완성', null, stats.setName ? `모든 능력치 +${stats.setPct}% (4부위 착용 +${BALANCE.EQUIP.setAny}% · 같은 등급 풀세트는 등급별 +${BALANCE.EQUIP.setSame.D}~${BALANCE.EQUIP.setSame.S}%)` : `4부위를 모두 채우면 +${BALANCE.EQUIP.setAny}%, 같은 등급으로 맞추면 최대 +${BALANCE.EQUIP.setSame.S}%`),
         row('합계', `ATK +${stats.atk}% · HP +${stats.hp}%`, null, `스킬 위력 +${stats.skill}% · 공격 속도 +${stats.speed}%`));
       equipPane.append(slotRows);
+      equipPane.append(el('div', { class: 'dt-sec equip-auto' }, el('b', {}, '자동'),
+        sb('이 사원 자동 장착', () => { const n = g.autoEquip(id); this.toast(n ? n + '부위를 최적 비품으로 교체했습니다' : '이미 최적입니다'); }, 'primary'),
+        sb('파티 전체 자동 장착', () => { const r = g.autoEquipParty(); this.toast(r.changed ? r.heroes + '명 · ' + r.changed + '부위 교체' : '파티 전원이 이미 최적입니다'); }),
+        el('span', { class: 'ds small' }, '슬롯별 최고 성능과 같은 등급 풀세트 중 더 강한 쪽을 고릅니다. 다른 사원이 착용 중인 비품은 건드리지 않습니다.')));
       // bag: pick the slot to browse, newest first, worn items marked
       this.equipSlot ??= 'keyboard';
       const bag = g.equipItems();
