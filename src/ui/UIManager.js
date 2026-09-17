@@ -150,8 +150,10 @@ export class UIManager {
     });
     {
       const input = $('#code-input'), msg = $('#code-msg');
-      const redeem = () => {
-        const r = this.game.redeemCode(input.value);
+      const redeem = async () => {
+        const btn = $('#code-redeem'); btn.disabled = true;
+        const r = await this.game.redeemCodeAsync(input.value);
+        btn.disabled = false;
         if (!r.ok) { msg.textContent = r.reason; msg.className = 'muted small bad'; return; }
         const parts = [r.gems && `보석 +${r.gems}`, r.cards && `강화 카드 +${r.cards}`, r.gold && `골드 +${fmt(r.gold)}`].filter(Boolean).join(' · ');
         msg.textContent = `${r.label}: ${parts}`; msg.className = 'muted small ok';

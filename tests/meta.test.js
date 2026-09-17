@@ -174,7 +174,8 @@ test('보석 코드: one use per save, unknown and expired codes refused, plausi
   const { checkSave } = await import('../src/core/plausibility.js');
   const code = Object.keys(CODES)[0];
   assert.ok(code, 'at least one code ships');
-  assert.equal(normalizeCode(' ex-cel heroes '), 'EXCELHEROES', 'case, spaces and dashes are forgiven');
+  assert.equal(normalizeCode(' hello-heros '), 'HELLOHEROS', 'case, spaces and dashes are forgiven');
+  assert.equal(normalizeCode('ref!'), 'REF!', 'punctuation that is part of a code survives');
   const g = new GameManager({ state: createInitialState(), save: memSave() });
   const gems = g.state.gems, cards = g.state.cards;
   const r = g.redeemCode(code.toLowerCase());

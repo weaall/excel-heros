@@ -15,9 +15,11 @@
 //   PUT  /v1/save   { save, name, dps }    → { ok, updatedAt, check }   (422 when the save is implausible)
 //   GET  /v1/board?limit=50                → { rows, mine, total }   (public: name + picture only, never email)
 //   POST /v1/ad     { kind }               → { ok, count }
+//   POST /v1/redeem { code }               → { ok, code, reward } | 409 (already used on this account)
 //
 // Deploy: see backend/README.md (wrangler login → d1 create → d1 execute schema.sql → set GOOGLE_CLIENT_ID → deploy).
 import { checkSave, checkDelta, boardEntry, boardScore, sanitizeName, MAX_SAVE_BYTES } from '../src/core/plausibility.js';
+import { checkCode } from '../src/data/codes.js';
 
 export const SESSION_DAYS = 30;
 /** ALLOW_ORIGIN may list several origins (comma-separated); echo the caller's origin when it is on the list, else the first. */
@@ -152,6 +154,17 @@ export default {
           if (r) { const above = await env.DB.prepare('SELECT COUNT(*) AS n FROM board WHERE score > ?').bind(r.score).first(); mine = view(r, (above?.n ?? 0) + 1); }
         }
         return json({ rows, mine, total: (await env.DB.prepare('SELECT COUNT(*) AS n FROM board').first())?.n ?? rows.length }, 200, origin);
+      }
+
+      if (url.pathname === '/v1/redeem' && req.method === 'POST') {
+        const a = await auth(req, env, origin); if (a instanceof Response) return a;
+        const body = await req.json().catch(() => ({}));
+        const r = checkCode(body.code, {}); // the account's own history is the table below, not the client's save
+        if (!r.ok) return json({ ok: false, reason: r.reason }, 400, origin);
+        const had = await env.DB.prepare('SELECT 1 AS n FROM redemptions WHERE user_id = ? AND code = ?').bind(a.id, r.code).first();
+        if (had) return json({ ok: false, reason: '이미 사용한 코드입니다' }, 409, origin);
+        await env.DB.prepare('INSERT INTO redemptions (user_id, code, at) VALUES (?, ?, ?)').bind(a.id, r.code, Date.now()).run();
+        return json({ ok: true, code: r.code, reward: r.reward }, 200, origin);
       }
 
       if (url.pathname === '/v1/ad' && req.method === 'POST') {

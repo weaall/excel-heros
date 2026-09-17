@@ -66,7 +66,7 @@ test('verifyGoogleToken: accepts a matching token, rejects wrong audience / issu
 
 // ---- Worker with an in-memory stand-in for D1 (only the SQL shapes worker.js uses) ---------------------------
 function fakeDB() {
-  const t = { users: new Map(), sessions: new Map(), saves: new Map(), board: new Map(), ads: [] };
+  const t = { users: new Map(), sessions: new Map(), saves: new Map(), board: new Map(), ads: [], redemptions: new Set() };
   const stmt = (sql) => { const bound = (...a) => ({
     async first() {
       if (sql.startsWith('SELECT s.user_id AS id')) { const s = t.sessions.get(a[0]); if (!s) return null; const u = t.users.get(s.user_id); return { id: s.user_id, expires_at: s.expires_at, name: u.name, picture: u.picture }; }
@@ -74,6 +74,7 @@ function fakeDB() {
       if (sql.startsWith('SELECT save, updated_at FROM saves')) return t.saves.get(a[0]) ?? null;
       if (sql.startsWith('SELECT COUNT(*) AS n FROM board WHERE score >')) return { n: [...t.board.values()].filter((r) => r.score > a[0]).length };
       if (sql.startsWith('SELECT COUNT(*) AS n FROM board')) return { n: t.board.size };
+      if (sql.startsWith('SELECT 1 AS n FROM redemptions')) return t.redemptions.has(`${a[0]}|${a[1]}`) ? { n: 1 } : null;
       if (sql.startsWith('SELECT COUNT(*) AS n FROM ad_views')) return { n: t.ads.filter((x) => x.id === a[0] && x.at > a[1]).length };
       if (sql.startsWith('SELECT id, name, picture, max_cleared')) return t.board.get(a[0]) ?? null;
       throw new Error('fake first: ' + sql);
@@ -87,6 +88,7 @@ function fakeDB() {
       else if (sql.startsWith('DELETE FROM sessions')) t.sessions.delete(a[0]);
       else if (sql.startsWith('INSERT INTO saves')) t.saves.set(a[0], { save: a[1], updated_at: a[2] });
       else if (sql.startsWith('INSERT INTO board')) t.board.set(a[0], { id: a[0], name: a[1], picture: a[2], max_cleared: a[3], shares: a[4], prestige: a[5], dps: a[6], play_seconds: a[7], collection: a[8], score: a[9], updated_at: a[10] });
+      else if (sql.startsWith('INSERT INTO redemptions')) t.redemptions.add(`${a[0]}|${a[1]}`);
       else if (sql.startsWith('INSERT INTO ad_views')) t.ads.push({ id: a[0], kind: a[1], at: a[2] });
       else throw new Error('fake run: ' + sql);
       return { success: true };
@@ -257,4 +259,21 @@ test('보안: the sessions table stores only a hash, and pre-hash rows keep work
   assert.equal(old.status, 200, 'an existing session is not dropped by the upgrade');
   assert.ok(!db.tables.sessions.has(legacy), 'and it is stored hashed afterwards');
   assert.ok(db.tables.sessions.has(await hashToken(legacy)));
+});
+
+test('보석 코드는 계정당 1회 — 서버가 기록하므로 저장을 지워도 두 번 받을 수 없다', async () => {
+  const db = fakeDB();
+  const env = { DB: db, GOOGLE_CLIENT_ID: CLIENT_ID, fetchFn: tokeninfo(goodClaims()), SAVE_MIN_GAP_MS: 0 };
+  const login = await (await worker.fetch(new Request('https://x/v1/auth/google', { method: 'POST', body: JSON.stringify({ credential: 'x'.repeat(40) }) }), env)).json();
+  const redeem = (code) => worker.fetch(new Request('https://x/v1/redeem', { method: 'POST', headers: { authorization: `Bearer ${login.token}` }, body: JSON.stringify({ code }) }), env);
+  const first = await redeem('hello-heros');
+  assert.equal(first.status, 200);
+  const body = await first.json();
+  assert.equal(body.code, 'HELLOHEROS'); assert.equal(body.reward.gems, 3000);
+  const again = await redeem('HELLOHEROS');
+  assert.equal(again.status, 409, '같은 계정은 두 번 받을 수 없다');
+  const other = await redeem('ref!');
+  assert.equal(other.status, 200, '다른 코드는 따로 받는다');
+  assert.equal((await redeem('NOPE')).status, 400);
+  assert.equal((await worker.fetch(new Request('https://x/v1/redeem', { method: 'POST', body: JSON.stringify({ code: 'ref!' }) }), env)).status, 401, '로그인 없이는 불가');
 });

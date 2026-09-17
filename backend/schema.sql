@@ -42,3 +42,9 @@ CREATE TABLE IF NOT EXISTS ad_views (
   at   INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ad_views_id_at ON ad_views (id, at);
+CREATE TABLE IF NOT EXISTS redemptions (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  code    TEXT NOT NULL,
+  at      INTEGER NOT NULL,
+  PRIMARY KEY (user_id, code)          -- 계정당 코드 1회
+);

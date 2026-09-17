@@ -121,7 +121,20 @@ export class GameManager extends Emitter {
     const power = ids.reduce((a, id) => a + this.heroView(id).power, 0);
     return power * (1 + syn.atk + syn.hp / 2) * (1 + syn.sets.length * 0.04) * (roles.has('healer') ? 1.08 : 1) * (syn.balanced ? 1.06 : 1);
   }
-  /** Redeem a 보석 코드. Returns { ok, reward, label } or { ok: false, reason }. One use per save. */
+  /**
+   * Redeem a code. When the player is signed in the account's own history decides (the Worker records it), so
+   * wiping the local save cannot pay twice; signed out, the local record stands in until the next sign-in.
+   */
+  async redeemCodeAsync(raw) {
+    const local = checkCode(raw, this.state.redeemed ?? {});
+    if (!local.ok) return local;
+    if (this.cloud?.enabled?.()) {
+      const r = await this.cloud.redeem(local.code);
+      if (r && !r.ok) return { ok: false, reason: r.reason };
+    }
+    return this.redeemCode(local.code);
+  }
+  /** Redeem a 보석 코드 locally. Returns { ok, reward, label } or { ok: false, reason }. One use per save. */
   redeemCode(raw) {
     const r = checkCode(raw, this.state.redeemed ?? {});
     if (!r.ok) return r;

@@ -524,3 +524,6 @@
 - `src/data/codes.js`의 표 한 곳에 코드를 적으면 끝. 삽입 시트 뽑기 버튼 아래 입력란에서 사용한다. 대소문자·공백·하이픈 무시, 저장당 1회, `until`로 기간 제한 가능.
 - **설계상 클라이언트 측**이다(코드 목록이 게임과 함께 배포됨). 비밀이 아니라 배포용 쿠폰으로 다루면 된다. 사용한 코드는 `state.redeemed`에 남고, plausibility 보석 예산이 이를 반영해 정상 사용이 순위표 검사에 걸리지 않는다.
 - 현재 등록된 코드는 예시 `EXCELHEROES`(보석 300 · 강화 카드 20) 하나. 나머지는 사용자가 정해 추가.
+- (75차 후속) 코드 확정: **`helloheros`** · **`ref!`** 각 보석 3,000, **계정당 1회**. 대소문자·공백·하이픈은 무시하지만 `!` 같은 코드의 일부인 문장부호는 유지된다.
+- "계정당 1회"는 저장 파일로는 보장할 수 없어(초기화하면 다시 받게 됨) **서버에 기록**한다: D1 테이블 `redemptions (user_id, code)` + `POST /v1/redeem`. 로그인 상태면 서버가 최종 판정(이미 사용 시 409), 로그아웃 상태면 로컬 기록으로 임시 처리하고 다음 로그인 때 서버가 우선한다. 로그인 게이트가 필수라 실제 서비스에서는 항상 서버 경로.
+- 배포 절차: `npx wrangler d1 execute excel-heroes --remote --file=backend/schema.sql --config backend/wrangler.toml` (redemptions 테이블 생성) → `npx wrangler deploy --config backend/wrangler.toml`

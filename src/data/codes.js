@@ -1,19 +1,20 @@
 // 보석 코드 (promo codes). Hand these out however you like — the table below is the whole system.
 //
-// These are client-side by design: the code list ships with the game, so treat a code as a coupon you *chose* to
-// publish, never as a secret. Each code can be redeemed once per save (state.redeemed), and the plausibility budget
-// knows about redemptions so a legitimate one never trips the leaderboard checks.
+// The code list ships with the game, so treat a code as a coupon you *chose* to publish, never as a secret.
+// Redemption is recorded **per account** by the Worker (POST /v1/redeem, table `redemptions`), so wiping the local
+// save does not hand out a second payout. When the player is signed out the client falls back to a local-only
+// record; the next sign-in is authoritative. The plausibility budget knows about redemptions either way.
 //
 // To add a code: one entry here, redeploy. `until` is optional (ISO date, inclusive); `once` defaults to true.
 //   WELCOME2026: { gems: 300, label: '입사 축하', until: '2026-12-31' }
 
 /** @type {Record<string, { gems?: number, cards?: number, gold?: number, label: string, until?: string }>} */
 export const CODES = Object.freeze({
-  // 예시 겸 첫 보상. 나머지 코드는 사용자가 정해 여기에 추가합니다.
-  EXCELHEROES: { gems: 300, cards: 20, label: '오픈 기념' },
+  HELLOHEROS: { gems: 3000, label: '입사 축하' },
+  'REF!': { gems: 3000, label: '참조 오류 복구' },
 });
 
-/** Codes are typed by hand: accept any case and ignore spaces/dashes. */
+/** Codes are typed by hand: accept any case and ignore spaces/dashes (but not punctuation that is part of a code). */
 export const normalizeCode = (raw) => String(raw ?? '').toUpperCase().replace(/[\s-]/g, '').slice(0, 32);
 
 /** The largest gem payout any code can grant — the plausibility budget adds this per redeemed code. */

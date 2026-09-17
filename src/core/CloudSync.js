@@ -81,5 +81,11 @@ export class CloudSync {
     try { this.fetchFn(`${this.base()}/v1/save`, { method: 'PUT', headers: this.headers(), keepalive: true, body: JSON.stringify({ save: this.game.state, name: this.cfg().name || this.auth.user?.name, dps: this.game.partyDPS() }) }); this.dirty = false; } catch { /* best effort */ }
   }
   /** Record a rewarded-ad view (audit trail only; the reward itself is granted locally). */
+  /** Redeem a code against the account. Resolves { ok, code, reward } or { ok: false, reason }; null when offline. */
+  async redeem(code) {
+    if (!this.enabled()) return null;
+    try { return await this.#call('/v1/redeem', { method: 'POST', body: JSON.stringify({ code }) }); }
+    catch (e) { return { ok: false, reason: String(e?.message ?? e).includes('409') ? '이미 사용한 코드입니다' : '서버에 연결할 수 없습니다' }; }
+  }
   async recordAd(kind = 'reward') { if (!this.enabled()) return null; return this.#call('/v1/ad', { method: 'POST', body: JSON.stringify({ kind }) }).catch(() => null); }
 }
