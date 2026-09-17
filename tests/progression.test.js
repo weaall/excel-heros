@@ -150,3 +150,16 @@ test('boss specials: every boss has named Nth-attack specials, distinct sprites 
   assert.ok(kinds.size >= 5, 'five different special kinds across the three bosses');
   assert.equal(new Set(BOSSES.map((b) => MONSTER_MAP[b.id])).size, 3, 'each boss uses its own creature');
 });
+
+test('stage modifiers: bosses have none, phases lay them out differently, and every one pays extra gold', async () => {
+  const { stageModifier, MODIFIERS } = await import('../src/data/stages.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+  for (const b of [10, 20, 50]) assert.equal(stageModifier(b), null, 'boss stages are never modified');
+  const layout = (phase) => Array.from({ length: BALANCE.BOSS_EVERY - 1 }, (_, i) => stageModifier(phase * BALANCE.BOSS_EVERY + i + 1)?.id ?? '-').join(',');
+  assert.notEqual(layout(0), layout(2), 'different phases lay modifiers out differently');
+  assert.ok(layout(4).split(',').filter((x) => x !== '-').length > layout(0).split(',').filter((x) => x !== '-').length, 'later phases are busier');
+  for (const m of Object.values(MODIFIERS)) {
+    assert.ok(m.gold > 1, `${m.id} pays extra gold for the extra difficulty`);
+    assert.ok(m.name && m.desc.length > 5, m.id);
+  }
+});

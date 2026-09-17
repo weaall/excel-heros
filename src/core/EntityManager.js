@@ -35,6 +35,7 @@ export class EntityManager {
     this.heroes = []; this.monsters = []; this.projectiles = []; this.floaters = []; this.particles = []; this.effects = [];
     this.boss = null; this.bossTimer = 0;
     this.atkBuff = { mult: 1, until: 0 }; this.hasteBuff = { mult: 1, until: 0 }; this.barrier = { hp: 0, max: 0, until: 0 }; this.slow = { mult: 1, until: 0 }; // slow: boss debuff on party attack speed
+    this.taunt = null; // { heroId, reduce, until } — 도발: every monster swings at this hero and it hurts less
     this.time = 0; this.dmgLog = []; this.rallyMult = 1; this.shake = 0;
     this.scroll = 0;            // background scroll offset (px)
     this.traveling = false; this.travelT = 0;
@@ -131,6 +132,7 @@ export class EntityManager {
   }
 
   #spawnMonster(stage, isBoss, index, forcedDef = null, eliteRate = null) {
+    const mod = isBoss ? null : stageModifier(stage);
     let def = forcedDef ?? (isBoss ? bossForStage(stage) : monsterForStage(stage, Math.random()));
     const elite = !isBoss && !forcedDef && Math.random() < (eliteRate ?? eliteChance(stage) * (stageModifier(stage)?.elite ?? 1));
     if (elite) def = asElite(def, Math.random());
@@ -139,8 +141,8 @@ export class EntityManager {
     const e = {
       id: nextId++, kind: 'monster', def, isBoss, elite, proj,
       x: CANVAS_W + 60 + index * 58 + Math.random() * 20, y: GROUND_Y + (index % 2 ? 10 : -8) + (Math.random() * 8 - 4),
-      hp: (isBoss ? bossHP(stage) * (def.hp ?? 1) : monsterHP(stage)) * (elite ? BALANCE.ELITE.hp : 1),
-      atk: (isBoss ? bossATK(stage) * (def.atk ?? 1) : monsterATK(stage)) * (elite ? BALANCE.ELITE.atk : 1),
+      hp: (isBoss ? bossHP(stage) * (def.hp ?? 1) : monsterHP(stage)) * (elite ? BALANCE.ELITE.hp : 1) * (isBoss ? 1 : mod?.hp ?? 1),
+      atk: (isBoss ? bossATK(stage) * (def.atk ?? 1) : monsterATK(stage)) * (elite ? BALANCE.ELITE.atk : 1) * (isBoss ? 1 : mod?.atk ?? 1),
       interval: isBoss ? (def.interval ?? 2.0) : proj ? 1.9 : 1.5, cd: 0.9 + Math.random() * 0.6, hits: 0,
       range, standoff: range * 0.9 + (proj ? 0 : index * 34),
       speed: isBoss ? (def.speed ?? 40) : BALANCE.MONSTER_SPEED * (0.9 + Math.random() * 0.25) * (elite ? 0.9 : 1),
@@ -167,7 +169,8 @@ export class EntityManager {
     if (this.hasteBuff.until < this.time) this.hasteBuff.mult = 1;
     if (this.barrier.until < this.time) this.barrier.hp = 0;
     if (this.slow.until < this.time) this.slow.mult = 1;
-    const speedMult = this.game.speedMult() * this.hasteBuff.mult * this.slow.mult;
+    if (this.taunt && this.taunt.until < this.time) this.taunt = null;
+    const speedMult = this.game.speedMult() * this.hasteBuff.mult * this.slow.mult * (stageModifier(this.game.combatStage())?.heroSpeed ?? 1);
 
     // --- travel between waves: scroll the dungeon, party runs in place
     if (!monsters.length && !this.boss) {
@@ -288,7 +291,9 @@ export class EntityManager {
         p.hit = true;
         if (p.hostile) {
           const tgt = this.heroes.find((h) => h.id === p.targetId);
-          if (tgt?.alive) { this.#damage(tgt, p.dmg * (tgt.trait === 'sturdy' ? 1 - tv(tgt, 'sturdy') : 1), false); this.fx('puff', { x: tgt.x, y: tgt.y - 10, color: p.color, life: 0.25 }); }
+          const taunting = this.taunt && this.taunt.until >= this.time ? this.heroes.find((a) => a.id === this.taunt.heroId && a.alive) : null;
+          const hit = taunting ?? tgt;
+          if (hit?.alive) { this.#damage(hit, p.dmg * (taunting ? 1 - this.taunt.reduce : 1) * (hit.trait === 'sturdy' ? 1 - tv(hit, 'sturdy') : 1), false); this.fx('puff', { x: hit.x, y: hit.y - 10, color: p.color, life: 0.25 }); }
         } else if (p.onHit) p.onHit();
       }
     }
@@ -353,6 +358,9 @@ export class EntityManager {
   }
 
   #monsterHit(m, target, mult = 1) {
+    // 도발: while it is up, the taunting hero takes the hit instead — and takes less of it
+    const t = this.taunt && this.taunt.until >= this.time ? this.heroes.find((a) => a.id === this.taunt.heroId && a.alive) : null;
+    if (t) { target = t; mult *= 1 - this.taunt.reduce; }
     this.#damage(target, m.atk * mult * (target.trait === 'sturdy' ? 1 - tv(target, 'sturdy') : 1), false);
     this.fx('puff', { x: target.x + 10, y: target.y - 12, color: '#e74c3c', life: 0.22 });
     if (m.isBoss) this.shake = Math.max(this.shake, 5);
@@ -465,6 +473,57 @@ export class EntityManager {
         this.atkBuff = { mult: Math.max(this.atkBuff.mult, 1 + (power * boost) / 100), until: this.time + 5 };
         for (const a of heroes) { this.fx('ring', { x: a.x, y: a.y + 20, color: '#f39c12', radius: 40, life: 0.5 }); this.fx('chart', { x: a.x, y: a.y - 46, life: 0.9 }); }
         break;
+      case 'cleanse': { // 정화: heal, clear the boss slow, and a short burst of speed — the healer that undoes debuffs
+        for (const a of heroes) {
+          const amt = Math.round(a.maxHp * (power * boost) / 100);
+          a.hp = Math.min(a.maxHp, a.hp + amt);
+          this.floaters.push({ x: a.x, y: a.y - 40, text: `+${amt}`, color: '#27ae60', t: 0 });
+          this.fx('sparkle', { x: a.x, y: a.y, color: '#a3e4d7', n: 8 });
+        }
+        if (this.slow.mult < 1) { this.slow = { mult: 1, until: 0 }; this.floaters.push({ x: h.x, y: h.y - 76, text: '둔화 해제', color: '#27ae60', t: 0 }); }
+        this.hasteBuff = { mult: Math.max(this.hasteBuff.mult, 1.2), until: this.time + SKILLS.cleanse.duration };
+        this.fx('ring', { x: h.x, y: h.y, color: '#a3e4d7', radius: 300, life: 0.5 });
+        break;
+      }
+      case 'revive': { // 복직: the only way to get a downed hero back before the timer
+        const down = heroes.concat(this.heroes.filter((a) => !a.alive)).find((a) => !a.alive);
+        if (down) {
+          down.alive = true; down.reviveT = 0; down.hp = Math.max(1, Math.round(down.maxHp * (power * boost) / 100));
+          this.fx('ring', { x: down.x, y: down.y, color: '#f1c40f', radius: 120, life: 0.7 }); this.fx('sparkle', { x: down.x, y: down.y - 20, color: '#ffe9a8', n: 16 });
+          this.floaters.push({ x: down.x, y: down.y - 60, text: '복직!', color: '#f1c40f', t: 0, big: true });
+          this.game.log(`${h.def.name}: ${down.def.name} 복직 처리`, 'skill');
+        } else {
+          const weak = heroes.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          if (weak) { const amt = Math.round(weak.maxHp * (power * boost) / 100); weak.hp = Math.min(weak.maxHp, weak.hp + amt); this.floaters.push({ x: weak.x, y: weak.y - 40, text: `+${amt}`, color: '#27ae60', t: 0 }); this.fx('sparkle', { x: weak.x, y: weak.y, color: '#ffe9a8', n: 10 }); }
+        }
+        break;
+      }
+      case 'drain': { // 회수: area damage that feeds the party back
+        let dealt = 0;
+        this.fx('ring', { x: h.x, y: h.y, color: '#8e44ad', radius: 400, life: 0.5 }); this.shake = Math.max(this.shake, 5);
+        for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: 0.2, life: 0.25 }); dealt += this.#heroHit(h, m, power * boost, true) ?? 0; }
+        const back = Math.round(dealt * 0.4 / Math.max(1, heroes.length));
+        if (back > 0) for (const a of heroes) { a.hp = Math.min(a.maxHp, a.hp + back); this.floaters.push({ x: a.x, y: a.y - 40, text: `+${back}`, color: '#27ae60', t: 0 }); }
+        break;
+      }
+      case 'chain': { // 연쇄: up to three enemies, each link weaker — rewards a wide wave, not a boss
+        const order = monsters.slice().sort((a, b) => a.x - b.x).slice(0, 3);
+        let mult = power * boost, prev = h;
+        for (const m of order) {
+          this.fx('slash', { x: m.x, y: m.y - 6, color: '#5dade2', angle: -0.5, life: 0.22 });
+          this.fx('grid', { x: Math.min(prev.x, m.x) - 10, y: Math.min(prev.y, m.y) - 40, w: Math.abs(m.x - prev.x) + 20, h: 40, life: 0.35, color: '#5dade2' });
+          this.#heroHit(h, m, mult, true); mult *= 0.7; prev = m;
+        }
+        this.shake = Math.max(this.shake, 4);
+        break;
+      }
+      case 'taunt': { // 도발: the tank eats everything for a while, and takes less while doing it
+        this.taunt = { heroId: h.id, reduce: Math.min(0.8, (power * boost) / 100), until: this.time + SKILLS.taunt.duration };
+        this.fx('ring', { x: h.x, y: h.y, color: '#e67e22', radius: 260, life: 0.6 });
+        this.floaters.push({ x: h.x, y: h.y - 76, text: '도발', color: '#e67e22', t: 0, big: true });
+        for (const m of monsters) this.fx('stars', { x: m.x, y: m.y - 44, color: '#e67e22', n: 4 });
+        break;
+      }
       case 'heal':
         for (const a of heroes) {
           const amt = Math.round(a.maxHp * (power * boost) / 100);

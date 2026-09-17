@@ -33,6 +33,7 @@ export const BALANCE = Object.freeze({
   // less than ★ or 각성 give, so 비품 supplements the existing axes instead of replacing them.
   EQUIP: {
     dropChance: 0.35, bossDropChance: 1, bossRolls: 2, // boss clears roll twice and keep the better item
+    bossFirstMinGrade: 'B', bossFirstRolls: 4,          // a boss's FIRST clear rolls more and floors the grade
     maxLevel: 10, pctPerLevel: 0.12,                   // +12% of the base value per level (S 키보드: 16% → 35%)
     upgradeGoldKills: 12, upgradeGrowth: 1.35,         // cost in "kills worth of gold" at the hero's stage, per level
     dismantleGoldKills: { D: 2, C: 4, B: 8, A: 16, S: 32 },

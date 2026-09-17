@@ -84,3 +84,13 @@ test('migrate: hand-edited saves cannot keep a slot pointing at an item that is 
   assert.deepEqual(s.heroes.staff_park.equip, { chair: 7 }, 'the dangling keyboard reference is dropped');
   assert.equal(s.equipment.items.length, 1);
 });
+
+test('a boss first clear always hands over an item of at least the floor grade', () => {
+  const g = game();
+  for (let i = 0; i < 20; i++) {
+    const it = g.dropEquipment(10, true, Math.random, true);
+    assert.ok(it, 'first-clear boss always drops');
+    assert.ok(itemBasePct(it.grade) >= itemBasePct(BALANCE.EQUIP.bossFirstMinGrade), `${it.grade} is at least ${BALANCE.EQUIP.bossFirstMinGrade}`);
+    g.state.equipment.items = [];
+  }
+});

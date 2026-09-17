@@ -285,13 +285,15 @@ export class GameManager extends Emitter {
   equipDismantleGold(item) { return relativeGold(this.state.maxStage, BALANCE.EQUIP.dismantleGoldKills[item.grade] ?? 2, 1); }
 
   /** Roll a drop for a cleared stage. Bosses roll twice and keep the better item. Returns the item or null. */
-  dropEquipment(stage, boss = false, rnd = Math.random) {
+  dropEquipment(stage, boss = false, rnd = Math.random, firstBoss = false) {
     const E = BALANCE.EQUIP; const s = this.state;
     if (rnd() >= (boss ? E.bossDropChance : E.dropChance)) return null;
     if ((s.equipment.items?.length ?? 0) >= E.inventoryMax) { this.log('비품 창고가 가득 찼습니다 — 상세 창 비품 탭에서 분해하세요', 'warn'); return null; }
     const phase = Math.floor((Math.max(1, stage) - 1) / BALANCE.BOSS_EVERY);
     let best = null;
-    for (let i = 0; i < (boss ? E.bossRolls : 1); i++) { const r = rollItem(phase, rnd); if (!best || itemBasePct(r.grade) > itemBasePct(best.grade)) best = r; }
+    const rolls = firstBoss ? E.bossFirstRolls : boss ? E.bossRolls : 1;
+    for (let i = 0; i < rolls; i++) { const r = rollItem(phase, rnd); if (!best || itemBasePct(r.grade) > itemBasePct(best.grade)) best = r; }
+    if (firstBoss && itemBasePct(best.grade) < itemBasePct(E.bossFirstMinGrade)) best.grade = E.bossFirstMinGrade; // 첫 보스 클리어는 최소 B급
     const item = { id: s.equipment.nextId++, ...best };
     s.equipment.items.push(item);
     this.log(`비품 획득: ${itemLabel(item)} (${SLOTS[item.slot].name})`, 'info');
@@ -828,7 +830,7 @@ export class GameManager extends Emitter {
       this.emit('cards'); this.emit('gems');
       return;
     }
-    const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(this.combatStage())) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1) * (stageModifier(s.stage)?.gold ?? 1));
+    const gold = Math.floor((m.isBoss ? bossGold(s.stage) : baseGold(this.combatStage())) * this.goldMult() * (m.elite ? BALANCE.ELITE.gold : 1) * (stageModifier(this.combatStage())?.gold ?? 1));
     s.gold += gold; s.stats.totalGold += gold; s.stats.totalKills++;
     this.#recordKill(m);
     for (const id of s.party) this.#addAffection(id, m.isBoss ? BALANCE.AFFECTION.xpPerBoss : BALANCE.AFFECTION.xpPerKill);
@@ -861,7 +863,7 @@ export class GameManager extends Emitter {
     const lucky = this.partyTraitCount('lucky') * TRAITS.lucky.value;
     const cards = first ? (Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1) * BALANCE.CARDS_FIRST_CLEAR_PER_PHASE : 0;
     s.gems += gems + lucky; s.cards += cards; s.maxCleared = Math.max(s.maxCleared, s.stage);
-    const drop = this.dropEquipment(s.stage, boss);
+    const drop = this.dropEquipment(s.stage, boss, Math.random, boss && first);
     this.checkMilestones();
     Quests.addProgress(s, 'clears', 1);
     this.log(`${this.stageLabel()} 마감 +${gems + lucky} 보석${cards ? ` +${cards} 강화 카드` : ''}${drop ? ` · 비품 ${itemLabel(drop)}` : ''}`, 'stage');

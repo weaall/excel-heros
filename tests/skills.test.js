@@ -85,3 +85,62 @@ test('quips: every skill type has lines (except the ultimate cut-in), every boss
   em.castSkill(h, em.monsters[0], em.monsters, em.heroes);
   assert.ok(h.say && SKILL_QUIPS.haste.includes(h.say.text), 'caster speaks a haste quip');
 });
+
+test('cleanse: heals, clears the boss slow and grants a short haste', () => {
+  const { g, em, h } = setup('ai_lead');
+  const ally = em.heroes[0]; ally.hp = Math.max(1, Math.floor(ally.maxHp * 0.3));
+  em.slow = { mult: 0.7, until: em.time + 10 };
+  em.castSkill(h, em.monsters[0], em.monsters, em.heroes);
+  assert.ok(ally.hp > Math.floor(ally.maxHp * 0.3), 'the party was healed');
+  assert.equal(em.slow.mult, 1, '둔화 was cleared');
+  assert.ok(em.hasteBuff.mult > 1 && em.hasteBuff.until > em.time, 'a short haste is granted');
+});
+
+test('revive: brings a downed ally back, and heals the weakest when nobody is down', () => {
+  const { g, em, h } = setup('chro');
+  const ally = em.heroes.find((a) => a !== h);
+  ally.alive = false; ally.hp = 0; ally.reviveT = 8;
+  em.castSkill(h, em.monsters[0], em.monsters, em.heroes.filter((a) => a.alive));
+  assert.ok(ally.alive && ally.hp > 0 && ally.reviveT === 0, 'the downed ally is back on the line');
+  // nobody down: the weakest ally is topped up instead
+  const weak = em.heroes.find((a) => a !== h); weak.hp = Math.max(1, Math.floor(weak.maxHp * 0.2));
+  const before = weak.hp;
+  em.castSkill(h, em.monsters[0], em.monsters, em.heroes);
+  assert.ok(weak.hp > before, 'the weakest ally was healed instead');
+});
+
+test('drain: damages every enemy and feeds part of it back to the party', () => {
+  const { g, em, h } = setup('cdo');
+  for (const a of em.heroes) a.hp = Math.max(1, Math.floor(a.maxHp * 0.4));
+  const hpBefore = em.heroes.map((a) => a.hp);
+  const mHpBefore = em.monsters.map((m) => m.hp);
+  em.castSkill(h, em.monsters[0], em.monsters, em.heroes);
+  assert.ok(em.monsters.some((m, i) => m.hp < mHpBefore[i] || !m.alive), 'enemies took damage');
+  assert.ok(em.heroes.some((a, i) => a.hp > hpBefore[i]), 'the party was healed by the drain');
+});
+
+test('chain: hits at most three enemies and each link is weaker than the last', () => {
+  const { g, em, h } = setup('vlookup');
+  for (let i = 0; i < 60 && em.monsters.filter((m) => m.alive).length < 3; i++) g.tick(0.1);
+  const alive = em.monsters.filter((m) => m.alive).sort((a, b) => a.x - b.x);
+  if (alive.length < 3) return; // the wave never filled up; nothing to assert
+  const before = alive.map((m) => m.hp);
+  em.castSkill(h, alive[0], em.monsters, em.heroes);
+  const dealt = alive.map((m, i) => before[i] - m.hp);
+  assert.ok(dealt[0] > 0 && dealt[1] > 0 && dealt[2] > 0, 'three enemies were hit');
+  assert.ok(dealt[0] >= dealt[1] && dealt[1] >= dealt[2], 'each link is weaker');
+  const fourth = em.monsters.filter((m) => !alive.includes(m));
+  assert.ok(fourth.every((m) => m.hp === m.maxHp || !m.alive), 'a fourth enemy is untouched');
+});
+
+test('taunt: monsters hit the taunting hero instead, for reduced damage, until it expires', () => {
+  const { g, em, h } = setup('guard');
+  const other = em.heroes.find((a) => a !== h);
+  em.castSkill(h, em.monsters[0], em.monsters, em.heroes);
+  assert.ok(em.taunt && em.taunt.heroId === h.id && em.taunt.reduce > 0, 'taunt is up');
+  const otherBefore = other.hp, tankBefore = h.hp;
+  for (let i = 0; i < 40 && h.hp === tankBefore && em.taunt; i++) g.tick(0.1); // stay inside the 5 s window
+  assert.equal(other.hp, otherBefore, 'the other hero was never hit while the taunt held');
+  if (em.taunt) { em.taunt.until = em.time - 1; g.tick(0.1); }
+  assert.equal(em.taunt, null, 'taunt expires');
+});

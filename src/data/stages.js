@@ -21,14 +21,30 @@ export const phaseIndex = (stage) => Math.floor((Math.max(1, stage) - 1) / BALAN
 export const phaseTheme = (stage) => PHASES[phaseIndex(stage) % PHASES.length];
 export const phaseName = (stage) => { const p = phaseIndex(stage); const floor = Math.floor(p / PHASES.length); return `${PHASES[p % PHASES.length].name}${floor ? ` ${floor + 1}차` : ''}`; };
 
-/** Stage modifiers by sub-stage: x-5 야근 러시, x-8 감사 기간, x-10 boss (handled elsewhere). */
+/**
+ * Stage modifiers. A phase is ten fights; without these, nine of them are the same fight. Each modifier trades a
+ * difficulty knob for gold, so a modified stage is a choice (farm it for the gold, or push past it).
+ *   count/speed/elite scale the wave · gold scales the payout · atk/hp scale the monsters · heroSpeed slows the party
+ */
 export const MODIFIERS = {
-  rush:  { id: 'rush',  name: '야근 러시', desc: '몬스터 +2 · 이동 속도 +30% · 골드 ×1.3', count: 2, speed: 1.3, gold: 1.3, elite: 1 },
-  elite: { id: 'elite', name: '감사 기간', desc: '엘리트 출현 ×3 · 골드 ×1.2',            count: 0, speed: 1,   gold: 1.2, elite: 3 },
+  rush:     { id: 'rush',     name: '야근 러시',   desc: '몬스터 +2 · 이동 속도 +30% · 골드 ×1.3',        count: 2,  speed: 1.3, elite: 1, gold: 1.3 },
+  elite:    { id: 'elite',    name: '감사 기간',   desc: '엘리트 출현 ×3 · 골드 ×1.2',                    count: 0,  speed: 1,   elite: 3, gold: 1.2 },
+  blackout: { id: 'blackout', name: '정전',        desc: '파티 공격 속도 -20% · 몬스터 HP -20% · 골드 ×1.35', count: 0, speed: 1, elite: 1, gold: 1.35, hp: 0.8, heroSpeed: 0.8 },
+  crunch:   { id: 'crunch',   name: '납기 압박',   desc: '몬스터 공격력 +35% · 이동 속도 +20% · 골드 ×1.5', count: 0,  speed: 1.2, elite: 1, gold: 1.5, atk: 1.35 },
+  swarm:    { id: 'swarm',    name: '단체 민원',   desc: '몬스터 +3 · HP -35% · 골드 ×1.25',               count: 3,  speed: 1,   elite: 1, gold: 1.25, hp: 0.65 },
 };
+/** Which modifier sits on which sub-stage, per phase. Floors rotate through the table so Phase 1 and Phase 6 differ. */
+const PHASE_MODIFIERS = [
+  { 5: 'rush', 8: 'elite' },
+  { 3: 'swarm', 5: 'rush', 8: 'elite' },
+  { 4: 'blackout', 7: 'rush', 9: 'elite' },
+  { 3: 'crunch', 6: 'swarm', 8: 'elite' },
+  { 2: 'swarm', 5: 'blackout', 7: 'crunch', 9: 'elite' },
+];
 export function stageModifier(stage) {
-  const sub = ((Math.max(1, stage) - 1) % BALANCE.BOSS_EVERY) + 1;
-  if (sub === 5) return MODIFIERS.rush;
-  if (sub === 8) return MODIFIERS.elite;
-  return null;
+  const st = Math.max(1, stage);
+  const sub = ((st - 1) % BALANCE.BOSS_EVERY) + 1;
+  if (sub === BALANCE.BOSS_EVERY) return null; // boss stage
+  const table = PHASE_MODIFIERS[phaseIndex(st) % PHASE_MODIFIERS.length];
+  return MODIFIERS[table[sub]] ?? null;
 }
