@@ -705,3 +705,16 @@ body.stealth #roster-table { display: table; }
 .prestige-hint b { color: #7d5a00; font-size: 12.5px; }
 .prestige-hint p { margin: 4px 0 6px; font-size: 12px; color: #444; line-height: 1.5; }
 .prestige-hint .xl-btn { margin-right: 4px; }
+
+/* A급 등장 배너 (S는 전체 화면 스플래시, A는 이 띠 — 등급 차이를 연출로도 유지) */
+.hero-banner { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; background: rgba(18,20,28,.92); border-left: 4px solid var(--gc); box-shadow: 0 6px 20px rgba(0,0,0,.35); z-index: 5; animation: hbIn .28s ease-out; }
+.hero-banner.out { animation: hbOut .4s ease-in forwards; }
+.hero-banner img { width: 44px; height: 44px; object-fit: cover; object-position: top center; }
+.hero-banner .hb-text { display: flex; flex-direction: column; line-height: 1.25; }
+.hero-banner b { color: var(--gc); font-size: 11.5px; letter-spacing: 1px; }
+.hero-banner span { color: #fff; font-size: 14px; font-weight: 700; }
+.hero-banner small { color: rgba(255,255,255,.65); font-size: 10.5px; }
+@keyframes hbIn { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes hbOut { to { opacity: 0; transform: translate(-50%, -8px); } }
+#modal.epic .reveal-grid { animation: epicPulse .7s ease-out; }
+@keyframes epicPulse { 0% { filter: brightness(1.5); } 100% { filter: none; } }

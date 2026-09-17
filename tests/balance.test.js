@@ -9,9 +9,15 @@ test('GDD formulas at level/stage 1 return base values', () => {
 });
 
 test('GDD formulas grow exponentially with floor', () => {
-  assert.equal(upgradeCost(2), Math.floor(10 * 1.12));
-  assert.equal(monsterHP(10), Math.floor(50 * 1.18 ** 9));
-  assert.equal(baseGold(20), Math.floor(5 * 1.15 ** 19));
+  assert.equal(upgradeCost(2), Math.floor(BALANCE.UPGRADE_COST_BASE * BALANCE.UPGRADE_COST_GROWTH));
+  assert.equal(monsterHP(10), Math.floor(BALANCE.MONSTER_HP_BASE * BALANCE.MONSTER_HP_GROWTH ** 9));
+  assert.equal(baseGold(20), Math.floor(BALANCE.GOLD_BASE * BALANCE.GOLD_GROWTH ** 19));
+  // the curve must still tighten with depth, or there is no wall and no reason to 회사 이전 …
+  const levelsPerStage = Math.log(BALANCE.MONSTER_HP_GROWTH) / Math.log(BALANCE.HERO_ATK_GROWTH);
+  const drift = BALANCE.UPGRADE_COST_GROWTH ** levelsPerStage / BALANCE.GOLD_GROWTH;
+  assert.ok(drift > 1.005, `levelling must get relatively pricier with depth (drift ${drift.toFixed(4)})`);
+  // … but not so fast that the mid game dies: 50 stages must not cost more than ~6x relative ground
+  assert.ok(drift ** 50 < 6, `50 stages of drift is ${(drift ** 50).toFixed(1)}x — too steep`);
 });
 
 test('offline gold applies 0.6 efficiency and 10h cap', () => {
@@ -69,7 +75,11 @@ test('회사 업그레이드: payroll raises gem drop chance (not gold), team co
   n = g.state.gems - gems0; const p = g.gemDropChance(), expected = 2000 * p * (1 + BALANCE.GEM_DROP.eliteMult) / 2 * BALANCE.GEM_DROP.amount;
   assert.ok(n > expected * 0.6 && n < expected * 1.4, `drops ${n} vs expected ≈ ${expected}`);
   assert.equal(g.state.stats.gemDrops, n);
-  // cost scale: coffee Lv 30 ≈ a hero at Lv 100; every team upgrade at Lv 0 costs more than a Lv 30 hero level
-  assert.ok(teamUpgradeCost('coffee', 30) > upgradeCost(95) && teamUpgradeCost('coffee', 30) < upgradeCost(110));
+  // cost scale: a team upgrade at Lv 30 should cost about what a hero level around 100-120 costs — expressed as a
+  // band rather than exact levels so a tuning pass on UPGRADE_COST_GROWTH does not need the test rewritten
+  for (const k of Object.keys(BALANCE.TEAM_UPGRADES)) {
+    const c = teamUpgradeCost(k, 30);
+    assert.ok(c > upgradeCost(95) && c < upgradeCost(125), `${k} Lv30 costs ${c}, outside the hero Lv 95-125 band`);
+  }
   for (const k of Object.keys(BALANCE.TEAM_UPGRADES)) assert.ok(teamUpgradeCost(k, 0) > upgradeCost(30), k);
 });

@@ -6,9 +6,9 @@
 
 export const BALANCE = Object.freeze({
   // --- GDD formulas -------------------------------------------------------
-  UPGRADE_COST_BASE: 10,   UPGRADE_COST_GROWTH: 1.12, // Cost = floor(10 * 1.12^(L-1))
+  UPGRADE_COST_BASE: 10,   UPGRADE_COST_GROWTH: 1.105, // Cost = floor(10 * 1.105^(L-1)) — see docs/BALANCE.md 6-58
   MONSTER_HP_BASE: 50,     MONSTER_HP_GROWTH: 1.18,   // HP   = floor(50 * 1.18^(S-1))
-  GOLD_BASE: 5,            GOLD_GROWTH: 1.15,         // Gold = floor(5  * 1.15^(S-1))
+  GOLD_BASE: 5,            GOLD_GROWTH: 1.16,         // Gold = floor(5  * 1.16^(S-1))
 
   // --- Idle / offline (user decision: open = 1.0x, closed = 0.6x up to 10h) --
   OFFLINE_CAP_SEC: 10 * 3600, OFFLINE_EFFICIENCY: 0.6, OFFLINE_MIN_SEC: 60,

@@ -703,6 +703,23 @@ export class UIManager {
     return c;
   }
 
+  /** A-grade arrival: a short banner over the reveal dialog — loud enough to notice, quiet enough that S still wins. */
+  #showHeroBanner(r) {
+    const host = $('#modal-body'); if (!host) return;
+    const v = this.game.heroView(r.heroId); const def = v.def;
+    host.querySelector('.hero-banner')?.remove();
+    const art = cardArtUrlFor(def) ?? cardArtUrl(def.id);
+    const el$ = el('div', { class: 'hero-banner', style: `--gc:${v.grade.color}` },
+      art && !/\.svg$/i.test(art) ? el('img', { src: art, alt: '' }) : null,
+      el('div', { class: 'hb-text' },
+        el('b', {}, `${def.grade}급 ${v.grade.label}`),
+        el('span', {}, def.name),
+        el('small', {}, r.isNew ? '신규 영입' : `조각 +${r.shards ?? 0}`)));
+    host.append(el$);
+    setTimeout(() => el$.classList.add('out'), 1500);
+    setTimeout(() => el$.remove(), 2000);
+  }
+
   /** S-grade splash: the full illustration slides in over the reveal dialog with the character's line. */
   #showSplash(r) {
     const url = cardArtUrl(r.heroId); if (!url || /\.svg$/i.test(url)) return;
@@ -1032,6 +1049,17 @@ export class UIManager {
     }
     body.append(grid);
     this.openModal('데이터 가져오기', body);
+    // 연속 뽑기: keep pulling without leaving the dialog, while the gems last
+    {
+      const acts = $('#modal-actions'); acts.innerHTML = '';
+      const again = (n, cost, cls) => {
+        const b = btn(`${n}행 더 (보석 ${fmt(cost)})`, () => { if (this.game.state.gems < cost) { this.toast('보석이 부족합니다'); return; } this.#pull(n); }, cls, this.game.state.gems < cost);
+        b.id = `again-${n}`; return b;
+      };
+      acts.append(again(1, BALANCE.GACHA_SINGLE_COST, 'small'), again(10, BALANCE.GACHA_TEN_COST, 'primary small'),
+        el('span', { class: 'muted small', style: 'margin:0 auto 0 8px' }, `보유 보석 ${fmt(this.game.state.gems)}`),
+        btn('닫기', () => this.closeModal(), 'primary'));
+    }
     const modal = $('#modal .dialog');
     let i = 0; const timers = [];
     // rarity "tell": high-grade cards glow on their back before they turn, so the player sees it coming
@@ -1051,7 +1079,7 @@ export class UIManager {
       if (f.flip.classList.contains('revealed')) return;
       f.flip.classList.add('revealed'); f.wrap.querySelector('.hidden-until')?.classList.remove('hidden-until');
       if (f.r.grade === 'S') { modal.classList.add('jackpot'); setTimeout(() => modal.classList.remove('jackpot'), 900); this.game.emit('sfx', 'jackpot'); burst(f); setTimeout(() => this.#showSplash(f.r), 700); }
-      else if (f.r.grade === 'A') { this.game.emit('sfx', 'levelup'); burst(f); }
+      else if (f.r.grade === 'A') { modal.classList.add('epic'); setTimeout(() => modal.classList.remove('epic'), 700); this.game.emit('sfx', 'levelup'); burst(f); this.#showHeroBanner(f.r); }
       else this.game.emit('sfx', 'coin');
     };
     const finish = () => { $('.reveal-hint', body).textContent = `${results.length}행 가져오기 완료${hasS ? ' — 전설 등급 등장!' : hasA ? ' — 영웅 등급 등장' : ''}. 카드를 누르면 상세.`; if (hasS) modal.classList.add('has-s'); };
