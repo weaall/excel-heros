@@ -1,5 +1,5 @@
 {
-  "version": 1789626350,
+  "version": 1789630644,
   "cards": {
     "staff_park": {
       "file": "staff_park.png",
@@ -109,10 +109,7 @@
       "file": "cmo.png",
       "thumb": "thumb/cmo.webp"
     },
-    "founder": {
-      "file": "founder.png",
-      "thumb": "thumb/founder.webp"
-    },
+    "founder": "founder.png",
     "intern_seo": {
       "file": "intern_seo.png",
       "thumb": "thumb/intern_seo.webp"
