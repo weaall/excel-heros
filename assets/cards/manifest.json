@@ -1,14 +1,8 @@
 {
-  "version": 1789631033,
+  "version": 1789685635,
   "cards": {
-    "staff_park": {
-      "file": "staff_park.png",
-      "thumb": "thumb/staff_park.webp"
-    },
-    "parttime": {
-      "file": "parttime.png",
-      "thumb": "thumb/parttime.webp"
-    },
+    "staff_park": "staff_park.png",
+    "parttime": "parttime.png",
     "guard": {
       "file": "guard.png",
       "thumb": "thumb/guard.webp"
@@ -17,10 +11,7 @@
       "file": "barista.png",
       "thumb": "thumb/barista.webp"
     },
-    "courier": {
-      "file": "courier.png",
-      "thumb": "thumb/courier.webp"
-    },
+    "courier": "courier.png",
     "contract": {
       "file": "contract.png",
       "thumb": "thumb/contract.webp"
@@ -81,10 +72,7 @@
       "file": "chairman.png",
       "thumb": "thumb/chairman.webp"
     },
-    "helpdesk": {
-      "file": "helpdesk.png",
-      "thumb": "thumb/helpdesk.webp"
-    },
+    "helpdesk": "helpdesk.png",
     "cleaner": {
       "file": "cleaner.png",
       "thumb": "thumb/cleaner.webp"
@@ -704,6 +692,94 @@
     "chairwoman__formal": {
       "file": "chairwoman__formal.png",
       "thumb": "thumb/chairwoman__formal.webp"
+    },
+    "intern__casual": {
+      "file": "intern__casual.png",
+      "thumb": "thumb/intern__casual.webp"
+    },
+    "intern__formal": {
+      "file": "intern__formal.png",
+      "thumb": "thumb/intern__formal.webp"
+    },
+    "staff__casual": {
+      "file": "staff__casual.png",
+      "thumb": "thumb/staff__casual.webp"
+    },
+    "staff__formal": {
+      "file": "staff__formal.png",
+      "thumb": "thumb/staff__formal.webp"
+    },
+    "sales_senior__casual": {
+      "file": "sales_senior__casual.png",
+      "thumb": "thumb/sales_senior__casual.webp"
+    },
+    "sales_senior__formal": {
+      "file": "sales_senior__formal.png",
+      "thumb": "thumb/sales_senior__formal.webp"
+    },
+    "sales_manager__casual": {
+      "file": "sales_manager__casual.png",
+      "thumb": "thumb/sales_manager__casual.webp"
+    },
+    "sales_manager__formal": {
+      "file": "sales_manager__formal.png",
+      "thumb": "thumb/sales_manager__formal.webp"
+    },
+    "sales__casual": {
+      "file": "sales__casual.png",
+      "thumb": "thumb/sales__casual.webp"
+    },
+    "sales__formal": {
+      "file": "sales__formal.png",
+      "thumb": "thumb/sales__formal.webp"
+    },
+    "finance_senior__casual": {
+      "file": "finance_senior__casual.png",
+      "thumb": "thumb/finance_senior__casual.webp"
+    },
+    "finance_senior__formal": {
+      "file": "finance_senior__formal.png",
+      "thumb": "thumb/finance_senior__formal.webp"
+    },
+    "finance_manager__casual": {
+      "file": "finance_manager__casual.png",
+      "thumb": "thumb/finance_manager__casual.webp"
+    },
+    "finance_manager__formal": {
+      "file": "finance_manager__formal.png",
+      "thumb": "thumb/finance_manager__formal.webp"
+    },
+    "finance__casual": {
+      "file": "finance__casual.png",
+      "thumb": "thumb/finance__casual.webp"
+    },
+    "finance__formal": {
+      "file": "finance__formal.png",
+      "thumb": "thumb/finance__formal.webp"
+    },
+    "admin_senior__casual": {
+      "file": "admin_senior__casual.png",
+      "thumb": "thumb/admin_senior__casual.webp"
+    },
+    "admin_senior__formal": {
+      "file": "admin_senior__formal.png",
+      "thumb": "thumb/admin_senior__formal.webp"
+    },
+    "admin_manager__casual": {
+      "file": "admin_manager__casual.png",
+      "thumb": "thumb/admin_manager__casual.webp"
+    },
+    "admin_manager__formal": {
+      "file": "admin_manager__formal.png",
+      "thumb": "thumb/admin_manager__formal.webp"
+    },
+    "admin__casual": {
+      "file": "admin__casual.png",
+      "thumb": "thumb/admin__casual.webp"
+    },
+    "admin__formal": {
+      "file": "admin__formal.png",
+      "thumb": "thumb/admin__formal.webp"
     }
   }
 }

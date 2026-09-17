@@ -85,11 +85,12 @@ export const ART_PALETTES = {
     "W": "#f8dfbf"
   },
   "ceo": {
-    "B": "#7a6076",
-    "W": "#ede1f0"
+    "B": "#282d3d",
+    "W": "#7c6b76"
   },
   "chairman": {
-    "B": "#1b4257"
+    "B": "#403525",
+    "W": "#613e1f"
   },
   "helpdesk": {
     "B": "#199bc7",
@@ -124,9 +125,9 @@ export const ART_PALETTES = {
     "W": "#e3b6b3"
   },
   "founder": {
-    "H": "#947ca6",
-    "B": "#6f7087",
-    "W": "#735b4d"
+    "H": "#fce78b",
+    "B": "#2b303e",
+    "W": "#59371e"
   },
   "intern_seo": {
     "B": "#597fbd",
@@ -146,26 +147,28 @@ export const ART_PALETTES = {
     "W": "#9aced8"
   },
   "chro": {
-    "B": "#979fb6",
-    "W": "#9aa2b8"
+    "H": "#3f5170",
+    "B": "#f7cee0",
+    "W": "#fcf2e4"
   },
   "cso": {
-    "B": "#22254e",
-    "W": "#21244d"
+    "H": "#8377d1",
+    "B": "#c997b3",
+    "W": "#cc9bb5"
   },
   "ai_lead": {
-    "B": "#856d4f",
-    "W": "#90b6cf"
+    "B": "#376c7c",
+    "W": "#d0aeb0"
   },
   "union_chief": {
-    "H": "#503e31",
-    "B": "#4f6c81",
-    "W": "#aabbd4"
+    "H": "#6b8281",
+    "B": "#343e4d",
+    "W": "#a87a6d"
   },
   "hacker": {
-    "H": "#3d4554",
-    "B": "#4e5367",
-    "W": "#fcebe6"
+    "H": "#857bba",
+    "B": "#292d46",
+    "W": "#292d45"
   },
   "intern_min": {
     "B": "#f7eaf1",
@@ -225,8 +228,9 @@ export const ART_PALETTES = {
     "W": "#b78076"
   },
   "labor_atty": {
-    "H": "#776561",
-    "B": "#d0cfdb"
+    "H": "#795755",
+    "B": "#4a3f3f",
+    "W": "#ab7570"
   },
   "bd_lead": {
     "H": "#2f303e",
@@ -243,13 +247,13 @@ export const ART_PALETTES = {
     "W": "#b77873"
   },
   "chief_of_staff": {
-    "B": "#2b3241",
-    "W": "#b7c0d8"
+    "B": "#3b3e49",
+    "W": "#fdfee0"
   },
   "chairwoman": {
-    "H": "#9199b8",
-    "B": "#4b6693",
-    "W": "#4a6693"
+    "H": "#876f5b",
+    "B": "#765c4a",
+    "W": "#bb9e9e"
   },
   "intern": {
     "H": "#636096",

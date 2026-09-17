@@ -2,7 +2,7 @@
 // A single-player idle game cannot stop a player from editing localStorage; these bounds only keep obviously
 // impossible saves off the shared leaderboard / cloud store. Every bound is deliberately generous so a legit
 // save never trips it — see docs/BALANCE.md 6-19.
-import { BALANCE, upgradeCost, prestigeShares, levelCap } from '../config/balance.js';
+import { BALANCE, upgradeCost, prestigeShares, levelCap, refoundGain } from '../config/balance.js';
 import { MAX_CODE_GEMS } from '../data/codes.js';
 
 const DAY = 86400000;
@@ -59,6 +59,7 @@ export function checkSave(state, now = Date.now()) {
   }
   checkEquipment(state, reasons);
   checkPrestige(state, reasons);
+  checkRefound(state, reasons);
   return { ok: reasons.length === 0, reasons };
 }
 
@@ -89,6 +90,29 @@ function checkPrestige(state, reasons) {
   // best stage ever reached: the current run, or (for a save that has reset) the stage each reset was taken at
   const best = Math.max(state.maxCleared | 0, state.stats?.bestStage | 0, BALANCE.PRESTIGE.minCleared);
   if (shares > prestigeShares(best) * Math.max(1, count) + 1) reasons.push('shares exceed what the stages cleared could grant');
+}
+
+/**
+ * Bounds for 창업 경험 (refound xp). It multiplies 지분 efficiency, so it multiplies the leaderboard score too —
+ * exactly the kind of number a hand-edited save would reach for. Each refounding costs REFOUND.minShares worth of
+ * 지분, and 지분 themselves are bounded by kills (checkPrestige), so kills bound refoundings as well.
+ */
+function checkRefound(state, reasons) {
+  const r = state.refound ?? {};
+  const xp = r.xp | 0, count = r.count | 0;
+  if (xp < 0 || count < 0) { reasons.push('refound is negative'); return; }
+  if (!xp && !count) return;
+  const best = Math.max(state.maxCleared | 0, state.stats?.bestStage | 0, BALANCE.PRESTIGE.minCleared);
+  const perReset = Math.max(1, prestigeShares(best));
+  // 재창업 한 번에 최소 minShares 주가 필요하고, 지분 한 주에도 최소 한 번의 이전이 든다
+  const resetsNeeded = Math.ceil(BALANCE.REFOUND.minShares / perReset);
+  const killsPerReset = BALANCE.PRESTIGE.minCleared * BALANCE.KILLS_PER_STAGE * 0.9;
+  const maxResets = Math.floor((state.stats?.totalKills ?? 0) / Math.max(1, killsPerReset)) + 1;
+  const maxRefounds = Math.floor(maxResets / Math.max(1, resetsNeeded)) + 1;
+  if (count > maxRefounds) reasons.push('more refoundings than kills allow');
+  // 한 번의 재창업이 줄 수 있는 최대 경험치 — 가장 관대하게 잡아도 이 이상은 나올 수 없다
+  const maxPerRefound = refoundGain(perReset * Math.max(1, maxResets));
+  if (xp > maxPerRefound * Math.max(1, count) + 1) reasons.push('refound xp exceeds what the shares could grant');
 }
 
 /** Bounds for the 비품 bag: a save cannot carry more items than the cap, nor levels past the ceiling. */

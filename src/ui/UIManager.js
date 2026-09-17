@@ -176,6 +176,8 @@ export class UIManager {
       input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeem(); });
     }
     $('#tut-hide')?.addEventListener('click', () => this.game.hideTutorial(true));
+    $('#promo-hint-go')?.addEventListener('click', () => this.openDetail(MAIN_ID));
+    $('#promo-hint-hide')?.addEventListener('click', () => { this.promoHintSnooze = Date.now() + 10 * 60 * 1000; $('#promo-hint').hidden = true; });
     this.game.on('tutorial', () => this.#refreshTutorial());
     $('#prestige-hint-go')?.addEventListener('click', () => { $('#prestige-hint').hidden = true; this.openBackstage('options'); });
     $('#prestige-hint-hide')?.addEventListener('click', () => { $('#prestige-hint').hidden = true; this.prestigeHintSnooze = Date.now() + 15 * 60000; });
@@ -222,6 +224,19 @@ export class UIManager {
         const r = this.game.prestige(); if (r) this.openModal('회사 이전 완료', `<p>새 사옥으로 이전했습니다. <b>지분 +${r.gain}</b> (총 ${r.total})</p><p class="muted">파티 ATK·골드 영구 +${Math.round(r.total * r.perShare * 100)}%. Phase 1-1부터 다시 시작합니다.</p>`);
       });
     });
+    $('#btn-refound')?.addEventListener('click', () => {
+      const r = this.game.refoundInfo(); if (!r.eligible) return;
+      this.#askConfirm('재창업 (법인 청산)', `창업 경험 +${r.gain} — 이후 지분 1주의 값이 ×${r.nextSharePower.toFixed(2)}, 조각 +${Math.round(((1 + (r.xp + r.gain) * BALANCE.REFOUND.shardBonus) - 1) * 100)}%, 뽑기 -${Math.round(Math.min(BALANCE.REFOUND.maxDiscount, (r.xp + r.gain) * BALANCE.REFOUND.pullDiscount) * 100)}%
+
+반납: 보유 카드 ${r.owned}종 (★ 합계 ${r.stars}) · 강화 카드 ${fmt(r.cards)}장 · 지분 ${r.shares}주 · 주인공 직급 · 스테이지 · 골드 · 회사 업그레이드
+유지: 보석 · 업적 · 도감 · 호감도 · 코드 이력
+
+되돌릴 수 없습니다.`, { ok: '재창업하기', danger: true }).then((yes) => {
+        if (!yes) return;
+        const res = this.game.refound();
+        if (res) this.openModal('재창업 완료', `<p>법인을 청산하고 <b>창업 경험 +${res.gain}</b>을 얻었습니다 (총 ${res.total}).</p><p class="muted">이제 지분 1주의 값이 ×${this.game.refoundSharePower().toFixed(2)}입니다. 조각이 더 나오고 뽑기가 싸지므로, 다시 올라오는 속도는 지난번보다 빠릅니다.</p>`);
+      });
+    });
     $('#set-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
     $('#set-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#set-stealth').addEventListener('change', (e) => this.game.toggleExcel(e.target.checked));
@@ -248,7 +263,7 @@ export class UIManager {
 
   #subscribe() {
     const g = this.game;
-    g.on('roster', () => { this.#refreshHeroTable(); this.#refreshTeamTable(); this.#buildCards(); this.#refreshDetail(); this.#refreshBenchGold(); });
+    g.on('roster', () => { this.#refreshHeroTable(); this.#refreshTeamTable(); this.#buildCards(); this.#refreshDetail(); this.#refreshBenchGold(); this.#refreshPromoHint(); });
     g.on('party', () => { this.#buildHeroTable(); this.#buildCards(); this.#refreshDetail(); });
     g.on('cards', () => { $('#cards-cell').textContent = fmt(g.state.cards); $('#cards-top').textContent = fmt(g.state.cards); this.#refreshDetail(); });
     g.on('main', (job) => this.openModal('승진 발표', `<p><b>김인턴</b>이(가) <b>${job.title}</b>(${job.grade}급)으로 승진했습니다!</p><p class="muted">${job.desc ?? '스탯과 스킬이 강화되었습니다.'}</p>`));
@@ -1055,14 +1070,14 @@ export class UIManager {
   #refreshGacha() {
     const s = this.game.state;
     $('#gems-cell').textContent = fmt(s.gems); $('#gems-top').textContent = fmt(s.gems);
-    $('#pull1').disabled = s.gems < BALANCE.GACHA_SINGLE_COST; $('#pull10').disabled = s.gems < BALANCE.GACHA_TEN_COST;
+    $('#pull1').disabled = s.gems < this.game.pullCost(1); $('#pull10').disabled = s.gems < this.game.pullCost(10);
     $('#pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA;
     $('#pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
     $('#total-pulls').textContent = s.stats.totalPulls;
     const pg = s.stats.pullGrades ?? {}; $('#pull-grades').textContent = s.stats.totalPulls ? `· S ${pg.S ?? 0} · A ${pg.A ?? 0} · B ${pg.B ?? 0} · C ${pg.C ?? 0} · D ${pg.D ?? 0}` : '';
     $('#pull10').innerHTML = s.stats.totalPulls === 0 ? '10행 가져오기<small>보석 900 · 첫 10행 S 확정</small>' : '10행 가져오기<small>보석 900</small>';
     this.#refreshPickup();
-    $('#qa-pull1').disabled = s.gems < BALANCE.GACHA_SINGLE_COST; $('#qa-pull10').disabled = s.gems < BALANCE.GACHA_TEN_COST;
+    $('#qa-pull1').disabled = s.gems < this.game.pullCost(1); $('#qa-pull10').disabled = s.gems < this.game.pullCost(10);
     $('#qa-pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA; $('#qa-pity-s').textContent = BALANCE.PITY_S - s.pity.sinceS;
     const tbody = $('#gacha-log tbody'); tbody.innerHTML = '';
     this.gachaLog.forEach((r, i) => tbody.append(el('tr', { class: `g-${r.grade}` },
@@ -1111,7 +1126,7 @@ export class UIManager {
         const b = btn(`${n}행 더 (보석 ${fmt(cost)})`, () => { if (this.game.state.gems < cost) { this.toast('보석이 부족합니다'); return; } this.#pull(n); }, cls, this.game.state.gems < cost);
         b.id = `again-${n}`; return b;
       };
-      acts.append(again(1, BALANCE.GACHA_SINGLE_COST, 'small'), again(10, BALANCE.GACHA_TEN_COST, 'primary small'),
+      acts.append(again(1, this.game.pullCost(1), 'small'), again(10, this.game.pullCost(10), 'primary small'),
         el('span', { class: 'muted small', style: 'margin:0 auto 0 8px' }, `보유 보석 ${fmt(this.game.state.gems)}`),
         btn('닫기', () => this.closeModal(), 'primary'));
     }
@@ -1440,6 +1455,19 @@ export class UIManager {
       el('span', {}, `대기 사원 ${heroes}명에 골드 `), el('b', {}, fmt(gold)), el('span', {}, ' 잠김'),
       btn('회수', () => { const r = this.game.reclaimBenchLevels(); this.toast(`골드 +${fmt(r.gold)} 회수`); }, 'small primary', false, '대기 중인 카드의 레벨을 되돌려 골드를 전액 돌려받습니다 (등급과 무관하게 레벨 값 그대로)'));
   }
+  /**
+   * 주인공 승진 안내. 상한에 걸린 순간은 계정 전체가 멈춘 순간이라, 이전(prestige) 안내보다 위에 둔다.
+   */
+  #refreshPromoHint() {
+    const box = $('#promo-hint'); if (!box) return;
+    if (this.promoHintSnooze && Date.now() < this.promoHintSnooze) { box.hidden = true; return; }
+    const a = this.game.mainPromoAdvice();
+    if (!a) { box.hidden = true; return; }
+    $('#promo-hint-title').textContent = a.kind === 'ready' ? '승진할 수 있습니다' : '주인공이 레벨 상한에 걸렸습니다';
+    $('#promo-hint-text').textContent = a.text;
+    box.classList.toggle('blocked', a.kind === 'capped');
+    box.hidden = false;
+  }
   #refreshPrestigeHint() {
     const box = $('#prestige-hint'); if (!box) return;
     if (this.prestigeHintSnooze && Date.now() < this.prestigeHintSnooze) { box.hidden = true; return; }
@@ -1448,12 +1476,24 @@ export class UIManager {
     $('#prestige-hint-text').textContent = a.text;
     box.hidden = false;
   }
+  /** 재창업 현황. 잃는 것을 숫자로 먼저 쓰고, 얻는 것을 그다음에 쓴다. */
+  #refreshRefound() {
+    const box = $('#refound-info'); if (!box) return;
+    const r = this.game.refoundInfo();
+    box.innerHTML = r.count || r.xp
+      ? `창업 경험 <b>${r.xp}</b> · 재창업 ${r.count}회 — 지분 효율 ×${r.sharePower.toFixed(2)} · 조각 +${Math.round((r.shardMult - 1) * 100)}% · 뽑기 -${Math.round(r.pullDiscount * 100)}%<br>` +
+        (r.eligible ? `지금 재창업하면 창업 경험 <b>+${r.gain}</b> (지분 효율 ×${r.nextSharePower.toFixed(2)})` : `지분 ${r.shares} / ${r.minShares} — 지분이 ${r.minShares}주 이상일 때 재창업할 수 있습니다`)
+      : (r.eligible ? `지금 재창업하면 창업 경험 <b>+${r.gain}</b> — 지분 1주의 값이 ×${r.nextSharePower.toFixed(2)}가 됩니다` : `지분 ${r.shares} / ${r.minShares} — 지분이 ${r.minShares}주 이상일 때 재창업할 수 있습니다`);
+    const btn$ = $('#btn-refound'); if (btn$) btn$.disabled = !r.eligible;
+  }
   #refreshPrestige() {
     const info = this.game.prestigeInfo(); const el$ = $('#prestige-info'); if (!el$) return;
     el$.innerHTML = `현재 지분 <b>${info.shares}</b> (파티 ATK·골드 +${Math.round(info.bonus * 100)}%) · 이전 ${info.count}회<br>` +
       (info.eligible ? `지금 이전하면 지분 <b>+${info.gain}</b> (+${Math.round(info.gain * info.perShare * 100)}%)` : `Phase ${info.minCleared / BALANCE.BOSS_EVERY}-10 클리어(스테이지 ${info.minCleared}) 후 이전 가능 · 현재 최고 클리어 ${this.game.state.maxCleared}`);
     $('#btn-prestige').disabled = !info.eligible;
     $('#shares-top').textContent = info.shares;
+    this.#refreshRefound();
+    this.#refreshPromoHint();
     this.#refreshPrestigeHint();
     this.#refreshTutorial();
     this.#refreshBenchGold();

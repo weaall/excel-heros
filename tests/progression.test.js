@@ -213,3 +213,121 @@ test('스카우트: refuses the main hero, unowned cards and ★ MAX', async () 
   assert.equal(g.scoutShard(maxed.id), null, '★ 최대면 조각이 쓸모없다');
   assert.equal(g.state.daily.scoutUsed | 0, 0, '거절된 시도는 한도를 쓰지 않는다');
 });
+
+// ------------------------------------------------------- 주인공 승진 안내 --
+// 주인공은 ★이 아니라 직급으로 상한이 열리고(MAIN_LEVEL_CAP_BY_TIER), 파티에서 뺄 수도 없다.
+// 그래서 승진을 모르면 계정 전체가 tier 0 상한에 갇히는데, 승진 버튼은 주인공 카드 안에만 있었다.
+// 안내는 '급할 때만' 떠야 한다 — 상한에 걸렸거나, 지금 누르면 되는 때.
+test('승진 안내: silent until it matters, then says exactly what is missing', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { MAIN_ID } = await import('../src/data/heroes.js');
+  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+
+  assert.equal(g.mainPromoAdvice(), null, '상한도 아니고 승진도 아직이면 조용해야 한다');
+
+  const e = g.state.heroes[MAIN_ID];
+  e.level = g.heroView(MAIN_ID).levelCap;
+  const capped = g.mainPromoAdvice();
+  assert.equal(capped.kind, 'capped');
+  assert.match(capped.text, /파티 전체가 여기서 멈춥니다/, '왜 막혔는지를 말해야 한다');
+  assert.match(capped.text, /남은 조건/, '무엇이 모자란지를 말해야 한다');
+
+  const info = g.mainPromotionInfo();
+  e.enhance = info.enhance; g.state.cards = info.cards; g.state.maxCleared = info.stage;
+  e.level = Math.max(e.level, info.level);
+  const ready = g.mainPromoAdvice();
+  assert.equal(ready.kind, 'ready');
+  assert.match(ready.text, /상한이 Lv \d+ → \d+/, '승진의 보상이 상한 해제라는 걸 보여야 한다');
+
+  const capBefore = g.heroView(MAIN_ID).levelCap;
+  assert.equal(g.promoteMain(info.options[0].id), true);
+  assert.ok(g.heroView(MAIN_ID).levelCap > capBefore, '승진하면 상한이 실제로 열린다');
+  assert.equal(g.mainPromoAdvice(), null, '열린 뒤에는 안내가 사라진다');
+});
+
+test('승진 안내: the last job has nothing to advise', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { MAIN_JOBS, MAIN_ID } = await import('../src/data/heroes.js');
+  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+  const last = Object.values(MAIN_JOBS).find((j) => !j.next.length);
+  g.state.main.job = last.id; g.entities.rebuildParty();
+  g.state.heroes[MAIN_ID].level = g.heroView(MAIN_ID).levelCap;
+  assert.equal(g.mainPromotionInfo().maxed, true);
+  assert.equal(g.mainPromoAdvice(), null, '최종 직급에서는 안내할 게 없다');
+});
+
+// ------------------------------------------------------------- 재창업 --
+// 회사 이전은 카드를 남긴다. 재창업은 카드까지 반납하는 대신, 이후의 지분 1주를 더 값지게 만든다.
+// 이 거래가 성립하려면 세 가지가 동시에 참이어야 한다: 실제로 전부 반납한다 · 보상이 영구히 붙는다 ·
+// 한 사이클 뒤에는 이득이다.
+test('재창업: hands back the whole collection and pays permanent 창업 경험', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { BALANCE, refoundGain } = await import('../src/config/balance.js');
+  const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
+  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+
+  assert.equal(g.refoundInfo().eligible, false, '지분이 모자라면 못 한다');
+  assert.equal(g.refound(), null);
+
+  // 충분히 깊은 계정을 만든다
+  g.state.prestige.shares = BALANCE.REFOUND.minShares * 4;
+  g.state.cards = 5000; g.state.gems = 1234; g.state.main.job = 'sales_manager';
+  for (const h of HEROES.slice(0, 20)) Object.assign(g.state.heroes[h.id], { owned: true, star: 3, shards: 7, level: 40, enhance: 5 });
+  const gems0 = g.state.gems;
+
+  const info = g.refoundInfo();
+  assert.equal(info.eligible, true);
+  assert.equal(info.gain, refoundGain(g.state.prestige.shares));
+  assert.ok(info.owned > 0 && info.stars > 0, '무엇을 잃는지 숫자로 알려 준다');
+
+  const res = g.refound();
+  assert.equal(res.gain, info.gain);
+  assert.equal(g.state.refound.xp, info.gain);
+  assert.equal(g.state.refound.count, 1);
+  // 반납한 것
+  assert.equal(g.state.prestige.shares, 0, '지분도 반납한다');
+  assert.equal(g.state.cards, 0);
+  assert.equal(g.state.main.job, 'intern', '직급도 처음으로');
+  assert.equal(g.state.maxCleared, 0);
+  const others = Object.entries(g.state.heroes).filter(([id]) => id !== MAIN_ID);
+  assert.ok(others.every(([, e]) => !e.owned && !e.star && !e.shards && !e.enhance), '보유 카드가 전부 사라진다');
+  assert.equal(g.state.heroes[MAIN_ID].owned, true, '주인공은 남는다');
+  // 남긴 것
+  assert.equal(g.state.gems, gems0, '보석은 남는다');
+});
+
+test('재창업: the reward is what makes the trade pay off a cycle later', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+  const g = new GameManager({ save: { save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() } });
+  const shares = BALANCE.REFOUND.minShares * 4;
+
+  g.state.prestige.shares = shares;
+  const bonusBefore = g.prestigeBonus();
+  const pull10Before = g.pullCost(10);
+
+  g.refound();
+  assert.ok(g.refoundSharePower() > 1, '지분 효율이 올라간다');
+  assert.ok(g.refoundShardMult() > 1, '조각이 더 나온다');
+  assert.ok(g.pullCost(10) < pull10Before, '뽑기가 싸진다');
+  assert.ok(g.pullCost(10) >= BALANCE.GACHA_TEN_COST * (1 - BALANCE.REFOUND.maxDiscount), '할인에는 바닥이 있다');
+
+  // 같은 지분까지 다시 올라오면 이전보다 세다 — 그래야 반납할 이유가 있다
+  g.state.prestige.shares = shares;
+  assert.ok(g.prestigeBonus() > bonusBefore, `한 사이클 뒤에는 이득이어야 한다 (${bonusBefore} → ${g.prestigeBonus()})`);
+});
+
+test('재창업: a hand-edited 창업 경험 does not pass the save check', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { checkSave } = await import('../src/core/plausibility.js');
+  const s = createInitialState();
+  s.stats.totalKills = 500; s.maxCleared = 40;
+  s.refound = { xp: 9999, count: 1 };
+  const r = checkSave(s);
+  assert.equal(r.ok, false, '순위표 점수를 곱하는 값은 검증되어야 한다');
+  assert.ok(r.reasons.some((x) => /refound/.test(x)), r.reasons.join(' / '));
+});
