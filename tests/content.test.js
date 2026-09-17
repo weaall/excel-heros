@@ -82,3 +82,14 @@ test('main hero job tree: 인턴→사원, then three tracks that each climb 대
   assert.equal(migrate({ version: 2, main: { job: 'manager' } }).main.job, 'sales_manager');
   assert.equal(migrate({ version: 2, main: { job: 'finance' } }).main.job, 'finance');
 });
+
+test('prologue: every scene has a title, narration lines and a generated panel id', async () => {
+  const { PROLOGUE } = await import('../src/data/prologue.js');
+  assert.ok(PROLOGUE.length >= 5);
+  const ids = new Set();
+  for (const sc of PROLOGUE) {
+    assert.match(sc.id, /^[a-z_]+$/); assert.ok(!ids.has(sc.id), `duplicate ${sc.id}`); ids.add(sc.id);
+    assert.ok(sc.title.length > 1);
+    assert.ok(Array.isArray(sc.lines) && sc.lines.length >= 2 && sc.lines.every((l) => typeof l === 'string' && l.length > 3), sc.id);
+  }
+});

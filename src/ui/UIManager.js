@@ -10,6 +10,7 @@ import * as Milestones from '../core/MilestoneManager.js';
 import { MILESTONES, milestoneValue } from '../data/milestones.js';
 import { profileOf, PROFILES } from '../data/profiles.js';
 import { extraOf } from '../data/profilesExtra.js';
+import { PROLOGUE } from '../data/prologue.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
 import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite, heroSprite } from '../data/sprites.js';
@@ -151,6 +152,7 @@ export class UIManager {
     this.game.on('gacha-art', () => { const box = $('#pickup-cards'); if (box) box.dataset.key = ''; this.#refreshGacha(); if (document.querySelector('#sheet-album.active')) this.#buildAlbum(); });
     this.game.on('dispatch', () => this.#refreshDispatch()); this.game.on('skin', () => { if (document.querySelector('#sheet-album.active')) this.#buildAlbum(); });
     $('#btn-dispatch').addEventListener('click', () => { const ids = [...document.querySelectorAll('#dispatch-pick input:checked')].map((i) => i.value); if (!ids.length) { this.toast('출장 보낼 대기 사원을 선택하세요 (파티 밖 카드)'); return; } if (this.game.startDispatch(ids)) this.toast(`출장 출발 · ${BALANCE.DISPATCH.hours}시간 후 복귀`); else this.toast('출장을 시작할 수 없습니다 (하루 2회, 진행 중이면 대기)'); });
+    $('#btn-prologue')?.addEventListener('click', () => this.showPrologue());
     $('#btn-dispatch-claim').addEventListener('click', () => { const r = this.game.claimDispatch(); if (r) this.toast(`출장 복귀: 보석 +${r.gems} · 강화 카드 +${r.cards}`); });
     $('#album-owned').addEventListener('change', () => this.#buildAlbum());
     this.game.on('story', () => { if (document.querySelector('#sheet-story.active')) this.#buildStory(this.storyId, { listOnly: true }); });
@@ -1295,6 +1297,44 @@ export class UIManager {
     const goldOffer = this.game.adOffers().find((o) => o.key === 'gold');
     if (goldOffer?.can) body.append(el('div', { class: 'ad-box' }, btn(`광고 보고 유휴 골드 1시간분 받기 (${goldOffer.value})`, () => { this.closeModal(); this.watchAd('gold'); }, 'primary'), el('span', { class: 'muted small' }, ' 고정 지급 · 방치 배율 없음')));
     this.openModal('백그라운드 계산 완료', body);
+  }
+  /**
+   * Prologue: one illustrated panel per scene, narration lines fading in. Resolves when it is finished or skipped,
+   * and remembers that it was seen (settings.prologueSeen) so it only interrupts the first session.
+   */
+  showPrologue() {
+    const box = $('#prologue'); if (!box) return Promise.resolve();
+    return new Promise((resolve) => {
+      const img = $('#pl-art'), dots = $('#pl-dots'); let i = 0, done = false;
+      dots.innerHTML = ''; PROLOGUE.forEach(() => dots.append(el('i', {})));
+      for (const sc of PROLOGUE) { const pre = new Image(); pre.src = `assets/story/${sc.id}.webp`; } // warm the cache
+      const finish = () => {
+        if (done) return; done = true;
+        box.hidden = true; this.game.state.settings.prologueSeen = true; this.game.persist();
+        document.removeEventListener('keydown', onKey); resolve();
+      };
+      const show = () => {
+        const sc = PROLOGUE[i];
+        img.classList.remove('on');
+        const next = new Image();
+        next.onload = () => { img.src = next.src; img.classList.add('on'); };
+        next.onerror = () => { img.removeAttribute('src'); };
+        next.src = `assets/story/${sc.id}.webp`;
+        $('#pl-title').textContent = `${i + 1}. ${sc.title}`;
+        const t = $('#pl-text'); t.innerHTML = '';
+        sc.lines.forEach((line, n) => t.append(el('p', { style: `animation-delay:${0.12 + n * 0.5}s` }, line)));
+        [...dots.children].forEach((d, n) => d.classList.toggle('on', n <= i));
+        $('#pl-prev').disabled = i === 0;
+        $('#pl-next').textContent = i === PROLOGUE.length - 1 ? '시작하기' : '다음';
+      };
+      const step = (d) => { const n = i + d; if (n < 0) return; if (n >= PROLOGUE.length) return finish(); i = n; show(); };
+      const onKey = (e) => { if (e.key === 'Escape') finish(); else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); step(1); } else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); };
+      $('#pl-next').onclick = () => step(1);
+      $('#pl-prev').onclick = () => step(-1);
+      $('#pl-skip').onclick = finish;
+      document.addEventListener('keydown', onKey);
+      box.hidden = false; show();
+    });
   }
   /** First-run guide: 4 Excel-style help balloons that point at the things a new player needs (skippable, once). */
   showCoach() {

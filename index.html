@@ -310,6 +310,7 @@
         <div class="sheet-head">
           <span>읽은 에피소드 <b id="story-count">0 / 10</b></span>
           <span class="muted">구역에 처음 도달하면 메신저 로그가 열립니다 · 처음 읽으면 보석 +30 · 호감도 Lv5 이상 카드의 개인 메시지도 여기서</span>
+          <button id="btn-prologue" class="xl-btn" style="margin-left:auto">프롤로그 다시 보기</button>
         </div>
         <div class="story-layout">
           <table class="xl-table compact story-list" id="story-list"><thead><tr><th>#</th><th>대화방 / 제목</th><th>상태</th></tr></thead><tbody></tbody></table>
@@ -510,6 +511,21 @@
     <div id="gsi-gate" class="gsi-button gate"></div>
     <p class="lg-note small muted" id="lg-note">로그인 버튼을 불러오는 중…</p>
     <p class="lg-legal small muted">이메일과 프로필 사진만 사용하며, 비밀번호는 저장하지 않습니다.</p>
+  </div>
+</div>
+<!-- Prologue: shown once after the first sign-in (settings.prologueSeen); replayable from 사내_메신저. -->
+<div id="prologue" class="prologue" hidden>
+  <div class="pl-stage">
+    <img id="pl-art" alt="">
+    <div class="pl-fade"></div>
+    <div class="pl-title" id="pl-title"></div>
+    <div class="pl-text" id="pl-text"></div>
+  </div>
+  <div class="pl-bar">
+    <button id="pl-skip" class="xl-btn">건너뛰기</button>
+    <span class="pl-dots" id="pl-dots"></span>
+    <button id="pl-prev" class="xl-btn">이전</button>
+    <button id="pl-next" class="xl-btn primary">다음</button>
   </div>
 </div>
 <div id="coach" class="coach" hidden><div class="coach-box"><b id="coach-title"></b><p id="coach-text"></p><div class="coach-foot"><span id="coach-step" class="small muted"></span><button id="coach-skip" class="xl-btn small">건너뛰기</button><button id="coach-next" class="xl-btn small primary">다음</button></div></div></div>

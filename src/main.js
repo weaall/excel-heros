@@ -44,6 +44,7 @@ if (game.cloud.enabled()) {
     if (srv && ((r.updatedAt ?? 0) > (local.lastSaved ?? 0) + 5000 || (srv.stats?.playSeconds ?? 0) > local.stats.playSeconds + 30)) { game.loadCloudSave(srv); cloudLoaded = true; }
   } catch { /* offline or server down: keep local */ }
 }
+if (!game.state.settings.prologueSeen) { document.getElementById('boot')?.classList.add('done'); await ui.showPrologue(); } // 첫 로그인: 오프닝
 bootStep(85, '통합 문서를 여는 중…');
 const startState = game.state;
 if (loaded || cloudLoaded) {

@@ -10,3 +10,4 @@ Thumbs.db
 # wrangler local cache (account metadata)
 .wrangler/
 .hf_tokens
+assets/story/*.png

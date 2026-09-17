@@ -5,10 +5,12 @@
 //   node scripts/genCardsHF.mjs                      # every hero/job without a png yet
 //   node scripts/genCardsHF.mjs --force ceo          # regenerate
 //   node scripts/genCardsHF.mjs --skin [ceo …]       # skin illustrations <id>__casual.png / <id>__formal.png (heroes only unless ids given)
+//   node scripts/genCardsHF.mjs --scene [meteor …]   # prologue scenes → assets/story/<id>.png (landscape)
 //   SEED=3 SPACE=asahina2k-animagine-xl-4-0 node scripts/genCardsHF.mjs ...
 import fs from 'node:fs';
 import { HEROES, MAIN_JOBS } from '../src/data/heroes.js';
 import { SKINS } from '../src/data/skins.js';
+import { PROLOGUE } from '../src/data/prologue.js';
 import { PROFILES } from '../src/data/profiles.js';
 
 const SPACE = process.env.SPACE ?? 'asahina2k-animagine-xl-4-0';
@@ -31,6 +33,20 @@ const BG_BY_ID = {
   coo: 'executive floor, panoramic city window, golden hour, light particles', ceo: 'grand executive office, panoramic city skyline, golden light, sparkles', chairman: 'grand hall, marble, bright golden light, chandelier, sparkles', founder: 'startup garage loft, whiteboard, warm sunset light, sparkles',
 };
 const BG_BY_GRADE = { D: 'modern office background, window light', C: 'bright office lobby background', B: 'meeting room background, plants', A: 'executive office background, city skyline, sunset', S: 'grand hall background, bright golden light, sparkles' };
+/** Prologue panels (src/data/prologue.js). Landscape story art; the cast is incidental, the moment is the subject. */
+const SCENES = {
+  deadline: '1girl, a tired office worker in a white blouse sitting at her desk late at night, chin resting on her hand, monitors full of spreadsheets around her, paper stacks, dark office, city lights through the window behind her, warm desk lamp, face fully visible',
+  meteor: '1boy, a young office worker in a white shirt standing at a tall office window at night, looking up in shock, a huge blazing meteor with a long burning trail falling across the night sky behind the glass, orange light on his face, face fully visible',
+  impact: '1girl, an office worker raising an arm to shield her face, blinding white explosion and expanding shockwave behind her, shattered glass and papers flying, red glowing cracks spreading through the air, dramatic, face fully visible',
+  errors: '1girl, an office worker stepping back in fear in a cracked city street at dawn, a huge monster made of glowing red error symbols and broken spreadsheet grid fragments looming over her, floating red exclamation marks, face fully visible',
+  halo: '1boy, a young office worker in a white shirt looking up in wonder as a glowing golden halo ring forms above his head, soft golden light on his face, dust drifting in dawn light, ruined street behind him, upper body, face fully visible',
+  awaken: '1boy, a young man in a white shirt and lanyard with a golden halo above his head, holding a glowing sword of light made from a keyboard, determined expression, golden energy aura, bright rim light, upper body, face fully visible',
+  roster: '1boy, a young man with short black hair in a white shirt and lanyard, a golden halo above his head, holding a printed roster sheet with both hands, determined expression, bright office lobby with morning light behind him, upper body, face fully visible',
+};
+const SCENE_STYLE = 'blue archive style, halo, anime key visual, flat color, cel shading, clean lineart, anime coloring, vivid pastel colors, depth of field, cinematic composition, soft even front lighting, bright face, masterpiece, best quality, very aesthetic, absurdres';
+const SCENE_NEG = 'lowres, bad anatomy, bad hands, extra digit, text, watermark, signature, username, worst quality, low quality, jpeg artifacts, 3d, realistic, photo, retro poster, woodblock print, monochrome, empty room, no people, faceless, back view, gore, blood, nsfw';
+export const scenePrompt = (id) => `${SCENES[id] ?? id}, ${SCENE_STYLE}`;
+
 const NEG = 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, close-up, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, busy background, cluttered background, high contrast background, nsfw';
 const HAIR = { short: 'short hair', bob: 'bob cut', grey: 'grey hair', bun: 'hair bun', cap: 'baseball cap', side: 'swept bangs', bald: 'bald', spiky: 'spiked hair', long: 'long hair', curly: 'curly hair' };
 const ACC = { tie: 'necktie', headset: 'headset', mustache: 'mustache', hardhat: 'hardhat', coffee: 'holding coffee cup', badge: 'name tag', lanyard: 'lanyard', glasses: 'glasses', beard: 'beard', clipboard: 'holding clipboard', earring: 'earrings', sunglasses: 'sunglasses', flower: 'hair flower', scarf: 'scarf', crown: 'crown', files: 'holding folder', apron: 'apron', radio: 'walkie-talkie', parcel: 'holding box', phone: 'holding phone', pen: 'holding pen', suspenders: 'suspenders', hoodie: 'hoodie', magnifier: 'magnifying glass', calculator: 'calculator', ledger: 'holding book', watch: 'wristwatch', briefcase: 'briefcase', cane: 'cane', laptop: 'laptop', mop: 'holding mop', tablet: 'drawing tablet' };
@@ -157,25 +173,30 @@ if (isMain && process.argv.includes('--manifest')) {
 } else if (isMain) {
   const args = process.argv.slice(2); const force = args.includes('--force'); const ids = args.filter((a) => !a.startsWith('--'));
   const seed = Number(process.env.SEED ?? 1);
+  const sceneMode = args.includes('--scene');
   const skinMode = args.includes('--skin');
   const baseDefs = [...HEROES.map((h) => [h.id, h, h.id]), ...Object.values(MAIN_JOBS).map((j) => [j.id, j, 'main'])];
-  const defs = skinMode
+  const defs = sceneMode
+    ? PROLOGUE.map((sc) => [sc.id, null, null, null]).filter(([id]) => !ids.length || ids.includes(id))
+    : skinMode
     ? baseDefs.filter(([id, , pid]) => ids.length ? ids.includes(id) : pid !== 'main').flatMap(([id, def, pid]) => (SKINS[id] ?? []).map((sk) => [`${id}__${sk.id}`, def, pid, sk])) // heroes only by default (main jobs: pass ids)
     : baseDefs.filter(([id]) => !ids.length || ids.includes(id));
-  const outDir = new URL('../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', outDir);
+  const outDir = new URL(sceneMode ? '../assets/story/' : '../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', new URL('../assets/cards/', import.meta.url));
+  if (sceneMode) fs.mkdirSync(outDir, { recursive: true });
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   let ok = 0;
   for (const [id, def, pid, skin = null] of defs) {
     const file = `${id}.png`; const target = new URL(file, outDir);
     if (!force && fs.existsSync(target)) { console.log(`skip ${id}`); ok++; continue; } // (manifest entries may be { file, thumb } objects)
-    const text = prompt(def, pid, skin);
+    const text = sceneMode ? scenePrompt(id) : prompt(def, pid, skin);
     // ZeroGPU quota: the Space answers "You have exceeded your free ZeroGPU quota (90s requested vs. Ns left). Try again in H:MM:SS" — wait that long.
     // Each image needs 90 s of quota; the account quota and the anonymous per-IP quota (HF_ANON=1) are separate pools.
     const maxAttempts = Number(process.env.MAX_ATTEMPTS ?? 12), quotaWait = Number(process.env.QUOTA_WAIT_MS ?? 240000);
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const buf = await callGenerate(text, seed + id.length);
-        fs.writeFileSync(target, buf); manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
+        const buf = await callGenerate(text, seed + id.length, sceneMode ? { width: 1216, height: 832, neg: SCENE_NEG } : {});
+        fs.writeFileSync(target, buf);
+        if (!sceneMode) { manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n'); }
         console.log(`ok   ${id} ${(buf.length / 1024).toFixed(0)} KB  ${new Date().toLocaleTimeString()}`); ok++; break;
       } catch (e) { const quota = /quota|event error/i.test(e.message); const m = e.message.match(/Try again in (\d+):(\d\d):(\d\d)/); const asked = m ? ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) + 30) * 1000 : 0; const rotated = quota && rotatePool(); const wait = rotated ? 2000 : quota ? (asked || quotaWait) : 15000; console.log(`retry ${id} (${attempt}): ${e.message}${rotated ? ` — switching to ${poolName()}` : quota ? ` — waiting ${(wait / 60000).toFixed(1)} min for GPU quota` : ''}`); if (quota && !rotated) poolIdx = 0, AUTH = TOKEN_POOL[0] ? { authorization: `Bearer ${TOKEN_POOL[0]}` } : {}; await new Promise((r) => setTimeout(r, wait)); } // (was: 15000)); }
     }
