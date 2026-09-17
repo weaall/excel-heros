@@ -30,15 +30,20 @@ test('burn: every enemy ticks damage for the duration and can die from it (kill 
   const { g, em, h } = setup(byType('burn').id);
   const ms = em.monsters.filter((m) => m.alive); assert.ok(ms.length >= 2);
   ms[0].hp = 5; // dies from the first tick → exercises the burn-kill path
-  const hp0 = ms.map((m) => m.hp), kills0 = g.state.stats.totalKills;
+  const hp0 = ms.map((m) => m.hp);
+  // 전역 킬 수로 세면, 이 무리가 전멸한 뒤 새 웨이브가 들어와 같이 죽을 때 값이 흔들린다(플레이키).
+  // 우리가 확인하려는 건 "이 무리의 죽음이 한 번씩만 집계되는가"이므로 이 무리만 따로 센다.
+  const counted = new Map();
+  const realKill = g.onMonsterKilled.bind(g);
+  g.onMonsterKilled = (m) => { counted.set(m, (counted.get(m) ?? 0) + 1); return realKill(m); };
   em.castSkill(h, ms[0], em.monsters, em.heroes);
   for (const m of ms) { assert.ok(m.burnT > 0); assert.ok(m.burnDps > 0); }
   em.heroes.forEach((x) => { x.cd = 99; x.skillCd = 99; }); // only the burn should deal damage now
   for (let i = 0; i < 12; i++) em.update(0.1);
   ms.forEach((m, i) => assert.ok(m.hp < hp0[i] || !m.alive, 'burn dealt damage'));
-  const dead = ms.filter((m) => !m.alive).length;
-  assert.ok(dead >= 1, 'the 5-HP monster died from burn ticks');
-  assert.equal(g.state.stats.totalKills, kills0 + dead, 'each burn death counted exactly once');
+  const dead = ms.filter((m) => !m.alive);
+  assert.ok(dead.length >= 1, 'the 5-HP monster died from burn ticks');
+  for (const m of dead) assert.equal(counted.get(m), 1, 'each burn death counted exactly once');
 });
 
 test('barrier: a shared pool absorbs hero damage until it is spent or expires', () => {
