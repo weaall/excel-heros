@@ -24,7 +24,7 @@ import { EPISODE_BY_ID, episodeUnlocked } from '../data/story.js';
 import { skinsOf, skinById } from '../data/skins.js';
 import { PROFILES } from '../data/profiles.js';
 import { localDateKey } from './state.js';
-import { relativeGold, gemsForClear } from '../config/balance.js';
+import { relativeGold, gemsForClear, gemDropAmount } from '../config/balance.js';
 import { checkCode } from '../data/codes.js';
 import { SLOTS, SLOT_ORDER, itemPct, itemLabel, rollItem, itemBasePct } from '../data/equipment.js';
 import { sanitizeName } from './plausibility.js';
@@ -994,7 +994,7 @@ export class GameManager extends Emitter {
     Quests.addProgress(s, 'kills', 1); if (m.elite) Quests.addProgress(s, 'elite', 1);
     this.entities.coinBurst(m.x, m.y, gold);
     if (!m.isBoss && this.rng.next() < this.gemDropChance()) { // 보석 드롭 (성과급 제도)
-      const drop = BALANCE.GEM_DROP.amount * (m.elite ? BALANCE.GEM_DROP.eliteMult : 1);
+      const drop = gemDropAmount(this.combatStage()) * (m.elite ? BALANCE.GEM_DROP.eliteMult : 1);
       s.gems += drop; s.stats.gemDrops = (s.stats.gemDrops ?? 0) + drop;
       this.entities.floaters.push({ x: m.x, y: m.y - 64, text: `보석 +${drop}`, color: '#5dade2', t: 0, big: m.elite });
       this.emit('gems');

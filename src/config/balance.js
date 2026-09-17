@@ -132,7 +132,7 @@ export const BALANCE = Object.freeze({
     sales:   { name: '매출 인센티브',   desc: '골드 획득 +1% / Lv',              per: 0.01,  base: 350, growth: 1.27, max: 50 }, // deliberately mild (+50% at max) so it stretches, not breaks, the curve
   },
   // 보석 드롭: every non-boss kill may drop a gem (elites drop more). Base chance + 성과급 제도 levels.
-  GEM_DROP: { base: 0.005, amount: 1, eliteMult: 3 },
+  GEM_DROP: { base: 0.005, amount: 1, amountPerPhase: 0.5, eliteMult: 3 }, // 처치 드롭만이 벽에서도 계속 돈다 → 깊이에 비례
 
   SAVE_INTERVAL_MS: 10_000,
 });
@@ -215,3 +215,6 @@ export const gemsForClear = (stage, { first = false, boss = false } = {}) => {
   if (boss) return first ? B.GEMS_BOSS_FIRST : B.GEMS_BOSS_REPEAT + phase * B.GEMS_BOSS_REPEAT_PER_PHASE;
   return first ? B.GEMS_FIRST_CLEAR : B.GEMS_REPEAT_CLEAR + phase * B.GEMS_REPEAT_PER_PHASE;
 };
+
+/** Gems per drop at a given stage. Flat drops made deep farming pay the same as phase 1; see docs/BALANCE.md 6-59. */
+export const gemDropAmount = (stage) => B.GEM_DROP.amount + Math.floor(Math.floor((Math.max(1, stage) - 1) / B.BOSS_EVERY) * B.GEM_DROP.amountPerPhase);

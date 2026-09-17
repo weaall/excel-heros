@@ -21,7 +21,9 @@ export function gemBudget(state, now = Date.now()) {
   const cleared = Math.max(state.maxCleared | 0, (state.prestige?.count ?? 0) * 100);
   // repeat clears now scale with the phase, so a deep save legitimately earns far more per day than a shallow one
   const phase = Math.floor(cleared / BALANCE.BOSS_EVERY);
-  const perDay = 1500 + phase * 900; // deep farming: generous, still bounded by account age
+  // Deep farming measured at ~1,700 gems/h (kill drops scale with the phase), so a heavy day at phase 11 is ~40k.
+  // The bound only has to reject the impossible, so it sits well above any honest schedule.
+  const perDay = 2000 + phase * 1800;
   const codes = Object.keys(state.redeemed ?? {}).length * MAX_CODE_GEMS; // 보석 코드로 받은 몫
   return BALANCE.STARTING_GEMS + cleared * 150 + days * perDay + (state.stats?.chests ?? 0) * BALANCE.CHEST.gemsMax + codes + 6000;
 }
