@@ -975,3 +975,23 @@ S 후광을 `majestic double halo ring … light motes orbiting` 으로 올렸�
 
 ### 남은 것
 주인공 직급 스킨 22장을 새로 만들었는데 **절반가량이 멀리 선 작은 인물**이다. 위의 "옷 설명이 프레임을 이긴다" 교정 이후로는 안 생길 문제라, 쿼터가 차는 대로 다시 뽑아야 한다.
+
+## 6-81. 99차: 쿼터 점검 도구와, 주인공 스킨 22장 재생성
+
+### `scripts/hfQuota.mjs` — 토큰 풀별 쿼터를 한 표로
+지금까지는 생성을 돌려 보고 로그의 실패 메시지를 읽는 게 유일한 확인 방법이었다. ZeroGPU는 쿼터가 모자라면 **GPU를 잡기 전에** 거절하므로(`process_completed` 의 에러), 한 장 요청해 거절만 읽으면 쿼터를 한 톨도 쓰지 않는다. 그 성질을 그대로 쓴다.
+
+```
+node scripts/hfQuota.mjs          # 풀별 상태 · 남은 초 · 리셋 시각
+node scripts/hfQuota.mjs --json
+```
+
+**첫 판이 틀렸던 이유(기록해 둔다)**: `fn_index` 를 3으로 **하드코딩**했고, 자체 타임아웃을 `available` 로 단정했다. 그래서 실제로는 전부 소진된 상태인데 **여섯 풀 모두 "사용 가능"** 으로 나왔다. 지금은 `/config` 에서 `generate` 의 인덱스를 읽고, 판정 전에 끊긴 경우는 `unknown` 으로 돌려준다 — **모르는 것을 좋은 소식으로 바꾸지 않는다.**
+
+### 주인공 직급 스킨 22장: 원인은 또 배경 문구였다
+절반가량이 멀리 선 작은 인물이었다. `SKIN_BG` 가 `city street at dusk` / `company anniversary hall` 이었는데, **넓은 장소는 모델을 뒤로 물러서게 한다**(6-80의 "옷 설명이 프레임을 이긴다"와 같은 축). `cafe window close behind him` / `warm party lights close behind him` 으로 좁히자 22장이 전부 허리 위·밝은 얼굴로 돌아왔다.
+
+### 배달원만 네 번 실패했다
+D 등급 교정에서 배달원 한 장이 계속 작아지고 머리 위에 주황색 띠가 생겼다. `orange delivery uniform` 이 색 덩어리로, `parcel` 이 배경 소품으로 해석된 탓이다. 고친 방향은 **색이 아니라 사람을 먼저 쓰는 것**: `cheerful young man in a delivery worker jacket with an orange collar, baseball cap, name tag, hands on the strap of a shoulder bag`.
+
+> 규칙 추가: 옷 설명을 **색 이름으로 시작하지 않는다.** 모델이 인물이 아니라 그 색의 면적을 그리려 든다.
