@@ -5,6 +5,8 @@
 - 기획서: [docs/GDD.md](docs/GDD.md)
 - 밸런스/로직 확정 사항 & 열린 질문: [docs/BALANCE.md](docs/BALANCE.md)
 
+작업 규칙은 [CLAUDE.md](CLAUDE.md), 현재 상태와 남은 일은 [docs/HANDOFF.md](docs/HANDOFF.md), 결정 기록은 [docs/BALANCE.md](docs/BALANCE.md).
+
 ## 실행
 
 ```bash
