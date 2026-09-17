@@ -380,3 +380,11 @@
 - `BALANCE.AD_OFFERS`: 유휴 골드 1시간분(3회) · 보석 +15(2회) · 강화 카드 +10(2회) · 출장 즉시 복귀(1회, 출장 중일 때만) · 야근 모드 추가 1회(1회, 오늘 야근을 마친 뒤). 하루 총 9회(`AD.perDay` = 합). 일별 카운터 `daily.ads[key]`, 야근 추가는 `daily.overtimeExtra`.
 - UI: 일일 업무의 광고 블록이 표(보상/지급/오늘/버튼)로 바뀌고, 리본 '광고 보상' 버튼은 같은 표를 모달로 연다. 복귀 정산 창의 버튼은 "유휴 골드 1시간분 받기"(고정). 광고 공급자 호출 이름은 offer key(gold/gems/…)로 넘겨 서버 ad_views에 종류가 남는다.
 - 보안 메모: 보석·카드 광고 보상은 클라이언트 지급이지만 하루 상한(보석 30, 카드 20)이 작고 plausibility 예산(하루 1500 보석) 안에 있다.
+
+## 6-44. 62차: A/B 등급 일러 품질 상향 · 얼굴 가림 방지
+
+- 사용자 지적: "COO가 CCO 미소에 비해 급 차이가 너무 난다". 원인은 등급 태그였다 — S는 `gold trim, sparkles, light particles, glowing`인데 A는 `executive, luxurious details`뿐이라 A 카드가 한 등급 아래로 보였다.
+- **등급 태그 재조정**(`scripts/genCardsHF.mjs` GRADE): 전 등급에 `beautiful detailed face` 추가, A에 `gold accents, sparkles, light particles`, B에 `soft light particles`. D/C는 그대로 담백하게 두어 등급 사다리는 유지.
+- **개별 묘사 강화 5명**: CFO(보라 스리피스 + 금 시계줄, 떠다니는 금색 숫자), CTO(차콜 블레이저 + 청록 홀로그램 코드), CHRO(모브 정장 + 진주·금 브로치, 흩날리는 꽃잎), 디자인팀장(베레모 + 빛나는 태블릿, 물감 튀김), 기획팀장(데님 재킷 + 부채꼴 기획서, 떠다니는 포스트잇). 배경도 밝게/보케 추가.
+- **마스크 차단**: CDO·QA 이 등에서 하관을 마스크·스카프가 덮는 결과가 반복돼 네거티브에 `face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth` 추가. CDO 프롬프트도 밝은 미소로 교체.
+- 도트 5종을 새 일러에 맞춰 재배색: CFO 보라 정장, CTO 스파이키 + 청록 트림, 기획팀장 파란 보브 + 흰 블라우스, 디자인팀장 분홍 곱슬 + 파란 베레, CHRO 크림 재킷 + 올리브 스커트.

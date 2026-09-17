@@ -70,12 +70,14 @@ export const ART_PALETTES = {
     "W": "#fcbfad"
   },
   "cfo": {
-    "B": "#225fc6",
-    "W": "#225fc7"
+    "H": "#d0b8b7",
+    "B": "#614783",
+    "W": "#614683"
   },
   "cto": {
-    "H": "#9c77cd",
-    "B": "#8475b0"
+    "H": "#2a3150",
+    "B": "#31446d",
+    "W": "#2d384c"
   },
   "coo": {
     "H": "#96b0d3",
@@ -107,12 +109,14 @@ export const ART_PALETTES = {
     "W": "#b2cade"
   },
   "pm_lead": {
-    "H": "#3671b7",
-    "B": "#30b0c2"
+    "H": "#578ace",
+    "B": "#ced7e2",
+    "W": "#cdd7e2"
   },
   "design_lead": {
-    "B": "#fa5b55",
-    "W": "#fa5a54"
+    "H": "#2d88c9",
+    "B": "#e49ea1",
+    "W": "#f5cecc"
   },
   "cmo": {
     "H": "#f69189",
@@ -141,9 +145,8 @@ export const ART_PALETTES = {
     "W": "#9aced8"
   },
   "chro": {
-    "H": "#324662",
-    "B": "#9f548c",
-    "W": "#fbcad2"
+    "B": "#979fb6",
+    "W": "#9aa2b8"
   },
   "cso": {
     "B": "#22254e",
