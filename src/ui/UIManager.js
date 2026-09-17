@@ -117,7 +117,12 @@ export class UIManager {
     // ribbon panels
     $('#qa-pull1').addEventListener('click', () => { this.switchSheet('gacha'); this.#pull(1); });
     $('#qa-pull10').addEventListener('click', () => { this.switchSheet('gacha'); this.#pull(10); });
-    $('#qa-auto-party').addEventListener('click', () => { const p = this.game.autoParty(); this.toast(`파티 자동 편성: ${p.length}명`); });
+    $('#qa-auto-party').addEventListener('click', () => {
+      const min = $('#qa-party-grade')?.value || null;
+      const p = this.game.autoParty(min);
+      const kept = min && p.every((id) => this.game.isMain(id) || GRADE_ORDER.indexOf(this.game.heroDef(id).grade) >= GRADE_ORDER.indexOf(min));
+      this.toast(min && !kept ? `${min}급 이상이 부족해 전체에서 편성했습니다` : `파티 자동 편성${min ? ` (${min}급 이상)` : ''}: ${p.length}명`);
+    });
     $('#qa-login').addEventListener('click', () => { const r = this.game.claimLogin(); this.toast(r ? `출근 보상: ${rewardText(r)}` : '오늘은 이미 출근 도장을 찍었습니다'); });
     $('#qa-ad').addEventListener('click', () => this.openModal('광고 보상', this.#adMenu())); // (legacy handler below kept for reference)
     if (false) $('#qa-ad').addEventListener('click', () => this.playAd(() => { const r = this.game.adReward('instant'); if (r) this.toast(`광고 보상 +${fmt(r.gold)} 골드`); }));
@@ -144,9 +149,11 @@ export class UIManager {
       const grade = $('#rf-dismiss-grade').value; const list = this.game.dismissCandidates(grade);
       if (!list.length) { this.toast(grade + '급 이하에 방출할 여분 카드가 없습니다 (파티·즐겨찾기·조각 없는 카드는 제외)'); return; }
       const names = list.slice(0, 6).map((v) => v.def.name).join(', ') + (list.length > 6 ? ' 외 ' + (list.length - 6) + '장' : '');
-      if (!confirm(grade + '급 이하 여분 ' + list.length + '장을 방출합니다.\n' + names + '\n\n파티·즐겨찾기·조각이 없는 카드는 제외됩니다. 되돌릴 수 없습니다.')) return;
-      const r = this.game.dismissAll(grade);
-      this.toast(r.count + '장 방출 → 강화 카드 ' + fmt(r.cards) + '장' + (r.gold ? ', 골드 ' + fmt(r.gold) : ''));
+      this.#askConfirm('여분 카드 일괄 방출', grade + '급 이하 여분 ' + list.length + '장을 방출합니다.\n' + names + '\n\n파티·즐겨찾기·조각이 없는 카드는 제외됩니다. 되돌릴 수 없습니다.', { ok: '방출', danger: true }).then((yes) => {
+        if (!yes) return;
+        const r = this.game.dismissAll(grade);
+        this.toast(r.count + '장 방출 → 강화 카드 ' + fmt(r.cards) + '장' + (r.gold ? ', 골드 ' + fmt(r.gold) : ''));
+      });
     });
     {
       const input = $('#code-input'), msg = $('#code-msg');
@@ -199,9 +206,13 @@ export class UIManager {
     $('#set-sound').addEventListener('change', (e) => { this.sound?.unlock(); this.game.setSound(e.target.checked); });
     $('#btn-prestige').addEventListener('click', () => {
       const info = this.game.prestigeInfo(); if (!info.eligible) return;
-      if (confirm(`회사 이전을 진행할까요?\n\n지분 +${info.gain} (파티 ATK·골드 영구 +${Math.round(info.gain * info.perShare * 100)}%)\n\n초기화: 스테이지 · 골드 · 영웅 레벨 · 회사 업그레이드\n유지: 보유 영웅·별·강화·강화 카드·보석·직급·업적`)) {
+      this.#askConfirm('회사 이전', `지분 +${info.gain} (파티 ATK·골드 영구 +${Math.round(info.gain * info.perShare * 100)}%)
+
+초기화: 스테이지 · 골드 · 영웅 레벨 · 회사 업그레이드
+유지: 보유 영웅·별·강화·강화 카드·보석·직급·업적`, { ok: '이전하기' }).then((yes) => {
+        if (!yes) return;
         const r = this.game.prestige(); if (r) this.openModal('회사 이전 완료', `<p>새 사옥으로 이전했습니다. <b>지분 +${r.gain}</b> (총 ${r.total})</p><p class="muted">파티 ATK·골드 영구 +${Math.round(r.total * r.perShare * 100)}%. Phase 1-1부터 다시 시작합니다.</p>`);
-      }
+      });
     });
     $('#set-auto-up').addEventListener('change', (e) => this.game.setAutoUpgrade(e.target.checked));
     $('#set-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
@@ -219,7 +230,7 @@ export class UIManager {
       try { this.game.importSave($('#save-text').value); this.toast('저장 데이터를 불러왔습니다'); }
       catch { this.toast('가져오기 실패: 올바르지 않은 문자열'); }
     });
-    $('#btn-reset').addEventListener('click', () => { if (confirm('이 통합 문서를 삭제하고 처음부터 시작할까요? 되돌릴 수 없습니다.')) this.game.reset(); });
+    $('#btn-reset').addEventListener('click', () => { this.#askConfirm('통합 문서 삭제', '이 통합 문서를 삭제하고 처음부터 시작할까요?\n\n보유 영웅·보석·업적까지 모두 사라집니다. 되돌릴 수 없습니다.', { ok: '삭제하고 새로 시작', danger: true }).then((yes) => { if (yes) this.game.reset(); }); });
     $('#modal-ok').addEventListener('click', () => this.closeModal());
     $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') this.closeModal(); });
 
@@ -507,6 +518,7 @@ export class UIManager {
     const next = g.nextStage();
     const fc = g.challengeForecast(challenging ? s.stage : next);
     $('#qa-challenge-label').textContent = challenging ? '도전 중단' : `${stageLabel(next)} 도전${isBossStage(next) ? ' (보스)' : ''}`;
+    this.#refreshNowDoing();
     const fcEl = $('#qa-forecast'); fcEl.textContent = `승산 ${Math.round(fc.prob * 100)}% · ${fc.label}${fc.boss && fc.bossTime ? ` · 예상 ${fc.bossTime.toFixed(0)}s` : ''}`;
     fcEl.className = `rb-forecast ${fc.prob >= 0.7 ? 'good' : fc.prob >= BALANCE.SAFE_ADVANCE_MIN ? 'mid' : 'bad'}`;
     if (!challenging && g.waitingAdvance) $('#stage-hint').textContent = `자동 진행 대기: ${stageLabel(next)} 승산 ${Math.round(fc.prob * 100)}% (강화하면 자동 재개)`;
@@ -619,13 +631,21 @@ export class UIManager {
       if (e.owned && v.affection.level >= BALANCE.AFFECTION.unlockSecret) wrap.append(el('span', { class: 'card-heart', title: `호감도 Lv ${v.affection.level}` }, `♥${v.affection.level}`));
       if (v.isMain) wrap.append(el('span', { class: 'card-badge main' }, '메인'));
       grid.append(wrap);
-      tbody.append(el('tr', { class: e.owned ? '' : 'locked' },
+      const partyBtn = e.owned && !v.isMain
+        ? btn(v.inParty ? '해제' : '배치', () => this.game.toggleParty(id), `small ${v.inParty ? '' : 'primary'}`, !v.inParty && this.game.state.party.length >= BALANCE.PARTY_SIZE)
+        : el('span', { class: 'muted small' }, v.isMain ? '고정' : '-');
+      tbody.append(el('tr', {
+        class: `roster-row ${e.owned ? '' : 'locked'} ${v.inParty ? 'in-party' : ''}`,
+        title: e.owned ? `${v.def.name} 상세 보기` : '미보유',
+        onclick: (ev) => { if (ev.target.closest('button')) return; this.openDetail(id); }, // the 배치 button keeps its own click
+      },
         el('td', {}, v.def.name), el('td', { style: `color:${v.grade.color}` }, v.def.grade), el('td', {}, ROLES[v.def.role].name), el('td', { style: `color:${DIVISIONS[divisionOf(v.isMain ? 'main' : id)].color}` }, divisionName(v.isMain ? 'main' : id)), el('td', {}, v.traitName),
         el('td', {}, v.isMain ? v.def.title : (e.owned ? stars(e.star) : '미보유')), el('td', { class: 'num' }, e.owned ? e.level : '-'),
         el('td', { class: 'num', style: 'font-weight:700' }, e.owned ? fmt(v.power) : '-'),
         el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${e.owned ? Math.max(2, Math.round((v.atk / maxAtk) * 96)) : 0}%` }), el('span', {}, e.owned ? fmt(v.atk) : '-')),
         el('td', { class: 'num', style: 'color:#e84393' }, e.owned ? `♥${v.affection.level}` : '-'),
-        el('td', { class: 'num' }, e.owned ? e.shards : '-')));
+        el('td', { class: 'num' }, e.owned ? e.shards : '-'),
+        el('td', { class: 'ctl' }, partyBtn)));
     }
     $('#party-count').textContent = `${this.game.state.party.length} / ${BALANCE.PARTY_SIZE}`;
     this.#refreshSynergy();
@@ -930,7 +950,9 @@ export class UIManager {
       body.append(el('div', { class: 'dt-actions' },
         btn(v.inParty ? '파티 해제' : '파티 배치', () => g.toggleParty(id), v.inParty ? '' : 'primary', v.isMain && v.inParty && s.party.length === 1),
         el('span', { class: 'spacer' }),
-        v.isMain ? null : (() => { const b = btn(`카드 방출 (+${v.dismissCards}장)`, () => { if (confirm(`${v.def.name} 카드를 방출하고 강화 카드 ${v.dismissCards}장을 받을까요? 되돌릴 수 없습니다.`)) g.dismiss(id); }, 'danger', !v.canDismiss); if (!v.canDismiss && v.dismissBlockedReason) b.title = v.dismissBlockedReason; return b; })(),
+        v.isMain ? null : (() => { const b = btn(`카드 방출 (+${v.dismissCards}장)`, () => { this.#askConfirm('카드 방출', `${v.def.name} 카드를 방출하고 강화 카드 ${v.dismissCards}장을 받습니다.
+
+되돌릴 수 없습니다.`, { ok: '방출', danger: true }).then((yes) => { if (yes) g.dismiss(id); }); }, 'danger', !v.canDismiss); if (!v.canDismiss && v.dismissBlockedReason) b.title = v.dismissBlockedReason; return b; })(),
         v.canDismiss || v.isMain ? null : el('span', { class: 'muted small' }, v.dismissBlockedReason)));
     }
     if (v.isMain) body.append(this.#mainPromoPanel(v.mainPromo));
@@ -1317,6 +1339,21 @@ export class UIManager {
   }
 
   /** Show the 회사 이전 suggestion only while the player is actually walled, and never nag more than once per 15 min. */
+  /** One plain sentence in the status bar: what the game is doing right now, and what it is waiting for. */
+  #refreshNowDoing() {
+    const box = $('#now-doing'); if (!box) return;
+    const g = this.game, s = g.state;
+    let txt;
+    if (g.paused) txt = '⏸ 로그인 대기';
+    else if (g.overtime) txt = `🌙 야근 모드 — 남은 ${Math.ceil(g.overtime.t)}초, 처치할수록 보석`;
+    else if (g.entities.traveling) txt = `🚶 ${stageLabel(g.combatStage())}(으)로 이동 중`;
+    else if (g.isChallenging()) {
+      const boss = isBossStage(s.stage);
+      txt = boss ? `⚑ ${stageLabel(s.stage)} 보스전 — 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : `⚑ ${stageLabel(s.stage)} 도전 중 — ${s.kills} / ${BALANCE.KILLS_PER_STAGE} 처치`;
+    } else if (g.waitingAdvance) txt = `⏳ ${stageLabel(s.stage)}에서 사냥하며 대기 — 승산이 오르면 자동으로 다음 단계`;
+    else txt = `🔁 ${stageLabel(s.stage)} 반복 사냥 중 — 골드·비품을 모으는 중`;
+    box.textContent = txt;
+  }
   #refreshPrestigeHint() {
     const box = $('#prestige-hint'); if (!box) return;
     if (this.prestigeHintSnooze && Date.now() < this.prestigeHintSnooze) { box.hidden = true; return; }
@@ -1398,6 +1435,22 @@ export class UIManager {
   }
 
   // ------------------------------------------------------------- dialogs --
+  /**
+   * Yes/no in the game's own modal instead of window.confirm — an OS dialog breaks the Excel disguise the moment it
+   * appears. Resolves true only when the player takes the action.
+   */
+  #askConfirm(title, message, { ok = '확인', danger = false } = {}) {
+    return new Promise((resolve) => {
+      const lines = String(message).split('\n').map((t) => (t ? el('p', {}, t) : el('div', { style: 'height:6px' })));
+      this.openModal(title, el('div', { class: 'ask' }, ...lines));
+      const acts = $('#modal-actions'); acts.innerHTML = '';
+      let done = false; const finish = (v) => { if (done) return; done = true; this.closeModal(); resolve(v); };
+      acts.append(btn('취소', () => finish(false)), btn(ok, () => finish(true), danger ? 'danger' : 'primary'));
+      const onEsc = (e) => { if (e.key === 'Escape') { document.removeEventListener('keydown', onEsc, true); finish(false); } };
+      document.addEventListener('keydown', onEsc, true);
+    });
+  }
+
   openModal(title, content) {
     this.detailId = null;
     $('#modal-title').textContent = title;

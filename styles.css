@@ -718,3 +718,16 @@ body.stealth #roster-table { display: table; }
 @keyframes hbOut { to { opacity: 0; transform: translate(-50%, -8px); } }
 #modal.epic .reveal-grid { animation: epicPulse .7s ease-out; }
 @keyframes epicPulse { 0% { filter: brightness(1.5); } 100% { filter: none; } }
+
+/* 인사_명단 표: 위장 모드에서는 이 표가 유일한 편성 수단이라 카드 그리드와 같은 조작을 제공해야 한다 */
+#roster-table tr.roster-row { cursor: pointer; }
+#roster-table tr.roster-row:hover td { background: var(--xl-green-light); }
+#roster-table tr.roster-row.locked { cursor: default; opacity: .6; }
+#roster-table tr.roster-row.in-party td:first-child { box-shadow: inset 3px 0 0 var(--xl-green); font-weight: 700; }
+#roster-table td.ctl { white-space: nowrap; text-align: right; }
+
+.rb-select { font: inherit; font-size: 11.5px; padding: 2px 4px; border: 1px solid var(--line-dark); background: #fff; margin-right: 4px; vertical-align: middle; }
+
+/* 상태 표시줄: 지금 무슨 일이 일어나는지 (자동 진행이라도 관전할 거리는 있어야 한다) */
+.statusbar .now-doing { color: var(--xl-green); font-weight: 600; margin-right: auto; }
+body.stealth .statusbar .now-doing { color: #444; font-weight: 400; }

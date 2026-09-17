@@ -209,3 +209,27 @@ test('the main hero can never leave the party', () => {
   assert.ok(g.toggleParty('guard'), 'other heroes still come and go');
   assert.ok(!g.state.party.includes('guard'));
 });
+
+test('벤치 레벨 자동 회수: 파티에서 빠지면 골드가 그대로 돌아온다 (등급에 투자해도 손해가 없다)', () => {
+  const s = createInitialState();
+  own(s, 'parttime'); own(s, 'cfo');
+  s.gold = 5_000_000;
+  const g = new GameManager({ state: s, save: memSave() });
+  g.toggleParty('parttime');
+  const spent = g.state.gold; g.upgradeHeroMany('parttime', 40); const after = g.state.gold;
+  assert.ok(spent > after, '골드를 썼다');
+  assert.ok(g.state.heroes.parttime.level > 1);
+  // 파티에서 빼고 회수하면 쓴 만큼 그대로 돌아온다 (LEVEL_REFUND 1.0 · 비용은 등급이 아니라 레벨만 본다)
+  g.toggleParty('parttime');
+  const r = g.reclaimBenchLevels();
+  assert.equal(r.heroes, 1);
+  assert.equal(g.state.gold, spent, '쓴 골드가 전액 돌아온다');
+  assert.equal(g.state.heroes.parttime.level, 1);
+  // 즐겨찾기와 파티원은 건드리지 않는다
+  g.toggleParty('cfo'); g.upgradeHeroMany('cfo', 10);
+  const lv = g.state.heroes.cfo.level;
+  assert.equal(g.reclaimBenchLevels().heroes, 0);
+  assert.equal(g.state.heroes.cfo.level, lv, '파티원은 회수 대상이 아니다');
+  g.toggleParty('cfo'); g.toggleFavorite('cfo');
+  assert.equal(g.reclaimBenchLevels().heroes, 0, '즐겨찾기도 건드리지 않는다');
+});

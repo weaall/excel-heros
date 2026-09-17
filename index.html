@@ -80,7 +80,8 @@
     <div class="ribbon-panel" data-panel="data">
       <div class="rb-group">
         <div class="rb-row">
-          <button id="qa-auto-party" class="rb-btn" title="보유 영웅 중 ATK가 높은 5명으로 파티 구성 (탱커·힐러 1명씩 보장)"><span class="rb-icon">⇅</span>파티 자동 편성</button>
+          <select id="qa-party-grade" class="rb-select" title="자동 편성에 쓸 최소 등급 — 낮은 등급을 빼고 짜고 싶을 때"><option value="">전체</option><option value="C">C급 이상</option><option value="B">B급 이상</option><option value="A">A급 이상</option><option value="S">S급만</option></select>
+          <button id="qa-auto-party" class="rb-btn" title="부문 시너지·역할 균형까지 계산해 파티를 짭니다 (탱커·힐러 보장, 주인공 고정)"><span class="rb-icon">⇅</span>파티 자동 편성</button>
           <button class="rb-btn" data-sheet="roster"><span class="rb-icon">▦</span>카드 명단</button>
         </div>
         <div class="rb-group-label">정렬 및 필터</div>
@@ -200,7 +201,7 @@
         </div>
         <div class="card-grid" id="card-grid"></div>
         <table class="xl-table compact" id="roster-table">
-          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>부문</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">전투력</th><th class="num">ATK</th><th class="num">호감</th><th class="num">조각</th></tr></thead>
+          <thead><tr><th>이름</th><th>등급</th><th>역할</th><th>부문</th><th>특성</th><th>별/직급</th><th class="num">Lv</th><th class="num">전투력</th><th class="num">ATK</th><th class="num">호감</th><th class="num">조각</th><th>배치</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>
@@ -498,7 +499,7 @@
     <span class="status-dim">접근성: 계속 진행 가능</span>
     <span class="spacer"></span>
     <span id="status-cloud" class="status-dim" title="계정 저장 상태"></span>
-    <span id="status-gold"></span><span id="status-gems"></span><span id="status-dps"></span>
+    <span id="now-doing" class="now-doing"></span><span id="status-gold"></span><span id="status-gems"></span><span id="status-dps"></span>
     <span class="status-dim">계산 모드: 자동</span>
     <span class="status-views">▦ ▤ ▥</span>
     <span class="zoom">− ────●──── + 100%</span>

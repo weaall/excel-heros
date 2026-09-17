@@ -82,11 +82,15 @@ export class GameManager extends Emitter {
    * So it seeds with a tank + healer + the strongest remaining, then hill-climbs by swapping one member at a time
    * while the party score improves.
    */
-  autoParty() {
+  autoParty(minGrade = null) {
     const slots = BALANCE.PARTY_SIZE - 1;
-    const owned = Object.keys(this.state.heroes)
+    // 등급 하한은 선호지 약속이 아니다: 그 등급만으로 파티가 안 차면 전체 로스터로 되돌아간다
+    const cut = minGrade ? GRADE_ORDER.indexOf(minGrade) : -1; // GRADE_ORDER is D→S, so "이 등급 이상" = index >= cut
+    const all = Object.keys(this.state.heroes)
       .filter((id) => this.state.heroes[id].owned && !this.isMain(id) && !this.isDispatched(id))
       .map((id) => this.heroView(id)).sort((a, b) => b.power - a.power);
+    const limited = cut >= 0 ? all.filter((v) => GRADE_ORDER.indexOf(v.def.grade) >= cut) : all;
+    const owned = limited.length >= slots ? limited : all;
     const pool = owned.slice(0, 18).map((v) => v.id); // beyond this nothing can win a slot; keeps the search instant
     const seed = [];
     for (const role of ['tank', 'healer']) { const best = owned.find((v) => v.def.role === role && !seed.includes(v.id)); if (best) seed.push(best.id); }
@@ -107,7 +111,8 @@ export class GameManager extends Emitter {
     }
     this.state.party = team;
     this.entities.rebuildParty();
-    this.log(`파티 자동 편성: ${this.state.party.map((id) => this.heroDef(id).name).join(', ')} (편성 점수 ${Math.round(this.partyScore(team))})`, 'info');
+    if (this.state.settings.autoReclaim) this.reclaimBenchLevels(); // 벤치로 내려간 카드의 골드는 바로 돌려받는다
+    this.log(`파티 자동 편성${minGrade ? ` (${minGrade}급 이상)` : ''}: ${this.state.party.map((id) => this.heroDef(id).name).join(', ')} (편성 점수 ${Math.round(this.partyScore(team))})`, 'info');
     this.emit('party'); this.emit('roster');
     return this.state.party;
   }
@@ -159,6 +164,24 @@ export class GameManager extends Emitter {
     const stalled = this.waitingAdvance || fc.prob < BALANCE.SAFE_ADVANCE_MIN;
     if (!stalled) return null;
     return { ...info, stalled: true, text: `다음 단계 승산 ${Math.round(fc.prob * 100)}% — 지금 회사를 이전하면 지분 +${info.gain} (파티 ATK·골드 +${Math.round(info.gain * info.perShare * 100)}%)을 영구히 얻고, 다시 올라오는 속도는 처음보다 훨씬 빠릅니다.` };
+  }
+
+  /**
+   * Pull the gold back out of everyone who is not fighting. Level cost depends on the level alone (never the grade)
+   * and the refund is 100%, so moving an investment from a levelled D card to an A card is lossless — this just does
+   * it without making the player open every card and press 초기화.
+   */
+  reclaimBenchLevels({ keep = [] } = {}) {
+    let gold = 0, heroes = 0;
+    for (const [id, e] of Object.entries(this.state.heroes)) {
+      if (!e.owned || (e.level | 0) <= 1) continue;
+      if (this.isMain(id) || this.state.party.includes(id) || keep.includes(id) || this.isDispatched(id)) continue;
+      if (this.state.favorites?.[id]) continue; // 즐겨찾기는 플레이어가 일부러 남겨 둔 카드
+      const back = this.resetHeroLevel(id);
+      if (back > 0) { gold += back; heroes++; }
+    }
+    if (heroes) this.log(`대기 사원 ${heroes}명 레벨 회수 → 골드 +${Math.round(gold).toLocaleString()}`, 'info');
+    return { heroes, gold };
   }
 
   /** 도감 보너스: owned heroes and their stars buff party ATK and gold income. */
