@@ -12,7 +12,7 @@
 //   POST /v1/logout                        → { ok }
 //   GET  /v1/save                          → { save, updatedAt } | 404
 //   PUT  /v1/save   { save, name, dps }    → { ok, updatedAt, check }   (422 when the save is implausible)
-//   GET  /v1/board?limit=50                → { rows, mine, total }
+//   GET  /v1/board?limit=50                → { rows, mine, total }   (public: name + picture only, never email)
 //   POST /v1/ad     { kind }               → { ok, count }
 //
 // Deploy: see backend/README.md (wrangler login → d1 create → d1 execute schema.sql → set GOOGLE_CLIENT_ID → deploy).
@@ -48,7 +48,10 @@ async function auth(req, env, origin) {
   return { id: row.id, name: row.name, picture: row.picture, token: m[1] };
 }
 
-/** Best-effort per-isolate rate limit: at most one PUT /v1/save per user per 20 s (the client saves every 5 min). */
+/** Hard cap on stored ad views per user per day — the endpoint is only a counter, but an open INSERT is free DB growth. */
+const AD_DAILY_CAP = 40;
+/** First line of the save rate limit: per-isolate memory. Cloudflare may hand a caller a fresh isolate, so the
+ *  durable check against saves.updated_at below is what actually holds. */
 const lastPut = new Map();
 function rateLimit(id, now, minGapMs = 20000) { const t = lastPut.get(id) ?? 0; if (now - t < minGapMs) return false; lastPut.set(id, now); if (lastPut.size > 5000) lastPut.clear(); return true; }
 const userView = (u) => ({ id: u.id, name: u.name, picture: u.picture, email: u.email ?? null });
@@ -78,6 +81,8 @@ export default {
           user = { ...user, name: claims.name, picture: claims.picture, email: claims.email };
         }
         const token = randomToken(), expiresAt = now + SESSION_DAYS * 86400000;
+        await env.DB.prepare('DELETE FROM sessions WHERE user_id = ? AND expires_at < ?').bind(user.id, now).run(); // expired tokens are dead weight and extra attack surface
+        await env.DB.prepare('DELETE FROM sessions WHERE user_id = ? AND token NOT IN (SELECT token FROM sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 9)').bind(user.id, user.id).run(); // keep the 9 newest, this login makes 10
         await env.DB.prepare('INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').bind(token, user.id, now, expiresAt).run();
         return json({ token, user: userView(user), expiresAt }, 200, origin);
       }
@@ -112,6 +117,8 @@ export default {
         const check = checkSave(body.save, now);
         if (!check.ok) return json({ error: 'implausible save', check }, 422, origin);
         const prevRow = await env.DB.prepare('SELECT save, updated_at FROM saves WHERE id = ?').bind(a.id).first();
+        const gap = Number(env.SAVE_MIN_GAP_MS ?? 20000);
+        if (prevRow && gap > 0 && now - prevRow.updated_at < gap) return json({ error: 'too many saves; try again in a moment' }, 429, origin); // durable: survives a fresh isolate
         const delta = checkDelta(prevRow ? JSON.parse(prevRow.save) : null, body.save, prevRow?.updated_at ?? now, now, body.force === true);
         if (!delta.ok) return json({ error: 'implausible change since the last save', check: delta }, 422, origin);
         const text = JSON.stringify(body.save);
@@ -139,14 +146,17 @@ export default {
       if (url.pathname === '/v1/ad' && req.method === 'POST') {
         const a = await auth(req, env, origin); if (a instanceof Response) return a;
         const body = await req.json().catch(() => ({}));
+        const since = Date.now() - 86400000;
+        const seen = await env.DB.prepare('SELECT COUNT(*) AS n FROM ad_views WHERE id = ? AND at > ?').bind(a.id, since).first();
+        if ((seen?.n ?? 0) >= AD_DAILY_CAP) return json({ ok: false, count: seen.n, error: 'daily ad cap reached' }, 429, origin);
         await env.DB.prepare('INSERT INTO ad_views (id, kind, at) VALUES (?, ?, ?)').bind(a.id, String(body.kind ?? 'reward').slice(0, 32), Date.now()).run();
-        const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM ad_views WHERE id = ? AND at > ?').bind(a.id, Date.now() - 86400000).first();
-        return json({ ok: true, count: c?.n ?? 1 }, 200, origin);
+        return json({ ok: true, count: (seen?.n ?? 0) + 1 }, 200, origin);
       }
 
       return json({ error: 'not found' }, 404, origin);
     } catch (e) {
-      return json({ error: 'server error', detail: String(e?.message ?? e).slice(0, 200) }, 500, origin);
+      console.error('worker error', url.pathname, e); // the detail belongs in the log, not in the response
+      return json({ error: 'server error' }, 500, origin);
     }
   },
 };

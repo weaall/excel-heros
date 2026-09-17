@@ -2,11 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createInitialState } from '../src/core/state.js';
 import { GameManager } from '../src/core/GameManager.js';
-import { checkSave, checkDelta, goldInLevels, boardEntry, boardScore, sanitizeName } from '../src/core/plausibility.js';
+import { checkSave, checkDelta, goldInLevels, boardEntry, boardScore, sanitizeName, maxPlausibleDps } from '../src/core/plausibility.js';
 import { CloudSync } from '../src/core/CloudSync.js';
 import { Auth } from '../src/core/Auth.js';
 import worker, { verifyGoogleToken } from '../backend/worker.js';
-import { upgradeCost } from '../src/config/balance.js';
+import { upgradeCost, prestigeShares } from '../src/config/balance.js';
 
 const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
 const DAY = 86400000;
@@ -197,4 +197,40 @@ test('sanitizeName: trims/collapses, strips control chars, masks profanity and s
   assert.equal(sanitizeName('가나다라마바사아자차카타파하가나다라'), '가나다라마바사아자차카타파하가나');
   assert.equal(sanitizeName(''), '익명 사원'); assert.equal(sanitizeName(null), '익명 사원');
   assert.equal(boardEntry(createInitialState(), '병신').name, '익명 사원');
+});
+
+// ---- leaderboard tampering --------------------------------------------------------------------------------
+test('보안: 지분(shares) drives the ranking, so a save cannot claim more than its stages could grant', () => {
+  const now = Date.now();
+  const ok = legitSave(now); ok.prestige = { shares: prestigeShares(ok.maxCleared), count: 1 };
+  assert.deepEqual(checkSave(ok, now).reasons, [], 'an honest reset passes');
+  const cheat = legitSave(now); cheat.prestige = { shares: 1e9, count: 1 };
+  assert.ok(checkSave(cheat, now).reasons.includes('shares exceed what the stages cleared could grant'), 'a fabricated share count is rejected');
+  const many = legitSave(now); many.prestige = { shares: 10, count: 500 };
+  assert.ok(checkSave(many, now).reasons.includes('more company moves than kills allow'), 'resets are bounded by kills');
+  const neg = legitSave(now); neg.prestige = { shares: -5, count: 1 };
+  assert.ok(checkSave(neg, now).reasons.includes('prestige is negative'));
+  // and the score really is share-dominated, which is why the bound matters
+  assert.ok(boardScore({ shares: 1, maxCleared: 1 }) > boardScore({ shares: 0, maxCleared: 900 }));
+});
+
+test('보안: shares cannot grow between two saves without a company move', () => {
+  const now = Date.now(); const prev = legitSave(now - 3600000); prev.prestige = { shares: 5, count: 1 };
+  const bump = legitSave(now); bump.prestige = { shares: 5000, count: 1 };
+  assert.ok(checkDelta(prev, bump, now - 3600000, now).reasons.includes('shares grew without a company move'));
+  const withReset = legitSave(now); withReset.prestige = { shares: 5000, count: 2 };
+  assert.ok(checkDelta(prev, withReset, now - 3600000, now).reasons.includes('shares grew faster than the resets allow'));
+  const honest = legitSave(now); honest.prestige = { shares: 5 + prestigeShares(honest.maxCleared), count: 2 };
+  assert.deepEqual(checkDelta(prev, honest, now - 3600000, now).reasons, [], 'one honest reset is accepted');
+  const back = legitSave(now); back.prestige = { shares: 1, count: 1 };
+  assert.ok(checkDelta(prev, back, now - 3600000, now).reasons.includes('shares went backwards'));
+});
+
+test('보안: the client reports its own DPS, so the board clamps it to what the save could produce', () => {
+  const s = legitSave(Date.now());
+  const cap = maxPlausibleDps(s);
+  assert.ok(boardEntry(s, '사원', 1e18).dps <= Math.ceil(cap), 'an absurd DPS is clamped');
+  assert.equal(boardEntry(s, '사원', -50).dps, 0, 'negative DPS becomes zero');
+  const real = Math.round(cap / 1000);
+  assert.equal(boardEntry(s, '사원', real).dps, real, 'a realistic DPS passes through untouched');
 });

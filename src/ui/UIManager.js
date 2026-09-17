@@ -921,7 +921,10 @@ export class UIManager {
     if (info.maxed) { box.append(el('p', { class: 'muted' }, '최고 직급입니다.')); return box; }
     box.append(el('p', { class: 'small' },
       el('span', { class: info.hasCards ? 'ok' : 'bad' }, `강화 카드 ${info.cards}장`), ' · ',
-      el('span', { class: info.hasStage ? 'ok' : 'bad' }, `${stageLabel(info.stage)} 클리어`)));
+      el('span', { class: info.hasStage ? 'ok' : 'bad' }, `${stageLabel(info.stage)} 클리어`), ' · ',
+      el('span', { class: info.hasLevel ? 'ok' : 'bad' }, `Lv ${info.levelNow} / ${info.level}`), ' · ',
+      el('span', { class: info.hasEnhance ? 'ok' : 'bad' }, `강화 +${info.enhanceNow} / +${info.enhance}`)));
+    if (!info.hasEnhance || !info.hasLevel) box.append(el('p', { class: 'muted small' }, '승진은 구매가 아니라 졸업입니다 — 현재 직급의 레벨과 강화를 모두 채워야 다음 직급으로 갑니다.'));
     if (info.options.length > 1) box.append(el('p', { class: 'small muted' }, '트랙을 고르면 이후 승진은 그 트랙 안에서만 진행됩니다 (변경 불가).'));
     const opts = el('div', { class: 'promo-options' });
     for (const job of info.options) {

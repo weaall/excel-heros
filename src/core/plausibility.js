@@ -2,7 +2,7 @@
 // A single-player idle game cannot stop a player from editing localStorage; these bounds only keep obviously
 // impossible saves off the shared leaderboard / cloud store. Every bound is deliberately generous so a legit
 // save never trips it — see docs/BALANCE.md 6-19.
-import { BALANCE, upgradeCost } from '../config/balance.js';
+import { BALANCE, upgradeCost, prestigeShares } from '../config/balance.js';
 
 const DAY = 86400000;
 export const MAX_SAVE_BYTES = 256 * 1024;
@@ -45,6 +45,7 @@ export function checkSave(state, now = Date.now()) {
   if ((st.bossKills ?? 0) < Math.floor(cleared / BALANCE.BOSS_EVERY) * 0.9 - 2) reasons.push('boss stages cleared without boss kills');
   if (JSON.stringify(state).length > MAX_SAVE_BYTES) reasons.push('save too large');
   checkEquipment(state, reasons);
+  checkPrestige(state, reasons);
   return { ok: reasons.length === 0, reasons };
 }
 
@@ -57,6 +58,26 @@ export function sanitizeName(raw) {
   n = n.slice(0, 16);
   return n || '익명 사원';
 }
+/**
+ * Bounds for 지분 (prestige shares) — the single most valuable number on the leaderboard, since boardScore weights it
+ * ×1000. Nothing checked it before, so a hand-edited save could claim any rank. A reset grants
+ * prestigeShares(maxCleared) and requires clearing PRESTIGE.minCleared again, so `count` resets are themselves gated
+ * by kills (checkSave already bounds kills by play time). The ceiling below assumes every reset happened at the
+ * account's best-ever stage, which is the most generous reading of the save.
+ */
+function checkPrestige(state, reasons) {
+  const p = state.prestige ?? {};
+  const count = p.count | 0, shares = p.shares | 0;
+  if (count < 0 || shares < 0) reasons.push('prestige is negative');
+  // a reset needs minCleared stages, and every stage needs kills — so play time bounds how many resets are possible
+  const killsPerReset = BALANCE.PRESTIGE.minCleared * BALANCE.KILLS_PER_STAGE * 0.9;
+  const maxResets = Math.floor((state.stats?.totalKills ?? 0) / Math.max(1, killsPerReset)) + 1;
+  if (count > maxResets) reasons.push('more company moves than kills allow');
+  // best stage ever reached: the current run, or (for a save that has reset) the stage each reset was taken at
+  const best = Math.max(state.maxCleared | 0, state.stats?.bestStage | 0, BALANCE.PRESTIGE.minCleared);
+  if (shares > prestigeShares(best) * Math.max(1, count) + 1) reasons.push('shares exceed what the stages cleared could grant');
+}
+
 /** Bounds for the 비품 bag: a save cannot carry more items than the cap, nor levels past the ceiling. */
 function checkEquipment(state, reasons) {
   const eq = state.equipment; if (!eq) return;
@@ -68,6 +89,17 @@ function checkEquipment(state, reasons) {
   if (items.length > clears + 20) reasons.push('more equipment than stages cleared');
 }
 
+/**
+ * Ceiling for a save's party DPS. The client reports its own number (the server does not simulate combat), so it is
+ * clamped to a very generous function of the furthest stage reached — enough that no real party ever trips it, small
+ * enough that "DPS 9경" cannot appear on the board.
+ */
+export function maxPlausibleDps(state) {
+  const stage = Math.max(1, state.maxCleared | 0, state.stats?.bestStage | 0);
+  const shares = Math.max(0, state.prestige?.shares | 0);
+  return BALANCE.MONSTER_HP_BASE * BALANCE.MONSTER_HP_GROWTH ** stage * 50 * (1 + shares * BALANCE.PRESTIGE.bonusPerShare) + 1e4;
+}
+
 /** Leaderboard row derived from a save (what the server actually ranks). */
 export function boardEntry(state, name, dps = 0) {
   return {
@@ -75,7 +107,7 @@ export function boardEntry(state, name, dps = 0) {
     maxCleared: state.maxCleared | 0,
     shares: state.prestige?.shares ?? 0,
     prestige: state.prestige?.count ?? 0,
-    dps: Math.round(dps),
+    dps: Math.round(Math.max(0, Math.min(dps, maxPlausibleDps(state)))), // client-reported, so clamp it to what the save could produce
     playSeconds: Math.floor(state.stats?.playSeconds ?? 0),
     collection: Object.values(state.heroes ?? {}).filter((h) => h?.owned).length,
   };
@@ -100,5 +132,12 @@ export function checkDelta(prev, next, prevAt, now = Date.now(), force = false) 
   if (gemsNow - gemsPrev > 1200 + hours * 1500 + clears * 150 + (force ? 3000 : 0)) reasons.push('gems grew faster than any income allows');
   const kills = (next.stats?.totalKills ?? 0) - (prev.stats?.totalKills ?? 0);
   if (kills > (Math.max(0, ps - pps) + 120) * 6 + 2000) reasons.push('kills exceed the play time added');
+  // 지분 drives the leaderboard: between two saves it can only grow by the resets that actually happened
+  const dShares = ((next.prestige?.shares | 0) - (prev.prestige?.shares | 0));
+  const dCount = ((next.prestige?.count | 0) - (prev.prestige?.count | 0));
+  if (!force && dShares < 0) reasons.push('shares went backwards');
+  if (dCount < 0 && !force) reasons.push('company moves went backwards');
+  if (dShares > 0 && dCount <= 0) reasons.push('shares grew without a company move');
+  if (dCount > 0 && dShares > prestigeShares(Math.max(prev.maxCleared | 0, next.maxCleared | 0, BALANCE.PRESTIGE.minCleared)) * dCount + 1) reasons.push('shares grew faster than the resets allow');
   return { ok: reasons.length === 0, reasons };
 }

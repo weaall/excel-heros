@@ -343,10 +343,13 @@ export class GameManager extends Emitter {
     const job = this.mainJob(); const s = this.state;
     if (!job.next.length) return { maxed: true, options: [] };
     const cards = BALANCE.MAIN_PROMOTE_CARDS[job.tier], stage = BALANCE.MAIN_PROMOTE_STAGE[job.tier];
+    const e = s.heroes[MAIN_ID]; const cap = enhanceCap(1, false, job.tier), lvl = BALANCE.MAIN_PROMOTE_LEVEL[job.tier] ?? 1;
+    const hasEnhance = (e.enhance | 0) >= cap, hasLevel = (e.level | 0) >= lvl;
     return {
-      maxed: false, cards, stage, tier: job.tier,
-      hasCards: s.cards >= cards, hasStage: s.maxCleared >= stage,
-      ok: s.cards >= cards && s.maxCleared >= stage,
+      maxed: false, cards, stage, tier: job.tier, enhance: cap, level: lvl,
+      hasCards: s.cards >= cards, hasStage: s.maxCleared >= stage, hasEnhance, hasLevel,
+      enhanceNow: e.enhance | 0, levelNow: e.level | 0,
+      ok: s.cards >= cards && s.maxCleared >= stage && hasEnhance && hasLevel,
       options: job.next.map((j) => MAIN_JOBS[j]),
     };
   }
@@ -565,6 +568,7 @@ export class GameManager extends Emitter {
   toggleParty(id) {
     const p = this.state.party;
     if (p.includes(id)) {
+      if (this.isMain(id)) { this.toast('주인공은 파티에서 뺄 수 없습니다'); return false; } // 김인턴 is the player, not a slot
       if (p.length === 1) { this.toast('파티에는 최소 1명이 필요합니다'); return false; }
       p.splice(p.indexOf(id), 1);
     } else {

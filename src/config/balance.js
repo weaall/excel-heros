@@ -111,6 +111,8 @@ export const BALANCE = Object.freeze({
 
   // Main hero job promotion: enhance cards + highest cleared stage requirement, per tier (D->C, C->B, B->A, A->S)
   MAIN_PROMOTE_CARDS: [20, 60, 150, 400],
+  // 승진은 구매가 아니라 졸업: 직급마다 그 티어의 강화 한계(10/20/30/40)를 모두 채우고 레벨도 찍어야 한다
+  MAIN_PROMOTE_LEVEL: [15, 40, 80, 140],
   MAIN_PROMOTE_STAGE: [5, 15, 30, 50],
   MAIN_SKILL_TIER: 1,       // job tier at which the main hero's skill unlocks (사원)
   MAIN_SKILL_BOOST_TIER: 3, // 과장

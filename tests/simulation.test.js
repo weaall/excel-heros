@@ -114,19 +114,26 @@ test('player actions: upgrade, team upgrade, pull, promote, party toggle', () =>
   assert.ok(g.toggleParty(other)); assert.ok(g.state.party.includes(other));
 });
 
-test('main hero job promotion: needs cards + stage, branches at 과장 → 부장, changes role', () => {
+test('main hero job promotion: needs cards, stage, level and a full 강화, branches at 과장 → 부장, changes role', () => {
   const s = createInitialState();
   const g = new GameManager({ state: s, save: memSave() });
+  /** Meet the level + 강화 gate for whatever tier the main hero is on now. */
+  const graduate = () => { const i = g.mainPromotionInfo(); if (i.maxed) return; g.state.heroes[MAIN_ID].level = Math.max(g.state.heroes[MAIN_ID].level, i.level); g.state.heroes[MAIN_ID].enhance = i.enhance; };
   assert.ok(!g.promoteMain('staff'), 'no cards yet');
   g.state.cards = 10_000;
   assert.ok(!g.promoteMain('staff'), 'stage requirement not met');
   g.state.maxCleared = 100;
+  assert.ok(!g.promoteMain('staff'), 'level and 강화 are not filled yet');
+  graduate();
   assert.ok(g.promoteMain('staff')); assert.equal(g.heroDef(MAIN_ID).grade, 'C');
   assert.ok(g.heroView(MAIN_ID).skillUnlocked, 'skill unlocks at 사원');
+  graduate();
   assert.ok(!g.promoteMain('sales'), 'cannot skip a tier');
   assert.ok(g.promoteMain('finance_senior'), 'track chosen right after 사원');
+  graduate();
   assert.ok(!g.promoteMain('sales_manager'), 'other tracks are closed once chosen');
   assert.ok(g.promoteMain('finance_manager'));
+  graduate();
   assert.ok(!g.promoteMain('intern'), 'invalid branch');
   assert.ok(g.promoteMain('finance'));
   assert.equal(g.heroDef(MAIN_ID).grade, 'S');
@@ -155,4 +162,16 @@ test('autosave fires every 10 seconds of play', () => {
   const g = new GameManager({ state: createInitialState(), save });
   run(g, 31);
   assert.ok(save.saved >= 3, `saved ${save.saved} times`);
+});
+
+test('the main hero can never leave the party', () => {
+  const s = createInitialState();
+  own(s, 'guard'); own(s, 'parttime');
+  const g = new GameManager({ state: s, save: memSave() });
+  g.toggleParty('guard'); g.toggleParty('parttime');
+  assert.ok(g.state.party.includes(MAIN_ID) && g.state.party.length === 3);
+  assert.equal(g.toggleParty(MAIN_ID), false, '주인공은 뺄 수 없다');
+  assert.ok(g.state.party.includes(MAIN_ID), 'still there');
+  assert.ok(g.toggleParty('guard'), 'other heroes still come and go');
+  assert.ok(!g.state.party.includes('guard'));
 });
