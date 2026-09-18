@@ -7,6 +7,8 @@
 // 반드시 한쪽이 낡는다.
 
 /** 도움말 장(章). body 는 문단 배열, rows 는 [항목, 설명] 표. */
+import { BALANCE } from '../config/balance.js';
+
 export const MANUAL = Object.freeze([
   {
     id: 'basics', title: '기본 흐름',
@@ -128,7 +130,7 @@ export const MANUAL = Object.freeze([
       ['저격 보고', '처형 기준이 ★당 +3%p (HP 30% → 42% 미만)'],
       ['성과 회수', '흡혈 비율이 ★당 +5%p (40% → 60%)'],
       ['웰니스 데이', '넘친 회복량이 버려지지 않고 파티 보호막이 됩니다'],
-      ['인사 복구', '1명 확정 + 추가 인원 확률 (최대 3명)'],
+      ['인사 복구', '1명 확정 + 추가 인원 확률 (최대 3명) · 4명 쓰러진 상황 실측 평균 ★1 1.9명 → ★5 2.8명'],
     ],
   },
   {
@@ -170,7 +172,8 @@ export function starSkillNote(type, star, S) {
     case 'heal':
       return `★ 보너스: 넘친 회복량이 보호막으로 (최대 HP ${pct(S.healShield * step)}×인원)`;
     case 'revive':
-      return '★ 보너스: 추가 복귀 확률 상승 (최대 3명)';
+      // 실측(4명 쓰러짐, 표본 1500): ★1 1.87명 · ★3 2.40명 · ★5 2.77명. 상한은 확정 1 + 추가 2.
+      return `★ 보너스: 추가 복귀 확률 ${pct(BALANCE.REVIVE.extraChance + BALANCE.REVIVE.extraPerStar * step)} (최대 ${1 + BALANCE.REVIVE.extraMax}명)`;
     default:
       return '';
   }
