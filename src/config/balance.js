@@ -83,6 +83,9 @@ export const BALANCE = Object.freeze({
   BOSS_EVERY: 10,
   // 보스 조정값은 **중첩 객체**에 둔다 — `BALANCE` 가 freeze 라 최상위 스칼라는 훑을 수 없다(6-95).
   BOSS: {
+    healPct: 0.12,     // 자가 결재: 최대 체력의 이만큼 회복 (수식 대응을 맞히면 그만큼 줄어든다)
+    shieldSec: 4,      // 반려 방어막 지속
+    shieldCut: 0.55,   // 방어막 중 받는 피해 배수
     timeLimit: 30,
     hpMult: 8,
     atkMult: 3,

@@ -420,6 +420,29 @@ export class EntityManager {
       const back = heroes.slice().sort((a, b) => a.x - b.x)[0]; if (!back) return true;
       this.projectiles.push({ x: m.x - 30, y: m.y - 70, tx: back.x, ty: back.y - 8, t: 0, dur: 0.7, color: '#935116', kind: 'drop', hostile: true, targetId: back.id, dmg: m.atk * 1.4 * k, crate: true });
       this.shake = Math.max(this.shake, 6);
+    } else if (sp.kind === 'summon') {
+      // 증원: 졸개를 부른다. 단일 대상 화력만 키운 파티가 벌을 받고, 광역·관통이 값을 한다.
+      // 수식 대응을 맞히면 한 명만 온다. 화면이 넘치지 않게 총 수를 제한한다.
+      const want = k < 1 ? 1 : 2;
+      const room = Math.max(0, BALANCE.MAX_MONSTERS - this.monsters.filter((x) => x.alive && !x.isBoss).length);
+      for (let i = 0; i < Math.min(want, room); i++) {
+        const add = this.#spawnMonster(this.game.combatStage(), false, i);
+        if (add) { add.x = m.x - 30 - i * 26; add.hp = add.maxHp = Math.round(add.maxHp * 0.6); }
+      }
+      this.fx('ring', { x: m.x, y: m.y, color: '#8e44ad', radius: 420, life: 0.5 });
+      this.floaters.push({ x: m.x, y: m.y - 90, text: '증원!', color: '#8e44ad', t: 0, big: true });
+    } else if (sp.kind === 'heal') {
+      // 자가 회복: 화력이 모자라면 영영 못 잡는다 — 제한 시간과 함께 진짜 DPS 검사가 된다.
+      const amt = Math.round(m.maxHp * BALANCE.BOSS.healPct * k);
+      m.hp = Math.min(m.maxHp, m.hp + amt);
+      this.fx('sparkle', { x: m.x, y: m.y - 40, color: '#2ecc71', n: 18 });
+      this.floaters.push({ x: m.x, y: m.y - 90, text: `+${Math.round(BALANCE.BOSS.healPct * k * 100)}%`, color: '#2ecc71', t: 0, big: true });
+    } else if (sp.kind === 'shield') {
+      // 방어막: 몇 초간 받는 피해가 준다. 몰아치는 타이밍을 고르게 만든다.
+      m.shieldUntil = this.time + BALANCE.BOSS.shieldSec * k;
+      m.shieldCut = BALANCE.BOSS.shieldCut;
+      this.fx('ring', { x: m.x, y: m.y, color: '#5dade2', radius: 360, life: 0.5 });
+      this.floaters.push({ x: m.x, y: m.y - 90, text: '반려 방어막', color: '#5dade2', t: 0, big: true });
     }
     return true;
   }
@@ -507,6 +530,8 @@ export class EntityManager {
 
   #damage(target, amount, isSkill, crit = false) {
     if (!target.alive) return 0;
+    // 반려 방어막(보스 특수): 지속 시간 동안 받는 피해가 준다. 엘리트의 흡수형 보호막과 달리 **감면**이다.
+    if (target.shieldUntil && target.shieldUntil > this.time) amount *= target.shieldCut ?? 1;
     amount = Math.max(1, Math.round(amount));
     if (target.shield > 0) { // elite 보호막 soaks damage first
       const absorbed = Math.min(target.shield, amount); target.shield -= absorbed; amount -= absorbed; target.flash = 0.1;
