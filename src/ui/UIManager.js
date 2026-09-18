@@ -1193,15 +1193,19 @@ export class UIManager {
       const rate = $(`#rate-${gr}`), sub = $(`#rate-${gr}-note`); if (!rate) continue;
       const n = heroesOfGrade(gr).length;
       rate.textContent = `${(GRADES[gr].rate * 100).toFixed(GRADES[gr].rate < 0.01 ? 1 : 0)}%`;
-      if (sub) sub.textContent = b === 'standard' ? `(${n}종 균등 · 한 장당 ${(GRADES[gr].rate / n * 100).toFixed(2)}%)` : `(픽업 ${(GRADES[gr].rate * PICKUP_RATE * 100).toFixed(2)}%)`;
+      // 두 문구는 **같은 모양·같은 길이**여야 한다. 길이가 다르면 표의 열이 다시 배치되며 화면이 흔들린다
+      // (계측: 확률 칸 126px ↔ 165px). 상세한 종 수는 아래 창구 설명줄에 있다.
+      if (sub) sub.textContent = b === 'standard' ? `(균등 ${(GRADES[gr].rate / n * 100).toFixed(2)}%)` : `(픽업 ${(GRADES[gr].rate * PICKUP_RATE * 100).toFixed(2)}%)`;
     }
     const note = $('#banner-note'); if (!note) return;
     const nS = heroesOfGrade('S').length, nA = heroesOfGrade('A').length;
     const pct = (x) => `${(x * 100).toFixed(2)}%`;
     if (b === 'pickup') {
-      note.textContent = `픽업 범위: S 픽업 ${pct(GRADES.S.rate * PICKUP_RATE)} · 그 외 S 한 장당 ${pct(GRADES.S.rate * (1 - PICKUP_RATE) / nS)} (S ${nS}종) · A 픽업 ${pct(GRADES.A.rate * PICKUP_RATE)}`;
+      note.textContent = `픽업 범위: S 픽업 ${pct(GRADES.S.rate * PICKUP_RATE)} · 그 외 S 한 장당 ${pct(GRADES.S.rate * (1 - PICKUP_RATE) / nS)} (${nS}종)
+나머지 절반은 등급 전체에서 균등하게 뽑습니다.`;
     } else {
-      note.textContent = `전체 범위: 픽업 가중 없음 — S 한 장당 ${pct(GRADES.S.rate / nS)} (S ${nS}종) · A 한 장당 ${pct(GRADES.A.rate / nA)} (A ${nA}종). 픽업이 아닌 카드를 노리면 이쪽이 두 배 유리합니다.`;
+      note.textContent = `전체 범위: 가중 없음 · S 한 장당 ${pct(GRADES.S.rate / nS)} (${nS}종) · A 한 장당 ${pct(GRADES.A.rate / nA)} (${nA}종)
+픽업이 아닌 카드를 노리면 이쪽이 두 배 유리합니다.`;
     }
   }
   #refreshGacha() {

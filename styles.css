@@ -896,4 +896,10 @@ body.stealth .task-pane .sub, body.stealth .task-pane .eff, body.stealth .syn-ta
 .banner-opt small { font-weight: 400; font-size: 11px; color: var(--muted); }
 .banner-opt.active { background: var(--xl-green); border-color: var(--xl-green); color: #fff; }
 .banner-opt.active small { color: rgba(255,255,255,.85); }
-.banner-note { text-align: center; margin: 6px 10px 0; line-height: 1.5; }
+/* 두 줄 자리를 **미리 비워 둔다.** 좁은 창에서 한쪽만 줄바꿈되면 아래 버튼이 밀린다 — 창구를 바꿀 때
+   화면이 흔들리던 원인의 하나다(6-104). `white-space: pre-line` 로 줄바꿈 위치도 내가 정한다. */
+.banner-note { text-align: center; margin: 6px 10px 0; line-height: 1.5; height: 36px; white-space: pre-line; overflow: hidden; }
+/* 확률 표: 칸 내용이 창구에 따라 바뀌어도 열이 움직이지 않게 (계측: 확률 칸 126px ↔ 165px) */
+#sheet-gacha .gacha-layout .xl-table { table-layout: fixed; }
+#sheet-gacha .gacha-layout .xl-table th:first-child, #sheet-gacha .gacha-layout .xl-table td:first-child { width: 80px; }
+#sheet-gacha .gacha-layout .xl-table th:nth-child(2), #sheet-gacha .gacha-layout .xl-table td:nth-child(2) { width: 132px; }
