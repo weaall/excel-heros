@@ -17,6 +17,10 @@ const { GameManager } = await import(R + 'core/GameManager.js');
 const { BALANCE } = await import(R + 'config/balance.js');
 const { HEROES, MAIN_ID } = await import(R + 'data/heroes.js');
 const { boardEntry, boardScore } = await import(R + 'core/plausibility.js');
+const { MODIFIERS } = await import(R + 'data/stages.js');
+// 수식어를 '없음'으로 만드는 값 — 각 필드가 기본값이면 수식어가 붙어도 아무 효과가 없다.
+const NEUTRAL = { count: 0, speed: 1, elite: 1, gold: 1, hp: 1, heroSpeed: 1, atk: 1 };
+const MOD_SNAP = JSON.parse(JSON.stringify(MODIFIERS));
 
 const HOURS = Number(process.env.HOURS ?? 2);
 const RUNS = Number(process.env.RUNS ?? 3);
@@ -54,6 +58,9 @@ const SYSTEMS = {
   synergy: { name: '부문 시너지',      off: (g) => { const real = g.synergy.bind(g); g.synergy = () => ({ ...real(), perks: { gold: 0, regen: 0, revive: 0, boss: 0, cooldown: 0, crit: 0, skill: 0 } }); }, onEntities: (g) => g.entities.refreshHeroStats() },
   skillLv: { name: '스킬 레벨',        off: () => { BALANCE.SKILL_LEVEL.powerPerLevel = 0; BALANCE.SKILL_LEVEL.cooldownPerLevel = 0; } },
   collection: { name: '도감 보너스',   off: () => { BALANCE.COLLECTION.atkPerHero = 0; BALANCE.COLLECTION.atkPerStar = 0; BALANCE.COLLECTION.goldPerHero = 0; } },
+  // 스테이지 수식어(야근 러시·감사 기간·정전·납기 압박·단체 민원)는 300단계 중 90단계(30%)에 붙는다.
+  // 한 번도 A/B 로 재 본 적이 없어서 여기 넣는다 — 재지 않는 시스템은 죽어 있어도 모른다(6-100).
+  modifier: { name: '스테이지 수식어', off: () => { for (const k of Object.keys(MODIFIERS)) Object.assign(MODIFIERS[k], NEUTRAL); } },
   // 하니스는 늘 수식을 맞힌다. 끄면 '한 번도 안 맞히는 플레이' = 방치 플레이어가 잃는 양이 나온다.
   brace:   { name: '수식 대응',        off: (g) => { g.__skipBrace = true; } },
 };
@@ -118,7 +125,7 @@ const snapshot = () => JSON.parse(JSON.stringify({
   TANK: BALANCE.TANK, ROLE_PASSIVE: BALANCE.ROLE_PASSIVE, SKILL_STAR: BALANCE.SKILL_STAR, TRAIT_STAR: BALANCE.TRAIT_STAR,
   COMBO: BALANCE.COMBO, AFFECTION: BALANCE.AFFECTION, SKILL_LEVEL: BALANCE.SKILL_LEVEL, COLLECTION: BALANCE.COLLECTION,
 }));
-const restore = (snap) => { for (const [k, v] of Object.entries(snap)) Object.assign(BALANCE[k], v); };
+const restore = (snap) => { for (const [k, v] of Object.entries(snap)) Object.assign(BALANCE[k], v); for (const [k, v] of Object.entries(MOD_SNAP)) Object.assign(MODIFIERS[k], v); };
 
 // 시드를 짝지었으므로 판별 차이를 평균한다(중앙값보다 민감하고, 짝 비교라 뽑기 운이 상쇄된다).
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
