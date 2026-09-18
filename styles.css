@@ -122,12 +122,15 @@ button:disabled { cursor: default; opacity: .55; }
    남는 자리를 먹는 힌트 칸이 **10px 로 짜부라져 사라졌다**(측정: 581px 폭에서). 셀을 줄어들 수 있게
    하고 힌트에 최소 폭을 준다 — 자리가 모자라면 라벨이 줄고, 마지막까지 남는 건 설명이다. */
 .ws-row .cell { flex: 0 1 var(--cell-w); width: var(--cell-w); min-width: 24px; height: 22px; line-height: 21px; padding: 0 5px; font-size: 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; }
-.ws-row .cell.k { background: #f3f3f3; color: #555; font-size: 11.5px; }
+/* 머리 칸(모드·스테이지·출현·처리)은 짧은 라벨이라 줄이면 바로 잘린다('스테이지' 가 40px 에서 잘렸다).
+   줄어드는 건 **값 칸**이어야 한다 — 값이 말줄임되는 건 실제 엑셀 셀의 동작이라 위장에도 맞는다. */
+.ws-row .cell.k { flex: 0 0 auto; width: auto; background: #f3f3f3; color: #555; font-size: 11.5px; }
 .ws-row .cell.w2 { flex-basis: calc(var(--cell-w) * 2); width: calc(var(--cell-w) * 2); }
 .ws-row .cell.hint { flex: 1 0 150px; min-width: 150px; color: var(--muted); font-size: 11.5px; }
 .ws-row .cell.stage-label { color: var(--xl-green); font-weight: 700; }
 .ws-row .cell.stage-monster { color: #444; }
-.ws-row .cell.stage-mode { font-weight: 700; color: #9a6700; }
+/* 모드는 가장 자주 읽는 한 칸이고 글자가 짧다 — 여기서 '자동 사냥' 이 '자동…' 이 되면 안 된다. */
+.ws-row .cell.stage-mode { flex: 0 0 auto; width: auto; font-weight: 700; color: #9a6700; }
 .ws-row .cell.stage-mode.challenge { color: #b03a2e; }
 .ws-row .cell.stage-mode.farm { color: var(--xl-green); }
 /* Excel "data bar" conditional formatting for kill progress */
