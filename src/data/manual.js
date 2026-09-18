@@ -86,6 +86,23 @@ export const MANUAL = Object.freeze([
     ],
   },
   {
+    id: 'skillstar', title: '★이 스킬을 바꾼다',
+    body: [
+      '★은 능력치만 올리는 것이 아닙니다. **스킬의 성질 자체가 바뀝니다.** 같은 「강타」라도 ★5 사원의 것은 자주 두 번 떨어집니다.',
+      '현재 ★에서 무엇이 더해지는지는 상세 창의 스킬 탭에 항상 표시됩니다.',
+    ],
+    rows: [
+      ['지속형 스킬', '지속 시간이 ★당 +0.4초 (화상·보호막·가속·도발·정화·버프)'],
+      ['강타 · 범위 정리', '★당 12% 확률로 한 번 더 때립니다'],
+      ['필살기', '기절이 ★당 +0.3초'],
+      ['참조 연쇄', '대상이 ★2당 1명 늘고, 연쇄 감쇠도 줄어듭니다 (70% → 82%)'],
+      ['저격 보고', '처형 기준이 ★당 +3%p (HP 30% → 42% 미만)'],
+      ['성과 회수', '흡혈 비율이 ★당 +5%p (40% → 60%)'],
+      ['웰니스 데이', '넘친 회복량이 버려지지 않고 파티 보호막이 됩니다'],
+      ['인사 복구', '1명 확정 + 추가 인원 확률 (최대 3명)'],
+    ],
+  },
+  {
     id: 'stealth', title: '페이지 레이아웃 보기 (Esc)',
     body: [
       'Esc를 누르면 전투 화면이 표로 바뀌고, 시트 탭·리본·상태 줄의 **용어까지 전부 스프레드시트로 바뀝니다.** 리본의 골드·보석 같은 수치도 라벨째 사라집니다.',
@@ -96,3 +113,36 @@ export const MANUAL = Object.freeze([
 
 /** 스킬 설명은 SKILLS 에서 그대로 읽어 온다 — 두 군데에 적으면 한쪽이 반드시 낡는다. */
 export const skillRows = (SKILLS) => Object.entries(SKILLS).map(([id, s]) => [s.name, String(s.desc ?? '').replace(/\{p\}/g, 'N'), id]);
+
+/**
+ * ★가 스킬에 더해 주는 2차 효과 한 줄. 상세 창과 도움말이 같은 문장을 쓰도록 여기서만 만든다.
+ * `star` 는 1~5, 반환값이 빈 문자열이면 아직 추가 효과가 없다는 뜻(★1).
+ */
+export function starSkillNote(type, star, S) {
+  const step = Math.max(0, (star | 0) - 1);
+  if (!step) return '';
+  const pct = (x) => `${Math.round(x * 100)}%`;
+  const sec = (x) => `${(+x.toFixed(1))}초`;
+  switch (type) {
+    case 'burn': case 'barrier': case 'haste': case 'taunt': case 'buff': case 'cleanse':
+      return `★ 보너스: 지속 시간 +${sec(S.duration * step)}`;
+    case 'ult':
+      return `★ 보너스: 기절 +${sec(S.stun * step)}`;
+    case 'strike':
+      return `★ 보너스: ${pct(S.extraHit * step)} 확률로 한 번 더 타격`;
+    case 'sweep':
+      return `★ 보너스: 적마다 ${pct(S.extraHit * step)} 확률로 한 번 더 타격`;
+    case 'chain':
+      return `★ 보너스: 대상 ${3 + Math.floor(S.chainPerStar * step)}명 · 연쇄 감쇠 ${pct(0.7 + S.chainFalloff * step)}`;
+    case 'execute':
+      return `★ 보너스: 처형 기준 HP ${pct(0.3 + S.execThreshold * step)} 미만`;
+    case 'drain':
+      return `★ 보너스: 흡혈 ${pct(0.4 + S.drainLeech * step)}`;
+    case 'heal':
+      return `★ 보너스: 넘친 회복량이 보호막으로 (최대 HP ${pct(S.healShield * step)}×인원)`;
+    case 'revive':
+      return '★ 보너스: 추가 복귀 확률 상승 (최대 3명)';
+    default:
+      return '';
+  }
+}

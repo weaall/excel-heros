@@ -347,3 +347,68 @@ test('인사 복구: one guaranteed, extras by chance, capped — and worth far 
   assert.ok(avg5 > avg1, `★이 높을수록 더 많이 일으킨다 (${avg1.toFixed(2)} → ${avg5.toFixed(2)})`);
   assert.ok(avg5 <= 1 + R.extraMax, `최대 인원을 넘으면 안 된다 (평균 ${avg5.toFixed(2)}, 상한 ${1 + R.extraMax})`);
 });
+
+// --------------------------------------------------- 스킬 고도화 (★ 2차 효과) --
+// 지금까지 스킬은 수치 하나로만 커졌다. 이제 ★이 **성질**을 바꾼다 — 그게 중복 카드를 계속 뽑을 이유다.
+// 각 스킬이 실제로 달라지는지, 그리고 화면에 그 사실이 보이는지를 함께 본다.
+test('★ 효과: every skill gains a second property that grows with stars', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { HEROES, MAIN_ID, SKILLS } = await import('../src/data/heroes.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+
+  const cast = (type, star, prep) => {
+    const def = HEROES.find((x) => x.skill.type === type);
+    const g = new GameManager({ save: memSave() });
+    g.state.heroes[def.id] = { owned: true, star, shards: 0, level: 40, enhance: 0 };
+    g.state.party = [MAIN_ID, def.id]; g.state.stage = 3; g.state.challenging = false;
+    g.entities.rebuildParty();
+    for (let i = 0; i < 80 && !g.entities.monsters.length; i++) g.tick(0.1);
+    const em = g.entities, h = em.heroes.find((a) => a.heroId === def.id);
+    h.star = star;
+    prep?.(em, h);
+    em.castSkill(h, em.monsters.find((m) => m.alive) ?? null, em.monsters, em.heroes.filter((a) => a.alive));
+    return { em, h };
+  };
+
+  // 지속형: ★이 오르면 길어진다
+  const burn1 = cast('burn', 1).em.monsters.find((m) => m.burnT > 0)?.burnT;
+  const burn5 = cast('burn', 5).em.monsters.find((m) => m.burnT > 0)?.burnT;
+  assert.ok(burn5 > burn1, `화상 지속이 ★로 길어져야 한다 (${burn1} → ${burn5})`);
+  assert.ok(Math.abs((burn5 - burn1) - BALANCE.SKILL_STAR.duration * 4) < 1e-6, '지속 보너스가 설정값과 맞아야 한다');
+
+  // 연쇄: 대상 수가 늘고 감쇠가 완화된다
+  const wide = (em) => { while (em.monsters.length < 8) em.monsters.push({ ...em.monsters[0], id: 900 + em.monsters.length, x: 500 + em.monsters.length * 20, alive: true }); for (const m of em.monsters) { m.hp = m.maxHp = 1e9; } };
+  const links = (star) => cast('chain', star, wide).em.monsters.filter((m) => m.hp < m.maxHp).length;
+  assert.ok(links(5) > links(1), `연쇄 대상이 ★로 늘어야 한다 (${links(1)} → ${links(5)})`);
+
+  // 필살기 기절: ★이 오르면 길어진다 (죽지 않게 HP를 올려 둔다)
+  const tough = (em) => { for (const m of em.monsters) { m.hp = m.maxHp = 1e12; } };
+  const stun = (star) => Math.max(0, ...cast('ult', star, tough).em.monsters.map((m) => m.stun ?? 0));
+  assert.ok(stun(5) > stun(1), `기절이 ★로 길어져야 한다 (${stun(1)} → ${stun(5)})`);
+
+  // 수치형 두 가지는 공식이 곧 결과다
+  const S = BALANCE.SKILL_STAR;
+  assert.ok(S.execThreshold > 0 && S.drainLeech > 0, '처형 기준과 흡혈 비율도 ★로 올라야 한다');
+});
+
+test('★ 효과: the detail panel tells the player what their stars actually did', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { HEROES, SKILLS } = await import('../src/data/heroes.js');
+  const { starSkillNote } = await import('../src/data/manual.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+  const g = new GameManager({ save: memSave() });
+
+  // ★1 에는 추가 효과가 없고, ★2부터 문구가 생긴다
+  for (const type of Object.keys(SKILLS)) {
+    assert.equal(starSkillNote(type, 1, BALANCE.SKILL_STAR), '', `${type}: ★1에는 추가 효과가 없어야 한다`);
+    assert.ok(starSkillNote(type, 3, BALANCE.SKILL_STAR).length > 0, `${type}: ★3 문구가 없다 — 고도화가 빠진 스킬`);
+  }
+  // heroView 가 그 문구를 실어 보낸다
+  const def = HEROES.find((h) => h.skill.type === 'chain');
+  Object.assign(g.state.heroes[def.id], { owned: true, star: 4, level: 20 });
+  const v = g.heroView(def.id);
+  assert.equal(v.skillStarNote, starSkillNote('chain', 4, BALANCE.SKILL_STAR));
+  assert.match(v.skillStarNote, /대상/);
+});

@@ -27,6 +27,7 @@ import { localDateKey } from './state.js';
 import { relativeGold, gemsForClear, gemDropAmount } from '../config/balance.js';
 import { checkCode } from '../data/codes.js';
 import { TUTORIAL, TUTORIAL_BONUS } from '../data/tutorial.js';
+import { starSkillNote } from '../data/manual.js';
 import { SLOTS, SLOT_ORDER, itemPct, itemLabel, rollItem, itemBasePct } from '../data/equipment.js';
 import { sanitizeName } from './plausibility.js';
 import { migrate } from './state.js';
@@ -406,6 +407,7 @@ export class GameManager extends Emitter {
       skillUnlocked, skillPower: skillPower * (1 + eq.skill / 100), skillLv, skillCdMult: 1 - skillLv * BALANCE.SKILL_LEVEL.cooldownPerLevel,
       skillName: def.skill.name ?? SKILLS[def.skill.type].name,
       skillDesc: SKILLS[def.skill.type].desc.replace('{p}', +(def.skill.power * skillPower).toFixed(2)),
+      skillStarNote: starSkillNote(def.skill.type, star, BALANCE.SKILL_STAR), // ★가 더해 주는 2차 효과
       traitName: TRAITS[def.trait].name, traitDesc: TRAITS[def.trait].desc,
       skillUnlockHint: isMain ? `${['인턴', '사원'][BALANCE.MAIN_SKILL_TIER]} 승급 시 해금` : `★${BALANCE.SKILL_UNLOCK_STAR} 해금`,
       promoteCost: nextCost,

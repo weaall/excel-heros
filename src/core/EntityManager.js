@@ -332,6 +332,11 @@ export class EntityManager {
     return inField.sort((a, b) => (a.hp + (a.shield ?? 0)) / a.maxHp - (b.hp + (b.shield ?? 0)) / b.maxHp || a.x - b.x)[0];
   }
 
+  /** ★ 보너스 단계 (0~4). 모든 스킬의 2차 효과가 이 값에 비례한다 — 규칙이 하나여야 읽을 수 있다. */
+  #starStep(h) { return Math.max(0, (h?.star ?? 1) - 1); }
+  /** 지속형 스킬의 실제 지속 시간: 기본 + ★당 보너스. */
+  #dur(h, base) { return base + BALANCE.SKILL_STAR.duration * this.#starStep(h); }
+
   /** 수식 대응 성공 — 다음 특수 공격 한 번이 약해진다. */
   markBraced() {
     this.braced = true;
@@ -488,40 +493,56 @@ export class EntityManager {
     switch (type) {
       case 'burn': { // 화상: every enemy takes ATK × p per second for SKILLS.burn.duration s (stacks by refreshing, not adding)
         const dps = h.atk * power * boost * this.atkBuff.mult * this.rallyMult;
-        for (const m of monsters) { if (!m.alive) continue; m.burnDps = Math.max(m.burnDps ?? 0, dps); m.burnT = SKILLS.burn.duration; m.burnTick = 0.25; this.fx('flame', { x: m.x, y: m.y - 20, life: 0.6 }); }
+        for (const m of monsters) { if (!m.alive) continue; m.burnDps = Math.max(m.burnDps ?? 0, dps); m.burnT = this.#dur(h, SKILLS.burn.duration); m.burnTick = 0.25; this.fx('flame', { x: m.x, y: m.y - 20, life: 0.6 }); }
         this.fx('papers', { x: h.x + 30, y: h.y - 20, n: 6, spread: 300, life: 0.6 }); this.shake = Math.max(this.shake, 4); break;
       }
       case 'barrier': { // 보호막: one shared pool for the party
         const hp = Math.round(h.atk * power * boost);
-        this.barrier = { hp, max: hp, until: this.time + SKILLS.barrier.duration };
+        this.barrier = { hp, max: hp, until: this.time + this.#dur(h, SKILLS.barrier.duration) };
         for (const a of heroes) this.fx('ring', { x: a.x, y: a.y + 16, color: '#5dade2', radius: 46, life: 0.6 });
         this.floaters.push({ x: h.x, y: h.y - 76, text: `보호막 ${hp}`, color: '#5dade2', t: 0 }); break;
       }
       case 'haste': {
-        this.hasteBuff = { mult: Math.max(this.hasteBuff.mult, 1 + (power * boost) / 100), until: this.time + SKILLS.haste.duration };
+        this.hasteBuff = { mult: Math.max(this.hasteBuff.mult, 1 + (power * boost) / 100), until: this.time + this.#dur(h, SKILLS.haste.duration) };
         for (const a of heroes) this.fx('dash', { x: a.x, y: a.y - 10, life: 0.5 }); break;
       }
       case 'execute': {
-        const low = target.hp < target.maxHp * 0.3;
+        const low = target.hp < target.maxHp * (0.3 + BALANCE.SKILL_STAR.execThreshold * this.#starStep(h)); // 처형 기준이 ★로 넓어진다
         this.fx('slash', { x: target.x, y: target.y - 6, color: low ? '#e74c3c' : '#f1c40f', angle: -1.1, life: 0.25, big: true });
         this.fx('stamp', { x: target.x, y: target.y - 30, life: 0.7, text: low ? '최종' : '검토', color: low ? '#c0392b' : '#7f8c8d' });
         this.shake = Math.max(this.shake, low ? 8 : 4); this.#heroHit(h, target, power * boost * (low ? 2 : 1), true); break;
       }
-      case 'strike': this.fx('slash', { x: target.x, y: target.y - 6, color: '#f1c40f', angle: -0.3, life: 0.25, big: true }); this.fx('stamp', { x: target.x, y: target.y - 30, life: 0.7, text: '결재' }); this.shake = Math.max(this.shake, 4); this.#heroHit(h, target, power * boost, true); break;
+      case 'strike': {
+        this.fx('slash', { x: target.x, y: target.y - 6, color: '#f1c40f', angle: -0.3, life: 0.25, big: true });
+        this.fx('stamp', { x: target.x, y: target.y - 30, life: 0.7, text: '결재' }); this.shake = Math.max(this.shake, 4);
+        this.#heroHit(h, target, power * boost, true);
+        // ★ 확률로 한 번 더 — 같은 강타라도 ★5의 것은 자주 두 번 떨어진다
+        if (target.alive && Math.random() < BALANCE.SKILL_STAR.extraHit * this.#starStep(h)) {
+          this.fx('slash', { x: target.x, y: target.y - 10, color: '#f39c12', angle: 0.4, life: 0.22, big: true });
+          this.floaters.push({ x: target.x, y: target.y - 80, text: '재결재!', color: '#f39c12', t: 0 });
+          this.#heroHit(h, target, power * boost, true);
+        }
+        break;
+      }
       case 'sweep':
         this.fx('ring', { x: h.x, y: h.y, color: '#f1c40f', radius: 420, life: 0.45 }); this.shake = Math.max(this.shake, 6);
         this.fx('papers', { x: h.x + 40, y: h.y - 30, n: 14, spread: 420, life: 0.9 });
-        for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#f1c40f', angle: 0.4, life: 0.25 }); this.#heroHit(h, m, power * boost, true); }
+        { const again = BALANCE.SKILL_STAR.extraHit * this.#starStep(h); // 적마다 따로 굴린다 — ★이 높으면 한 번에 여럿이 두 번 맞는다
+          for (const m of monsters) {
+            this.fx('slash', { x: m.x, y: m.y - 6, color: '#f1c40f', angle: 0.4, life: 0.25 });
+            this.#heroHit(h, m, power * boost, true);
+            if (m.alive && Math.random() < again) { this.fx('slash', { x: m.x, y: m.y - 12, color: '#f39c12', angle: -0.3, life: 0.2 }); this.#heroHit(h, m, power * boost, true); }
+          } }
         break;
       case 'ult':
         this.game.emit('ult', { hero: h }); this.flashT = 0.18;
         this.fx('ring', { x: h.x, y: h.y, color: '#8e44ad', radius: 460, life: 0.6 }); this.shake = Math.max(this.shake, 10);
         { const xs = monsters.map((m) => m.x); const x0 = xs.length ? Math.min(...xs) - 40 : h.x + 60, x1 = xs.length ? Math.max(...xs) + 40 : h.x + 400; this.fx('grid', { x: x0, y: h.y - 70, w: Math.max(120, x1 - x0), h: 96, life: 0.9, color: '#8e44ad' }); }
         for (const m of monsters) this.fx('stamp', { x: m.x, y: m.y - 34, life: 0.8, text: '반려', color: '#8e44ad' });
-        for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: -0.6, life: 0.3, big: true }); this.#heroHit(h, m, power * boost, true); if (m.alive) { m.stun = Math.max(m.stun, 2); this.fx('stars', { x: m.x, y: m.y - 44, color: '#f1c40f', life: 2 }); } }
+        for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: -0.6, life: 0.3, big: true }); this.#heroHit(h, m, power * boost, true); if (m.alive) { const st = 2 + BALANCE.SKILL_STAR.stun * this.#starStep(h); m.stun = Math.max(m.stun, st); this.fx('stars', { x: m.x, y: m.y - 44, color: '#f1c40f', life: st }); } }
         break;
       case 'buff':
-        this.atkBuff = { mult: Math.max(this.atkBuff.mult, 1 + (power * boost) / 100), until: this.time + 5 };
+        this.atkBuff = { mult: Math.max(this.atkBuff.mult, 1 + (power * boost) / 100), until: this.time + this.#dur(h, 5) };
         for (const a of heroes) { this.fx('ring', { x: a.x, y: a.y + 20, color: '#f39c12', radius: 40, life: 0.5 }); this.fx('chart', { x: a.x, y: a.y - 46, life: 0.9 }); }
         break;
       case 'cleanse': { // 정화: heal, clear the boss slow, and a short burst of speed — the healer that undoes debuffs
@@ -564,36 +585,54 @@ export class EntityManager {
         let dealt = 0;
         this.fx('ring', { x: h.x, y: h.y, color: '#8e44ad', radius: 400, life: 0.5 }); this.shake = Math.max(this.shake, 5);
         for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: 0.2, life: 0.25 }); dealt += this.#heroHit(h, m, power * boost, true) ?? 0; }
-        const back = Math.round(dealt * 0.4 / Math.max(1, heroes.length));
+        const leech = 0.4 + BALANCE.SKILL_STAR.drainLeech * this.#starStep(h); // 흡혈 비율이 ★로 오른다
+        const back = Math.round(dealt * leech / Math.max(1, heroes.length));
         if (back > 0) for (const a of heroes) { a.hp = Math.min(a.maxHp, a.hp + back); this.floaters.push({ x: a.x, y: a.y - 40, text: `+${back}`, color: '#27ae60', t: 0 }); }
         break;
       }
       case 'chain': { // 연쇄: up to three enemies, each link weaker — rewards a wide wave, not a boss
-        const order = monsters.slice().sort((a, b) => a.x - b.x).slice(0, 3);
+        const S = BALANCE.SKILL_STAR, step = this.#starStep(h);
+        const links = 3 + Math.floor(S.chainPerStar * step);     // ★당 대상 +0.5명
+        const falloff = 0.7 + S.chainFalloff * step;             // 감쇠도 ★로 완화된다
+        const order = monsters.slice().sort((a, b) => a.x - b.x).slice(0, links);
         let mult = power * boost, prev = h;
         for (const m of order) {
           this.fx('slash', { x: m.x, y: m.y - 6, color: '#5dade2', angle: -0.5, life: 0.22 });
           this.fx('grid', { x: Math.min(prev.x, m.x) - 10, y: Math.min(prev.y, m.y) - 40, w: Math.abs(m.x - prev.x) + 20, h: 40, life: 0.35, color: '#5dade2' });
-          this.#heroHit(h, m, mult, true); mult *= 0.7; prev = m;
+          this.#heroHit(h, m, mult, true); mult *= falloff; prev = m;
         }
         this.shake = Math.max(this.shake, 4);
         break;
       }
       case 'taunt': { // 도발: the tank eats everything for a while, and takes less while doing it
-        this.taunt = { heroId: h.id, reduce: Math.min(0.8, (power * boost) / 100), until: this.time + SKILLS.taunt.duration };
+        this.taunt = { heroId: h.id, reduce: Math.min(0.8, (power * boost) / 100), until: this.time + this.#dur(h, SKILLS.taunt.duration) };
         this.fx('ring', { x: h.x, y: h.y, color: '#e67e22', radius: 260, life: 0.6 });
         this.floaters.push({ x: h.x, y: h.y - 76, text: '도발', color: '#e67e22', t: 0, big: true });
         for (const m of monsters) this.fx('stars', { x: m.x, y: m.y - 44, color: '#e67e22', n: 4 });
         break;
       }
-      case 'heal':
+      case 'heal': {
+        // ★가 붙으면 넘친 회복량이 버려지지 않고 파티 보호막이 된다 — 풀피일 때도 쓸모가 생긴다
+        const capPct = BALANCE.SKILL_STAR.healShield * this.#starStep(h);
+        let spill = 0;
         for (const a of heroes) {
           const amt = Math.round(a.maxHp * (power * boost) / 100);
+          const before = a.hp;
           a.hp = Math.min(a.maxHp, a.hp + amt);
-          this.floaters.push({ x: a.x, y: a.y - 40, text: `+${amt}`, color: '#27ae60', t: 0 });
+          spill += amt - (a.hp - before);
+          this.floaters.push({ x: a.x, y: a.y - 40, text: `+${a.hp - before}`, color: '#27ae60', t: 0 });
           this.fx('sparkle', { x: a.x, y: a.y, color: '#2ecc71', n: 8 }); this.fx('coffee', { x: a.x, y: a.y - 54, life: 1.0 });
         }
+        if (capPct > 0 && spill > 0) {
+          const cap = Math.round(h.maxHp * capPct * heroes.length);
+          const hp = Math.min(spill, cap);
+          if (hp > 0) {
+            this.barrier = { hp: Math.max(this.barrier?.hp ?? 0, hp), max: Math.max(this.barrier?.max ?? 0, hp), until: this.time + this.#dur(h, 6) };
+            this.floaters.push({ x: h.x, y: h.y - 76, text: `보호막 ${hp}`, color: '#5dade2', t: 0 });
+          }
+        }
         break;
+      }
     }
     h.anim = 'attack'; h.animT = 0;
     this.castLock = type === 'ult' ? CAST_GAP_ULT : CAST_GAP;

@@ -899,6 +899,7 @@ export class UIManager {
     const skillPane = el('div', { class: 'dt-sections pane-skill' }, el('table', { class: 'dt-table' },
       row('스킬명', el('span', { class: 'nm-skill' }, v.skillName), null, `${SK.name} 계열${v.def.skill.name && v.def.skill.name !== SK.name ? ` · ${v.def.name} 고유 명칭` : ''}`),
       row('효과', v.skillDesc, null, v.skillUnlocked ? null : el('span', { class: 'lock' }, `🔒 ${v.skillUnlockHint}`)),
+      v.skillStarNote ? row('★ 효과', v.skillStarNote, null, '중복 카드로 ★을 올리면 스킬의 성질 자체가 바뀝니다') : null,
       row('위력', `×${(v.def.skill.power * v.skillPower).toFixed(2)}`, null, `기본 ×${v.def.skill.power}${sl.level ? ` · 스킬 Lv ×${sl.power.toFixed(2)}` : ''}${!v.isMain && v.star >= BALANCE.SKILL_BOOST_STAR ? ` · ★${BALANCE.SKILL_BOOST_STAR} ×${BALANCE.SKILL_BOOST_MULT}` : ''}${v.awakened ? ` · 각성 ×${BALANCE.AWAKEN.skill}` : ''}`),
       row('대기 시간', `${(SK.cooldown * sl.cooldown).toFixed(1)}s`, null, `기본 ${SK.cooldown}s${sl.level ? ` · 스킬 Lv ×${sl.cooldown.toFixed(2)}` : ''}`),
       SK.duration ? row('지속', `${SK.duration}s`) : null,

@@ -90,6 +90,18 @@ export const BALANCE = Object.freeze({
   // 인사 복구: 죽음이 영구해진 뒤로 가장 값비싼 스킬이다. 확정 1명 + 추가 인원마다 확률 굴림.
   // 확률은 ★(시전자)로 오르고, 최대 추가 인원이 상한이다 — 좋은 시전자는 한 번에 셋까지 일으킨다.
   REVIVE: { extraChance: 0.30, extraPerStar: 0.10, extraMax: 2 },
+  // 스킬 고도화: 모든 스킬이 ★로 **성질**이 바뀐다(수치만 커지는 게 아니라). s = ★ - 1 에 비례.
+  // 중복 카드를 계속 뽑을 이유이자, 등급이 아니라 ★이 캐릭터를 완성한다는 뜻.
+  SKILL_STAR: {
+    duration: 0.4,      // 지속형(화상·보호막·가속·도발·정화·버프): ★당 +0.4초
+    stun: 0.3,          // 필살기 기절: ★당 +0.3초
+    extraHit: 0.12,     // 강타·범위 정리: ★당 한 번 더 때릴 확률
+    chainPerStar: 0.5,  // 연쇄: ★당 대상 +0.5명 (★3에 4명, ★5에 5명)
+    chainFalloff: 0.03, // 연쇄 감쇠 완화: ★당 +3%p (0.70 → 0.82)
+    execThreshold: 0.03,// 처형 기준: ★당 +3%p (30% → 42%)
+    drainLeech: 0.05,   // 흡혈 비율: ★당 +5%p (40% → 60%)
+    healShield: 0.05,   // 회복: 넘친 만큼 ★당 최대 HP 5%까지 보호막으로
+  },
   HERO_REGEN_PCT: 0.02,     // fraction of max HP regenerated per second while alive
   MELEE_ADVANCE_CELLS: 3,   // how far (cells) a melee hero may leave formation
   ELITE: { hp: 2.5, atk: 1.5, gold: 3 },
