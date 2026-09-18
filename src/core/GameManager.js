@@ -54,7 +54,7 @@ export class GameManager extends Emitter {
 
   // ------------------------------------------------------------- derived --
   stageLabel() { return stageLabel(this.state.stage); }
-  goldMult() { return 1 + teamUpgradeBonus('sales', this.state.team.sales ?? 0) + TRAITS.greedy.value * this.partyTraitCount('greedy') + this.collection().gold + this.prestigeBonus() + this.synergy().perks.gold; }
+  goldMult() { return 1 + teamUpgradeBonus('sales', this.state.team.sales ?? 0) + TRAITS.greedy.value * this.partyTraitSum('greedy') + this.collection().gold + this.prestigeBonus() + this.synergy().perks.gold; }
   /** Permanent bonus from 지분 (prestige shares): +3% ATK and gold each. */
   prestigeBonus() { return (this.state.prestige?.shares ?? 0) * BALANCE.PRESTIGE.bonusPerShare; }
   prestigeInfo() {
@@ -285,6 +285,18 @@ export class GameManager extends Emitter {
     return { sets, balanced, atk, hp, perks };
   }
   partyTraitCount(trait) { return this.state.party.filter((id) => this.heroDef(id).trait === trait).length; }
+  /**
+   * 파티가 가진 특성의 **★ 반영 합계**(인원수가 아니라 값의 합). 전투 밖(골드·보석)에서도 ★이 반영되어야
+   * 같은 특성이 화면마다 다른 값으로 보이지 않는다.
+   */
+  partyTraitSum(trait) {
+    return this.state.party.reduce((a, id) => {
+      if (this.heroDef(id).trait !== trait) return a;
+      const e = this.state.heroes[id];
+      const mult = (this.heroView(id).traitMult ?? 1) * (1 + BALANCE.TRAIT_STAR.perStar * Math.max(0, (e?.star ?? 1) - 1));
+      return a + mult;
+    }, 0);
+  }
   speedMult() { return 1 + teamUpgradeBonus('coffee', this.state.team.coffee); }
   /** Chance that a normal kill drops a gem: base + 성과급 제도. */
   gemDropChance() { return BALANCE.GEM_DROP.base + teamUpgradeBonus('payroll', this.state.team.payroll); }
@@ -1182,7 +1194,7 @@ export class GameManager extends Emitter {
     const s = this.state; const boss = isBossStage(s.stage);
     const first = s.stage > s.maxCleared;
     const gems = gemsForClear(s.stage, { first, boss });
-    const lucky = this.partyTraitCount('lucky') * TRAITS.lucky.value;
+    const lucky = Math.round(this.partyTraitSum('lucky') * TRAITS.lucky.value);
     const cards = first ? (Math.floor((s.stage - 1) / BALANCE.BOSS_EVERY) + 1) * BALANCE.CARDS_FIRST_CLEAR_PER_PHASE : 0;
     s.gems += gems + lucky; s.cards += cards; s.maxCleared = Math.max(s.maxCleared, s.stage);
     const drop = this.dropEquipment(s.stage, boss, Math.random, boss && first);

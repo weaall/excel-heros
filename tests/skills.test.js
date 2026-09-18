@@ -412,3 +412,81 @@ test('★ 효과: the detail panel tells the player what their stars actually di
   assert.equal(v.skillStarNote, starSkillNote('chain', 4, BALANCE.SKILL_STAR));
   assert.match(v.skillStarNote, /대상/);
 });
+
+// ------------------------------------------------- 역할 상시 효과 · 특성 ★ --
+// 탱커만 상시 정체성이 있으면 나머지 셋은 스킬로만 구분된다. 넷 다 늘 일해야 파티를 짤 때 역할을 본다.
+test('역할: all four roles do something permanently, and all of it scales with stars', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+
+  const party = (role, star) => {
+    const d = HEROES.find((h) => h.role === role && h.id !== MAIN_ID);
+    const g = new GameManager({ save: memSave() });
+    Object.assign(g.state.heroes[d.id], { owned: true, star, level: 30 });
+    g.state.party = [MAIN_ID, d.id]; g.state.stage = 3; g.state.challenging = false;
+    g.entities.rebuildParty();
+    for (let i = 0; i < 80 && !g.entities.monsters.length; i++) g.tick(0.1);
+    return { g, em: g.entities, h: g.entities.heroes.find((a) => a.heroId === d.id) };
+  };
+
+  // 힐러: 파티 전원 상시 회복, ★로 커진다
+  const aura1 = party('healer', 1).em.healerAura, aura5 = party('healer', 5).em.healerAura;
+  assert.ok(aura1 > 0, '힐러가 있으면 상시 회복이 있어야 한다');
+  assert.ok(aura5 > aura1, `★로 커져야 한다 (${aura1} → ${aura5})`);
+
+  // 근접: 처치하면 자신만 빨라진다
+  const melee = (star) => {
+    const { em, h } = party('melee', star);
+    h.star = star;
+    const m = em.monsters.find((x) => x.alive); m.hp = 1;
+    em.__testHeroHit(h, m);
+    return h.meleeRush?.mult ?? 1;
+  };
+  assert.ok(melee(1) > 1, '처치하면 기세가 붙어야 한다');
+  assert.ok(melee(5) > melee(1), `기세도 ★로 커진다 (${melee(1)} → ${melee(5)})`);
+
+  // 원거리: 확률로 뒤쪽 적까지 관통 — 확률이므로 여러 번 굴린다
+  const pierceRate = (star, n = 500) => {
+    const { em, h } = party('ranged', star);
+    h.star = star;
+    let hit = 0;
+    for (let i = 0; i < n; i++) {
+      for (const m of em.monsters) { m.hp = m.maxHp = 1e9; m.alive = true; }
+      const sorted = em.monsters.slice().sort((a, b) => a.x - b.x);
+      if (sorted.length < 2) return null;
+      em.__testHeroHit(h, sorted[0]);
+      if (sorted[1].hp < sorted[1].maxHp) hit++;
+    }
+    return hit / n;
+  };
+  const p1 = pierceRate(1), p5 = pierceRate(5);
+  if (p1 !== null) {
+    assert.ok(p1 > 0, '원거리는 가끔 관통해야 한다');
+    assert.ok(p5 > p1, `관통 확률도 ★로 커진다 (${p1} → ${p5})`);
+    assert.ok(p5 < 1, '항상 관통하면 안 된다');
+  }
+  assert.ok(BALANCE.ROLE_PASSIVE.healer && BALANCE.ROLE_PASSIVE.melee && BALANCE.ROLE_PASSIVE.ranged, '세 역할 모두 수치가 있어야 한다');
+});
+
+test('특성: passive trait values scale with stars, in and out of combat', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+
+  const d = HEROES.find((h) => h.trait === 'greedy' && h.id !== MAIN_ID);
+  const gold = (star) => {
+    const g = new GameManager({ save: memSave() });
+    Object.assign(g.state.heroes[d.id], { owned: true, star, level: 20 });
+    g.state.party = [MAIN_ID, d.id]; g.entities.rebuildParty();
+    return { sum: g.partyTraitSum('greedy'), mult: g.goldMult() };
+  };
+  const a = gold(1), b = gold(5);
+  assert.ok(b.sum > a.sum, `특성 합계가 ★로 커져야 한다 (${a.sum} → ${b.sum})`);
+  assert.ok(b.mult > a.mult, `전투 밖(골드)에서도 ★이 반영되어야 한다 (${a.mult} → ${b.mult})`);
+  // 인원수만 세던 옛 방식이면 ★이 달라도 값이 같다 — 그 회귀를 막는다
+  assert.ok(Math.abs(b.sum - a.sum) > 1e-6);
+  assert.ok(BALANCE.TRAIT_STAR.perStar > 0);
+});

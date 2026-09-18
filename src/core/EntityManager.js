@@ -17,7 +17,8 @@ const LINE_GAP = 60;                                // spacing between heroes in
 
 const ROLE_PRIORITY = { tank: 0, melee: 1, healer: 2, ranged: 3 };
 const T = (k) => TRAITS[k].value;
-const tv = (h, k) => TRAITS[k].value * (h.traitMult ?? 1);   // a hero's own trait value (awakened heroes ×1.5)
+/** 영웅의 특성 값: 각성 ×1.5, 그리고 ★당 +12%. 접근자가 여기 하나뿐이라 전투 전체가 한 번에 따라온다. */
+const tv = (h, k) => TRAITS[k].value * (h.traitMult ?? 1) * (1 + BALANCE.TRAIT_STAR.perStar * Math.max(0, (h.star ?? 1) - 1));
 const RANGED_SHAPES = { sheet: 'paper', chart: 'bar', cursor: 'arrow', cloud: 'drop', hourglass: 'sand' };
 /** What each ranged/healer hero throws (office supplies). Unlisted heroes fire a plain shot. */
 const HERO_SHOT = { parttime: 'drop', contract: 'paper', vlookup: 'bar', acct_lead: 'bar', cfo: 'sand', ceo: 'arrow', helpdesk: 'bar', pm_lead: 'paper', cmo: 'paper', barista: 'drop', hr_jung: 'paper', welfare: 'drop', design_lead: 'arrow', cleaner: 'drop' };
@@ -40,6 +41,7 @@ export class EntityManager {
     this.taunt = null; // { heroId, reduce, until } — 도발: every monster swings at this hero and it hurts less
     this.castLock = 0; // 스킬 순차 발동: 남은 잠금 시간(초). 한 번에 하나씩만 터지게 한다
     this.braced = false; // 수식 대응 성공 — 다음 특수 공격 한 번만 약해진다
+    this.healerAura = 0; // 파티의 힐러가 주는 상시 회복 (rebuildParty 에서 계산)
     this.time = 0; this.dmgLog = []; this.rallyMult = 1; this.shake = 0;
     this.scroll = 0;            // background scroll offset (px)
     this.traveling = false; this.travelT = 0;
@@ -86,6 +88,10 @@ export class EntityManager {
       e.star = v.entry.star; e.level = v.entry.level;
       e.skill = v.def.skill; e.skillUnlocked = v.skillUnlocked; e.skillPower = v.skillPower; e.skillName = v.skillName; e.skillCdMult = v.skillCdMult ?? 1;
     }
+    // 힐러 상시 오라: 파티의 힐러마다 전원이 초당 조금씩 회복한다. ★로 커지므로 **★을 채운 뒤에** 계산한다.
+    { const P = BALANCE.ROLE_PASSIVE.healer;
+      this.healerAura = this.heroes.filter((h) => h.role === 'healer')
+        .reduce((a, h) => a + P.regen + P.perStar * Math.max(0, (h.star ?? 1) - 1), 0); }
   }
 
   levelUpFx(heroId) {
@@ -202,8 +208,9 @@ export class EntityManager {
       if (!h.alive) continue; // 쓰러지면 이 스테이지 동안 일어나지 못한다 — 부활 스킬만이 예외다
       if (this.traveling) continue;
       h.animT += dt;
-      h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (BALANCE.HERO_REGEN_PCT + (h.trait === 'regen' ? tv(h, 'regen') : 0) + (this.perks?.regen ?? 0)) * dt);
-      h.cd -= dt * speedMult; h.skillCd -= dt;
+      h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (BALANCE.HERO_REGEN_PCT + (h.trait === 'regen' ? tv(h, 'regen') : 0) + (this.perks?.regen ?? 0) + (this.healerAura ?? 0)) * dt);
+      const rush = h.meleeRush && h.meleeRush.until > this.time ? h.meleeRush.mult : 1; // 근접 처치 기세 (자신만)
+      h.cd -= dt * speedMult * rush; h.skillCd -= dt;
 
       let target = this.#byId(monsters, h.targetId);
       if (!target || !target.alive) { target = this.#pickMonsterTarget(h, monsters); h.targetId = target?.id ?? null; }
@@ -421,6 +428,9 @@ export class EntityManager {
     if (m.isBoss) this.shake = Math.max(this.shake, 5);
   }
 
+  /** 테스트 전용 통로: 영웅의 기본 공격 한 대를 그 자리에서 처리한다(비공개 메서드라 밖에서 못 부른다). */
+  __testHeroHit(h, target) { return this.#heroHit(h, target, 1, false, this.monsters); }
+
   #heroHit(h, target, mult, isSkill, monsters) {
     let dmg = h.atk * mult * this.atkBuff.mult * this.rallyMult * (1 + Math.min(BALANCE.COMBO.max, this.combo * BALANCE.COMBO.perHit));
     let crit = false;
@@ -434,7 +444,28 @@ export class EntityManager {
     if (h.trait === 'splash' && !isSkill && monsters) {
       for (const m of monsters) if (m !== target && m.alive && Math.abs(m.x - target.x) < 90) this.#damage(m, dmg * tv(h, 'splash'), false);
     }
+    this.#rolePassiveOnHit(h, target, isSkill, dealt > 0 && !target.alive);
     return dealt;
+  }
+
+  /**
+   * 역할 상시 효과 중 '때릴 때' 도는 둘. **기본 공격에서만** 돈다 — 스킬까지 얹으면 역할이 아니라 배수가 된다.
+   *  · 원거리: 확률로 뒤쪽 적까지 관통 (뒤에서 쏘는 역할다운 보상)
+   *  · 근접: 처치하면 잠시 자신의 공격이 빨라진다 (앞에서 계속 미는 역할다운 보상)
+   */
+  #rolePassiveOnHit(h, target, isSkill, killed) {
+    const P = BALANCE.ROLE_PASSIVE, step = Math.max(0, (h.star ?? 1) - 1);
+    if (!isSkill && h.role === 'ranged' && Math.random() < P.ranged.pierce + P.ranged.perStar * step) {
+      const behind = this.monsters.filter((m) => m.alive && m !== target && m.x > target.x).sort((a, b) => a.x - b.x)[0];
+      if (behind) {
+        this.#damage(behind, h.atk * this.atkBuff.mult * this.rallyMult * P.ranged.dmg, false);
+        this.fx('slash', { x: behind.x, y: behind.y - 6, color: '#5dade2', angle: 0, life: 0.2 });
+      }
+    }
+    if (killed && h.role === 'melee') {
+      h.meleeRush = { mult: 1 + P.melee.haste + P.melee.perStar * step, until: this.time + P.melee.dur };
+      this.floaters.push({ x: h.x, y: h.y - 70, text: '기세', color: '#e67e22', t: 0 });
+    }
   }
 
   #damage(target, amount, isSkill, crit = false) {
