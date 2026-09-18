@@ -578,7 +578,8 @@ export class UIManager {
       const row = el('tr', { 'data-id': id },
         el('td', { class: 'name clickable', onclick: () => this.openDetail(id), title: `${v.traitName}: ${v.traitDesc}` },
           el('img', { src: heroIconDataURL(v.def), class: 'icon', alt: '' }), el('span', {}, v.def.name),
-          el('div', { class: 'sub', style: `color:${v.grade.color}` }, v.isMain ? `${v.def.grade} · ${v.def.title}` : `${v.def.grade} · ${stars(v.star)}`)),
+          // 좁은 칸에서 '★★★★☆' 는 다섯 글자를 쓰면서 별을 세게 만든다. 'S ★4' 가 짧고 바로 읽힌다.
+          el('div', { class: 'sub', style: `color:${v.grade.color}`, title: v.isMain ? v.def.title : `${stars(v.star)}` }, v.isMain ? `${v.def.grade} · ${v.def.title}` : `${v.def.grade} ★${v.star}`)),
         el('td', { class: 'num lvl' }), el('td', { class: 'num atk' }), el('td', { class: 'num eq' }), el('td', { class: 'num cost' }),
         el('td', { class: 'act' }, btn('+1', () => { if (!this.game.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'up'), btn('+10', () => { const n = this.game.upgradeHeroMany(id, 10); if (!n) this.toast('골드가 부족합니다'); }, 'up10')),
       );

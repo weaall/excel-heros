@@ -154,11 +154,36 @@ button:disabled { cursor: default; opacity: .55; }
 /* ------------------------------------------------------------ task pane -- */
 /* 340px 에서는 시너지 효과와 강화 줄이 아래로 밀리고 '…' 로 잘렸다. 창 폭에 따라 늘어나되
    상한을 둔다 — 넓은 화면에서 전투 영역을 잡아먹지 않게. */
-.task-pane { width: clamp(340px, 26vw, 420px); flex: none; border-left: 1px solid var(--line-dark); background: #fafafa; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.task-pane { width: clamp(400px, 29vw, 470px); flex: none; border-left: 1px solid var(--line-dark); background: #fafafa; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .pane-title { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; font-weight: 600; font-size: 13px; background: var(--panel); border-bottom: 1px solid var(--line-dark); }
 .pane-x { color: var(--muted); font-size: 12px; }
 .pane-body { overflow-y: auto; overflow-x: hidden; flex: 1; min-width: 0; scrollbar-gutter: stable; }
 .pane-body table { table-layout: fixed; max-width: 100%; }
+/* `table-layout: fixed` 는 열 너비를 안 주면 **균등 분할**한다 — 6열이 전부 56px 이 되어 머리글도
+   버튼도 이름도 잘렸다(계측 20곳, 6-108). 내용에 맞는 폭을 정하고 이름이 남는 폭을 가져간다. */
+#hero-table th:nth-child(1), #hero-table td:nth-child(1) { width: auto; }          /* 이름 — 남는 폭 */
+#hero-table th:nth-child(2), #hero-table td:nth-child(2) { width: 38px; }          /* Lv */
+#hero-table th:nth-child(3), #hero-table td:nth-child(3) { width: 58px; }          /* ATK — '8,027만' */
+#hero-table th:nth-child(4), #hero-table td:nth-child(4) { width: 38px; }          /* 비품 — '4/4' */
+#hero-table th:nth-child(5), #hero-table td:nth-child(5) { width: 64px; }          /* 비용 */
+#hero-table th:nth-child(6), #hero-table td:nth-child(6) { width: 66px; }          /* +1 / +10 */
+#team-table th:nth-child(1), #team-table td:nth-child(1) { width: auto; }
+#team-table th:nth-child(2), #team-table td:nth-child(2) { width: 48px; }  /* '0/100' */
+#team-table th:nth-child(3), #team-table td:nth-child(3) { width: 64px; }
+#team-table th:nth-child(4), #team-table td:nth-child(4) { width: 64px; }  /* '구매' 버튼 */
+/* 조작 칸의 작은 버튼 둘이 한 줄에 들어가야 한다 */
+#hero-table td.act, #team-table td.act { padding-left: 2px; padding-right: 4px; white-space: nowrap; }
+#hero-table td.act .xl-btn { padding: 1px 4px; font-size: 11px; min-width: 0; }
+/* 이름 칸: 아이콘 + 이름 한 줄, 등급은 아래 줄. 넘치면 이름만 말줄임한다 */
+#hero-table td.name { overflow: hidden; white-space: nowrap; }
+#team-table td.name { overflow: hidden; }
+#hero-table td.name { padding-left: 4px; padding-right: 4px; }
+#hero-table td.name > .icon { vertical-align: middle; }
+/* 여유 28px — 아이콘(20)과 이름이 칸을 정확히 채우면 반올림 한 픽셀에 줄이 바뀐다(측정: 행 43 → 61px) */
+#hero-table td.name > span { display: inline-block; max-width: calc(100% - 28px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+#hero-table td.name .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 회사 업그레이드는 이름이 아니라 **설명**이 들어간다 — 한 줄로 자르면 뜻이 사라지므로 풀어 쓴다 */
+#team-table td.name .sub { white-space: normal; line-height: 1.35; }
 .pane-body td, .pane-body th { overflow: hidden; text-overflow: ellipsis; }
 .pane-actions { display: flex; gap: 6px; padding: 8px 10px 2px; }
 .xl-table td.act .xl-btn + .xl-btn { margin-left: 3px; }
