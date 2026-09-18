@@ -4,7 +4,7 @@
 // from primitives. Monsters use shaded shapes with hand-drawn faces. Soft per-colour outlines.
 import { GRADES } from './heroes.js';
 import { sheetFrame } from './spriteSheets.js';
-import { MONSTER_MAPS, MONSTER_ACCENTS } from './monsterArt.js';
+import { MONSTER_MAPS, MONSTER_ACCENTS, BOSS_MAPS } from './monsterArt.js';
 import { BODY_IDLE, LEGS, ARM, HAIR } from './heroArt.js';
 import { packHeroFrame, packHeroIcon, packMonsterFrame } from './packSprites.js';
 import { cardArt, cardCrop, drawArtCover, drawArtContain } from './cardArt.js';
@@ -207,6 +207,18 @@ function monsterFrame(def, frame) {
   return frame ? shiftDown(out, 1) : out;
 }
 
+/**
+ * 손그림 보스: 64×58 격자에 찍어 SCALE 2 로 그린다 → 128×116. 팩 보스와 같은 캔버스 크기이면서
+ * 픽셀 밀도는 일반 몬스터(2×)와 같다 — 사무기기 몬스터 옆에 세워도 결이 맞는 유일한 방법이다.
+ */
+function handBossFrame(map, def, frame) {
+  const g = blank(64, 58);
+  const w = map[0].length, h = map.length;
+  stamp(g, map, Math.floor((64 - w) / 2), 56 - h);
+  if (def.elite) stamp(g, ['C..C..C..C', 'CCLCCLCCLC', 'CCCCCCCCCC'], 27, Math.max(0, 56 - h - 4));
+  return frame % 2 ? shiftDown(g, 1) : g; // 숨 쉬듯 1px 위아래
+}
+
 function bossFrame(def, frame) {
   const g = blank(48, 32);
   rect(g, 2, 4, 44, 24, 'M');
@@ -275,7 +287,8 @@ export function monsterSprite(mon, frame = 0) {
   const pack = packMonsterFrame(mon, frame, mon.hue ?? 0); if (pack) return pack;
   const key = `m:${mon.id}:${mon.elite ? 'e' : ''}:${frame}`;
   if (cache.has(key)) return cache.get(key);
-  const g = mon.shape === 'ticket' ? bossFrame(mon, frame) : monsterFrame(mon, frame);
+  const hand = BOSS_MAPS[String(mon.id).split(':')[0]];
+  const g = hand ? handBossFrame(hand, mon, frame) : mon.shape === 'ticket' ? bossFrame(mon, frame) : monsterFrame(mon, frame);
   return render(key, g, monsterPalette(mon), SCALE);
 }
 

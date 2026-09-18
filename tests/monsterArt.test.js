@@ -19,16 +19,20 @@ test('every monster type has a hand-pixelled map with uniform rows and known key
 test('every boss carries its own creature AND its own office props', async () => {
   const { BOSSES } = await import('../src/data/monsters.js');
   const { MONSTER_MAP, BOSS_PROPS } = await import('../src/data/packSprites.js');
+  const { BOSS_MAPS } = await import('../src/data/monsterArt.js');
   const creatures = new Set();
   for (const b of BOSSES) {
     const spec = MONSTER_MAP[b.id];
-    // 0x72 팩의 큰 생물(문자열)이거나, 보스 배율로 그리는 Tiny Creatures({ tiny, boss })이거나.
-    const creature = typeof spec === 'string' ? 'pack:' + spec : spec?.tiny != null ? 'tiny:' + spec.tiny : null;
+    // 세 경로: 손그림 보스(BOSS_MAPS) · 0x72 팩의 큰 생물(문자열) · 보스 배율 Tiny Creatures({ tiny, boss })
+    const creature = BOSS_MAPS[b.id] ? 'hand:' + b.id
+      : typeof spec === 'string' ? 'pack:' + spec
+      : spec?.tiny != null ? 'tiny:' + spec.tiny : null;
     assert.ok(creature, `${b.id}: 전용 생물이 없다`);
-    assert.ok(spec?.tiny == null || spec.boss, `${b.id}: 보스는 보스 배율(boss: true)로 그려야 일반 몬스터와 크기가 구분된다`);
+    assert.ok(BOSS_MAPS[b.id] || spec?.tiny == null || spec.boss, `${b.id}: 보스는 보스 배율로 그려야 일반 몬스터와 크기가 구분된다`);
     assert.ok(!creatures.has(creature), `${b.id}: ${creature}를 다른 보스와 공유한다 — 색만 다른 보스는 보스가 아니다`);
     creatures.add(creature);
-    assert.equal(typeof BOSS_PROPS[b.id], 'function', `${b.id}: 사무실 소품이 없다`);
+    // 손그림 보스는 몸통 자체가 사무기기라 덧붙이는 소품이 필요 없다. 빌려 온 생물만 소품으로 정체를 얻는다.
+    if (!BOSS_MAPS[b.id]) assert.equal(typeof BOSS_PROPS[b.id], 'function', `${b.id}: 빌려 온 생물에는 사무실 소품이 있어야 한다`);
   }
 });
 

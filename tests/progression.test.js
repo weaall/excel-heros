@@ -54,12 +54,13 @@ test('collection bonus raises party ATK and gold multiplier as heroes are collec
   assert.ok(atk0 > 0);
 });
 
-test('bosses rotate by phase, have pack sprites, and patterns spawn with their own stats', () => {
+test('bosses rotate by phase, have pack sprites, and patterns spawn with their own stats', async () => {
   assert.ok(BOSSES.length >= 3, '보스가 적으면 같은 보스를 금방 다시 만난다');
   // 페이즈마다 순서대로 돌고, 한 바퀴를 돌면 처음으로 — 개수를 박지 않고 순환 자체를 본다
   for (let i = 0; i < BOSSES.length; i++) assert.equal(bossForStage((i + 1) * 10).id, BOSSES[i].id, `페이즈 ${i + 1}`);
   assert.equal(bossForStage((BOSSES.length + 1) * 10).id, BOSSES[0].id, '한 바퀴 뒤에 처음으로 돌아온다');
-  for (const b of BOSSES) assert.ok(MONSTER_MAP[b.id], `sprite for ${b.id}`);
+  const { BOSS_MAPS } = await import('../src/data/monsterArt.js');
+  for (const b of BOSSES) assert.ok(MONSTER_MAP[b.id] || BOSS_MAPS[b.id], `sprite for ${b.id}`);
   const s = createInitialState(); s.stage = 20; s.maxStage = 20; s.maxCleared = 19; s.heroes[MAIN_ID].level = 30; s.challenging = true;
   const g = new GameManager({ state: s, save: memSave() });
   run(g, 2.5);
@@ -150,7 +151,8 @@ test('boss specials: every boss has named Nth-attack specials, distinct sprites 
     assert.ok(b.desc.length > 10);
   }
   assert.ok(kinds.size >= 5, 'five different special kinds across the three bosses');
-  const creatureKey = (id) => { const v = MONSTER_MAP[id]; return typeof v === 'string' ? 'pack:' + v : v?.tiny != null ? 'tiny:' + v.tiny : null; };
+  const { BOSS_MAPS: BM } = await import('../src/data/monsterArt.js');
+  const creatureKey = (id) => { if (BM[id]) return 'hand:' + id; const v = MONSTER_MAP[id]; return typeof v === 'string' ? 'pack:' + v : v?.tiny != null ? 'tiny:' + v.tiny : null; };
   assert.equal(new Set(BOSSES.map((b) => creatureKey(b.id))).size, BOSSES.length, 'each boss uses its own creature');
 });
 

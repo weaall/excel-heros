@@ -10,7 +10,7 @@ export const ACHIEVEMENTS = [
   { id: 'time',       name: '근속 포상',        desc: '플레이 시간',           stat: 'playSeconds', tiers: [3600, 36000, 180000, 720000],      gems: [20, 60, 150, 400], unit: 'time' },
   { id: 'prestige',   name: '회사 이전',        desc: '회사 이전 횟수',        stat: 'prestige',   tiers: [1, 3, 10],                          gems: [100, 250, 600] },
   { id: 'chests',     name: '보물 사냥꾼',      desc: '보물 상자 개봉',        stat: 'chests',     tiers: [1, 10, 50, 200],                    gems: [20, 50, 120, 300] },
-  { id: 'bestiary',   name: '오류 도감',        desc: '처치한 오류 종류',      stat: 'bestiary',   tiers: [6, 14, 24, 37],                     gems: [30, 80, 200, 500] },
+  { id: 'bestiary',   name: '오류 도감',        desc: '처치한 오류 종류',      stat: 'bestiary',   tiers: [6, 15, 26, 40],                     gems: [30, 80, 200, 500] },
   { id: 'overtime',   name: '야근 수당',        desc: '야근 모드 참여',        stat: 'overtimes',  tiers: [1, 7, 30, 100],                     gems: [30, 100, 300, 800] },
   { id: 'equipment',  name: '비품 관리대장',    desc: '보유한 비품 개수',      stat: 'equipment',  tiers: [4, 20, 60, 120],                    gems: [30, 80, 200, 400] },
   { id: 'collection', name: '인재 도감',        desc: '보유 영웅 종류',        stat: 'collection', tiers: [5, 15, 25, 40, 55],                 gems: [50, 100, 200, 500, 800] },

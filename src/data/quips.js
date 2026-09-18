@@ -23,6 +23,9 @@ export const BOSS_LINES = {
   boss_audit: ['전표 한 장까지 다 봅니다.', '이 영수증, 설명 좀 해 주시죠.', '감사는 끝나지 않습니다.'],
   boss_target: ['이번 분기 목표, 상향합니다.', '숫자가 왜 이 모양입니까?', '실적은 변명을 안 듣습니다.'],
   boss_approval: ['반려.', '다시 올리세요.', '이 서류는 제 책상에서 자랍니다.'],
+  boss_copier: ['전량 인쇄 들어갑니다.', '용지가 걸렸습니다. 다시.', '토너가 부족합니다… 아직 아닙니다.'],
+  boss_cabinet: ['그 서류, 제 안에 있습니다.', '열 수 있으면 열어 보세요.', '분류는 끝났습니다.'],
+  boss_elevator: ['정원이 초과되었습니다.', '이 층에는 서지 않습니다.', '올라가시죠. 끝까지.'],
 };
 export const pick = (arr, r = Math.random()) => (arr && arr.length ? arr[Math.min(arr.length - 1, Math.floor(r * arr.length))] : null);
 export const skillQuip = (type, r) => pick(SKILL_QUIPS[type] ?? [], r);
