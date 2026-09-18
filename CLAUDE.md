@@ -31,6 +31,8 @@ npx wrangler deploy --config backend/wrangler.toml   # Worker 재배포
 ```
 
 ## 함정
+- **`node --test | grep …` 는 종료 코드를 삼킨다.** `node --test 2>&1 | grep -E '^# (pass|fail)' && git commit …` 은 grep 이 성공하면 실패한 테스트를 그대로 커밋한다. 결과를 파일로 받고 종료 코드를 따로 확인할 것: `node --test > out.txt 2>&1; rc=$?; grep -E '^# (pass|fail)' out.txt; [ $rc -eq 0 ] && git commit …`
+- **간헐 실패는 밸런스를 바꾼 다음에 나타난다.** 눈금(속도·체력·성장률)을 건드렸으면 `node --test` 를 **한 번이 아니라 30~60번** 돌려 볼 것. 시뮬레이션으로 상태를 만들어 두는 테스트는 그 눈금에 매여 있다.
 - Bash에서 `node -e`로 백틱/`${}`/정규식이 든 코드를 넘기면 셸이 망가뜨림 → 편집은 스크래치패드에 `.mjs` 편집 스크립트를 **Write**로 만들어 실행(멱등하게). Bash 명령은 ~10 KB 넘으면 잘림.
 - HF Space `/call` API는 오류 본문을 숨김 → 스크립트는 queue 프로토콜로 실제 메시지를 읽고 "Try again in H:MM:SS"만큼 대기. 이미지 1장 = ZeroGPU 90초 고정. 계정 쿼터와 익명(IP) 쿼터는 별개 풀. `X-IP-Token`(JWT)을 붙이면 "Expired ZeroGPU proxy token" → 붙이지 말 것. 토큰에 Inference Providers 권한 없음(403).
 - GitHub Pages는 정적 파일을 ~10분 캐시. 사용자가 "안 바뀌었다"고 하면 먼저 캐시 의심.
