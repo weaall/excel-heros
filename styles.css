@@ -201,7 +201,7 @@ button:disabled { cursor: default; opacity: .55; }
 .xl-table tbody tr:nth-child(even) td { background: #f2f7f3; }
 .xl-table tbody tr:hover td { background: #e6f2ea; }
 .xl-table tbody tr.locked:nth-child(even) td { background: #f6f6f6; }
-.xl-table th.num { text-align: right; }
+.xl-table th.num, .xl-table td.num { text-align: right; }  /* 머리글만 오른쪽이면 숫자가 머리글과 어긋난다 */
 .xl-table tr.affordable td.cost { color: var(--xl-green); font-weight: 600; }
 .xl-table td.name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
 .xl-table td.act { white-space: nowrap; width: 1%; }
