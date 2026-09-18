@@ -87,6 +87,8 @@ function fakeDB() {
       else if (sql.startsWith('DELETE FROM sessions WHERE user_id')) { /* pruning: the fake keeps every row, which is the stricter case for these tests */ }
       else if (sql.startsWith('DELETE FROM sessions')) t.sessions.delete(a[0]);
       else if (sql.startsWith('INSERT INTO saves')) t.saves.set(a[0], { save: a[1], updated_at: a[2] });
+      else if (sql.startsWith('DELETE FROM saves')) t.saves.delete(a[0]);
+      else if (sql.startsWith('DELETE FROM board')) t.board.delete(a[0]);
       else if (sql.startsWith('INSERT INTO board')) t.board.set(a[0], { id: a[0], name: a[1], picture: a[2], max_cleared: a[3], shares: a[4], prestige: a[5], dps: a[6], play_seconds: a[7], collection: a[8], score: a[9], updated_at: a[10] });
       else if (sql.startsWith('INSERT INTO redemptions')) t.redemptions.add(`${a[0]}|${a[1]}`);
       else if (sql.startsWith('INSERT INTO ad_views')) t.ads.push({ id: a[0], kind: a[1], at: a[2] });
@@ -276,4 +278,61 @@ test('보석 코드는 계정당 1회 — 서버가 기록하므로 저장을 �
   assert.equal(other.status, 200, '다른 코드는 따로 받는다');
   assert.equal((await redeem('NOPE')).status, 400);
   assert.equal((await worker.fetch(new Request('https://x/v1/redeem', { method: 'POST', body: JSON.stringify({ code: 'ref!' }) }), env)).status, 401, '로그인 없이는 불가');
+});
+
+test('완전 초기화: 서버 기록을 지워야 초기화 뒤에도 저장이 된다', async () => {
+  const env = { DB: fakeDB(), ALLOW_ORIGIN: '*', GOOGLE_CLIENT_ID: CLIENT_ID, SAVE_MIN_GAP_MS: 0, fetchFn: tokeninfo(goodClaims()) };
+  const { token } = await (await worker.fetch(req('/v1/auth/google', { method: 'POST', body: JSON.stringify({ credential: 'x'.repeat(40) }) }), env)).json();
+  const now = Date.now();
+  const played = legitSave(now); played.prestige = { shares: prestigeShares(played.maxCleared), count: 1 };
+  assert.equal((await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save: played }) }, token), env)).status, 200);
+
+  // 초기화한 저장본 = 진행이 전부 뒤로 간 저장본. 서버 기록이 남아 있으면 거부된다.
+  const fresh = createInitialState(now);
+  const blocked = await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save: fresh }) }, token), env);
+  assert.equal(blocked.status, 422, '기록이 남아 있으면 초기화 저장본은 거부된다 — 이게 원래 버그였다');
+  assert.match((await blocked.json()).check.reasons.join(','), /rolled back|backwards/);
+
+  // 서버 기록을 지우면 통과한다
+  const del = await worker.fetch(req('/v1/save', { method: 'DELETE' }, token), env);
+  assert.equal(del.status, 200); assert.equal((await del.json()).reset, true);
+  assert.equal((await worker.fetch(req('/v1/save', { method: 'GET' }, token), env)).status, 404, '저장본이 사라졌다');
+  const board = await (await worker.fetch(req('/v1/board'), env)).json();
+  assert.ok(!(board.entries ?? board.rows ?? []).some((e) => e.me), '순위표에서도 내려갔다');
+  assert.equal((await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save: fresh }) }, token), env)).status, 200, '초기화 뒤 저장이 된다');
+
+  // 로그인 없이는 거부
+  assert.equal((await worker.fetch(req('/v1/save', { method: 'DELETE' }), env)).status, 401, '남의 기록은 못 지운다');
+});
+
+test('CloudSync.resetServer: DELETE 를 보내고, 로그인 전이면 건너뛰고, 실패를 숨기지 않는다', async () => {
+  const g = new GameManager({ save: memSave() });
+  const store = new Map();
+  const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+  const calls = [];
+  let mode = 'ok';
+  const fetchFn = async (url, init) => {
+    calls.push(`${init?.method ?? 'GET'} ${String(url).replace(/^https?:\/\/[^/]+/, '')}`);
+    if (mode === 'fail') return { ok: false, status: 500, json: async () => ({ error: 'boom' }) };
+    return { ok: true, status: 200, json: async () => ({ ok: true, reset: true }) };
+  };
+  // 로그인 전: 지울 서버 기록이 없다
+  const auth = new Auth({ storage, fetchFn, clientId: CLIENT_ID });
+  g.state.settings.cloud = { url: 'https://api.example', name: '' };
+  const cloud = new CloudSync(g, { storage, fetchFn, auth });
+  assert.deepEqual(await cloud.resetServer(), { ok: true, skipped: true });
+  assert.deepEqual(calls, [], '로그인 전에는 요청을 보내지 않는다');
+
+  // 로그인 후: DELETE /v1/save
+  auth.session = { token: 't', user: { name: 'x' }, expiresAt: Date.now() + 86400000 };
+  cloud.dirty = true;
+  const r = await cloud.resetServer();
+  assert.deepEqual(r, { ok: true });
+  assert.deepEqual(calls, ['DELETE /v1/save']);
+  assert.equal(cloud.dirty, false, '초기화 직후에 옛 저장본이 올라가지 않는다');
+
+  // 실패는 숨기지 않는다
+  mode = 'fail';
+  const bad = await cloud.resetServer();
+  assert.equal(bad.ok, false); assert.match(cloud.lastError, /서버 기록 초기화 실패/);
 });

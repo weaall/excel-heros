@@ -121,6 +121,22 @@ export default {
         return json({ save: JSON.parse(row.save), updatedAt: row.updated_at }, 200, origin);
       }
 
+      // 완전 초기화 — 그 계정의 저장본과 순위표 행을 지운다.
+      //
+      // 이게 없으면 초기화한 플레이어는 영구히 저장할 수 없다. `checkDelta` 가 이전 저장본과 비교해
+      // '진행이 뒤로 갔다'고 거부하는데, 초기화는 정의상 전부 뒤로 가는 일이다.
+      //
+      // 자기 행만 지우고, 지우는 건 언제나 손해다(순위표에서 내려간다) — 조작 점수를 씻는 통로가
+      // 아니라 버리는 통로다.
+      if (url.pathname === '/v1/save' && req.method === 'DELETE') {
+        const a = await auth(req, env, origin); if (a instanceof Response) return a;
+        const now = Date.now();
+        if (!rateLimit(a.id, now, Number(env.SAVE_MIN_GAP_MS ?? 20000))) return json({ error: 'too many requests; try again in a moment' }, 429, origin);
+        await env.DB.prepare('DELETE FROM saves WHERE id = ?').bind(a.id).run();
+        await env.DB.prepare('DELETE FROM board WHERE id = ?').bind(a.id).run();
+        return json({ ok: true, reset: true }, 200, origin);
+      }
+
       if (url.pathname === '/v1/save' && req.method === 'PUT') {
         const len = Number(req.headers.get('content-length') ?? 0); if (len > MAX_SAVE_BYTES * 1.2) return json({ error: 'payload too large' }, 413, origin);
         const a = await auth(req, env, origin); if (a instanceof Response) return a;

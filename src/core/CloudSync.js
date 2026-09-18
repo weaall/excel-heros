@@ -58,6 +58,27 @@ export class CloudSync {
     finally { this.busy = false; }
   }
 
+  /**
+   * 완전 초기화 — 서버 기록까지 지운다.
+   *
+   * 로컬만 지우면 서버에 초기화 전 저장본이 남아, 이후 모든 자동 저장이 `checkDelta` 에서
+   * '진행이 뒤로 갔다'로 거부된다. 초기화한 사람은 영구히 저장을 못 하게 된다.
+   * 로그인하지 않았으면 지울 서버 기록이 없으므로 `{ ok: true, skipped: true }`.
+   */
+  async resetServer() {
+    this.dirty = false; this.lastPush = 0; this.timer = 0;
+    if (!this.enabled()) { this.status = this.auth.loggedIn() ? 'idle' : 'off'; this.lastError = null; this.game.emit('cloud', this); return { ok: true, skipped: true }; }
+    this.status = 'saving'; this.game.emit('cloud', this);
+    try {
+      await this.#call('/v1/save', { method: 'DELETE' });
+      this.status = 'ok'; this.lastError = null; this.game.emit('cloud', this); return { ok: true };
+    } catch (e) {
+      // 404 = 지울 게 없다 = 이미 원하는 상태다
+      if (e.status === 404) { this.status = 'ok'; this.lastError = null; this.game.emit('cloud', this); return { ok: true }; }
+      this.status = 'error'; this.lastError = `서버 기록 초기화 실패: ${e.message}`; this.game.emit('cloud', this); return { ok: false, error: e.message };
+    }
+  }
+
   /** Fetch the server copy (the caller decides whether to load it — see GameManager.loadCloudSave). */
   async pull() {
     if (!this.enabled()) return null;

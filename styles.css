@@ -398,6 +398,12 @@ body.stealth #roster-table { display: table; }
 
 /* ------------------------------------------------------------ card detail (record layout) -- */
 .dialog:has(.dt) { width: min(94vw, 720px); }
+/* 카드 상세는 **높이를 고정한다.** 탭마다 내용이 699~927px 로 달라서, 높이를 내용에 맡기면 탭을 누를
+   때마다 창이 튄다(6-96). 스크롤은 오른쪽 정보 열만 하고 일러스트는 제자리에 있는다. */
+.dialog:has(.dt) .dialog-body { height: clamp(360px, 74vh, 560px); overflow: hidden; padding-bottom: 0; }
+.dialog:has(.dt) .dt { height: 100%; }
+.dialog:has(.dt) .dt .detail-art { position: sticky; top: 0; }
+.dialog:has(.dt) .dt-info { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; padding-right: 2px; padding-bottom: 12px; }
 .dt { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
 .dt .detail-art { width: 220px; }
 .dt-info { min-width: 0; }
@@ -869,3 +875,7 @@ body.stealth .tutorial { display: none; }
 .rb-btn.big:hover:not(:disabled) { background: linear-gradient(#eef9f2, #d9efe2); }
 .rb-btn.big .rb-icon { color: var(--xl-green); }
 .import-dlg .detail-actions { margin-top: 10px; }
+
+/* 툴팁으로 접힌 설명이 있는 행 — 마우스를 올리면 나온다는 표시 */
+.dt-table tr.has-tip th { cursor: help; }
+.dt-table tr.has-tip th::after { content: 'ⓘ'; margin-left: 4px; color: #7fae8f; font-size: 10px; font-weight: 400; }

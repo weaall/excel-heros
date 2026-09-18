@@ -260,11 +260,15 @@ export class UIManager {
         + '되돌릴 수 없습니다.';
       this.#askConfirm('통합 문서 삭제', msg, { ok: '삭제하고 새로 시작', danger: true }).then(async (yes) => {
         if (!yes) return;
+        // 서버 기록을 **먼저** 지운다. 로컬만 지우면 이후 자동 저장이 영구히 거부된다(6-96).
+        const srv = await this.game.cloud?.resetServer() ?? { ok: true, skipped: true };
         this.game.reset();
         this.switchSheet('home'); this.showRibbon('home');
         await this.showPrologue();   // 오프닝부터 다시 (showPrologue 가 prologueSeen 을 다시 세운다)
         this.#refreshTutorial();     // 교육 목록은 1번 항목부터
-        this.toast('새 통합 문서에서 다시 시작합니다');
+        // 서버 초기화가 실패했으면 숨기지 않는다 — 그대로 두면 저장이 계속 거부되는데 왜인지 알 수 없다.
+        if (srv.ok) this.toast(srv.skipped ? '새 통합 문서에서 다시 시작합니다' : '새 통합 문서에서 다시 시작합니다 (서버 기록도 초기화)');
+        else this.openModal('서버 기록이 남았습니다', `<p>이 브라우저는 초기화됐지만 <b>서버 기록을 지우지 못했습니다</b>: ${srv.error}</p><p class="muted">서버에 초기화 전 기록이 남아 있으면 자동 저장이 "진행이 뒤로 갔다"며 거부됩니다. 연결을 확인한 뒤 <b>검토 › 계정</b>에서 다시 초기화하거나 「지금 저장」을 눌러 주세요.</p>`);
       });
     });
     $('#modal-ok').addEventListener('click', () => this.closeModal());
@@ -851,7 +855,16 @@ export class UIManager {
     const portrait = artUrl && !/\.svg$/i.test(artUrl)
       ? el('img', { class: 'detail-art', src: artUrl, alt: v.def.name, title: '클릭하면 원본 크기로 봅니다', onclick: () => this.openLightbox(artUrl, `${v.def.name} · ${p?.nick ?? ''}`) })
       : portraitCanvas(v.def, 3);
-    const row = (label, value, ctrl = null, hint = null) => el('tr', {}, el('th', {}, label), el('td', { class: 'val' }, value, hint ? el('div', { class: 'hint' }, hint) : null), el('td', { class: 'ctl' }, ctrl));
+    // 설명은 기본적으로 **접는다**(툴팁). 정보 탭이 길어진 건 행마다 설명이 셀 안에 펼쳐져서였다 —
+    // 전투력 한 행이 네 줄을 차지했다. `open`을 준 행만 펼쳐 둔다: 지금 누를 버튼의 비용처럼 행동에
+    // 직접 쓰이는 숫자들.
+    const row = (label, value, ctrl = null, hint = null, open = false) => {
+      const plain = typeof hint === 'string' ? hint : null;
+      const cell = el('td', { class: 'val' }, value, hint && (open || !plain) ? el('div', { class: 'hint' }, hint) : null);
+      const tr = el('tr', {}, el('th', {}, label), cell, el('td', { class: 'ctl' }, ctrl));
+      if (plain && !open) { tr.title = plain; tr.classList.add('has-tip'); }
+      return tr;
+    };
     const sb = (label, fn, cls = '', disabled = false, title = '') => { const b = btn(label, fn, `small ${cls}`, disabled); if (title) b.title = title; return b; };
     // --- header
     const head = el('div', { class: 'dt-head' },
@@ -884,7 +897,7 @@ export class UIManager {
         sb('+1', () => { if (!g.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'primary', s.gold < v.cost, `레벨 +1 · 골드 ${fmt(v.cost)}`),
         sb('+10', () => { if (!g.upgradeHeroMany(id, 10)) this.toast('골드가 부족합니다'); }, 'primary', s.gold < v.cost, '레벨 +10 (골드가 되는 만큼)'),
         sb('초기화', () => { const r = g.resetHeroLevel(id); this.toast(r ? `레벨 초기화: 골드 ${fmt(r)} 환급` : '레벨 1입니다'); }, 'danger', e.level <= 1, '레벨 1로 되돌리고 전액 환급')),
-        v.atLevelCap ? `레벨 상한 도달 — ${v.levelCapHint}` : `다음 레벨 골드 ${fmt(v.cost)} · 되돌리면 ${fmt(v.refundPerLevel)} 환급`));
+        v.atLevelCap ? `레벨 상한 도달 — ${v.levelCapHint}` : `다음 레벨 골드 ${fmt(v.cost)} · 되돌리면 ${fmt(v.refundPerLevel)} 환급`, true));
       table.append(row('전투력', fmt(v.power), null, '등급·★·레벨·강화·비품을 합친 비교값 (ATK×2 + HP÷10) — 등급이 낮아도 이 숫자가 높으면 더 셉니다'));
       table.append(row('공격력 ATK', fmt(v.atk)));
       table.append(row('체력 HP', fmt(v.hp)));
@@ -906,7 +919,7 @@ export class UIManager {
         v.awakened ? null : sb(`✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, 'primary', !v.canAwaken),
         `ATK/HP +${Math.round(BALANCE.AWAKEN.atk * 100)}% · 특성 ×${BALANCE.AWAKEN.trait} · 스킬 ×${BALANCE.AWAKEN.skill} · 강화 한계 +${BALANCE.ENHANCE_CAP_AWAKEN}`));
     }
-    table.append(row('특성', el('span', { class: 'nm-trait' }, v.traitName), null, v.traitDesc));
+    table.append(row('특성', el('span', { class: 'nm-trait' }, v.traitName), null, v.traitDesc, true));
     // --- 스킬 pane: one record per number (name / effect / power / cooldown / level), then the ★ growth ladder
     const sl = g.skillLevelInfo(id); const SK = SKILLS[v.def.skill.type]; const L = BALANCE.SKILL_LEVEL;
     const skillPane = el('div', { class: 'dt-sections pane-skill' }, el('table', { class: 'dt-table' },
