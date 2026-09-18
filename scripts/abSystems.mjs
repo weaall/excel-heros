@@ -166,6 +166,7 @@ if (usable.length < GATE_KEYS.length) {
 console.log('-'.repeat(84));
 
 const rows = [];
+const baseDeaths = avg(base, 'deaths') ?? 0;
 for (const k of keys) {
   restore(snap);
   const sys = SYSTEMS[k];
@@ -175,6 +176,10 @@ for (const k of keys) {
   const delays = []; let bounded = 0;
   for (const key of usable) { const p = paired(runs, base, key); const b2 = avg(base, key); if (p && b2) { delays.push((p.d / b2) * 100); bounded += p.bounded; } }
   const pct = delays.length ? delays.reduce((a2, b2) => a2 + b2, 0) / delays.length : null;
+  // **쓰러짐도 같이 찍는다.** 생존 계열 시스템(힐러 오라·탱커 엄호)은 관문 시간을 거의 안 움직인다 —
+  // 이 게임의 진행 속도는 회복량에 둔감하다는 걸 6-130에서 재서 확인했다(공급을 30%까지 깎아도
+  // 60단계 도달이 초 단위까지 같았다). 그런 시스템이 실제로 움직이는 축은 **쓰러짐**이다.
+  const dDeaths = avg(runs, 'deaths') - baseDeaths;
   rows.push({ k, name: sys.name, pct, deaths: avg(runs, 'deaths'), gates: delays.length, bounded });
   console.log(
     `끔: ${sys.name}`.padEnd(22),
@@ -182,6 +187,7 @@ for (const k of keys) {
     (pct === null ? '평균 판정불가' : `평균 ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%${bounded ? '↑' : ''}`).padStart(15),
     `(관문 ${delays.length}/${GATE_KEYS.length}${bounded ? `, 하한 ${bounded}` : ''})`,
     '· 지분', String(avg(runs, 'shares')).padStart(4),
+    '· 쓰러짐', `${dDeaths >= 0 ? '+' : ''}${Math.round(dDeaths)}`.padStart(5),
   );
 }
 console.log('-'.repeat(84));
@@ -191,6 +197,6 @@ const unknown = rows.filter((r) => r.pct === null);
 if (unknown.length) console.log(`판정 불가(기준선도 그 관문에 못 감): ${unknown.map((r) => r.name).join(', ')} — '기여가 없다'가 아니라 '재지 못했다'다. HOURS 를 늘려라.`);
 if (rows.some((r) => r.bounded)) console.log('↑ 표시는 변종이 관문에 아예 도달하지 못해 **하한**으로 계산한 값이다 — 실제 지연은 이보다 크다.');
 console.log(dead.length
-  ? `꺼도 3% 미만으로만 움직이는 시스템: ${dead.map((r) => r.name).join(', ')} — 밸런스에 기여하지 않는다는 신호다.`
+  ? `꺼도 관문이 3% 미만으로만 움직이는 시스템: ${dead.map((r) => r.name).join(', ')} — **바로 '기여 없음'으로 읽지 말 것.** 생존 계열은 원래 관문을 안 움직인다(6-130). 옆의 쓰러짐 변화를 보고, 그래도 안 움직이면 \`scripts/sysBench.mjs\` 로 고정 단계에서 다시 재라.`
   : '모든 시스템이 꺼면 티가 난다.');
 if (wrong.length) console.log(`⚠ 껐더니 **빨라진** 시스템: ${wrong.map((r) => `${r.name} ${r.pct.toFixed(1)}%`).join(', ')} — 버프가 손해라는 뜻이므로 지표나 게임 어딘가가 틀렸다.`);
