@@ -3,6 +3,8 @@
 // (no source sheet), then given a 1px dark outline like the 0x72 heroes, so it sits on the same 2px grid.
 // Strip layout matches heroSkins.buildHeroStrip: 9 frames of 16×28 — 0-3 idle, 4-7 walk, 8 hit. Heroes face right.
 
+import { ART_PALETTES } from './artPalettes.js';
+
 const FW = 16, FH = 28, FRAMES = 9;
 const SKIN = { light: '#f6d7c3', fair: '#f9e0cf', tan: '#e0b48a' };
 const SHOE = '#23262d';
@@ -34,14 +36,16 @@ export const DOLLS = {
   coo:        { hair: 'bob', hairColor: '#8fd3f4', skin: 'fair', outfit: 'suit', top: '#2456c8', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#1f2a44', acc: ['badge', 'trim:#d4a017'], halo: '#dfe9f7' }, // art: light-blue bob, royal-blue suit with gold
   ceo:        { hair: 'long', hairColor: '#f2f2f2', skin: 'fair', outfit: 'suit', top: '#111111', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#111111', acc: ['sunglasses', 'trim:#d4a017'], halo: '#ffe9a8' },
   chairman:   { hair: 'short', hairColor: '#d0d0d0', skin: 'light', outfit: 'suit', top: '#151515', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#151515', acc: ['beard', 'crown', 'trim:#d4a017'], halo: '#ffd76a' },
-  helpdesk:   { hair: 'bob', hairColor: '#152238', skin: 'fair', outfit: 'suit', top: '#2f7fd6', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#2f7fd6', acc: ['headset'], halo: '#d6e9ff' },
+  // artHair:false — 검은 단발이 헤드셋·역광 때문에 회색(#93a0a9)으로 뽑힌다
+  helpdesk:   { hair: 'bob', hairColor: '#152238', artHair: false, skin: 'fair', outfit: 'suit', top: '#2f7fd6', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#2f7fd6', acc: ['headset'], halo: '#d6e9ff' },
   cleaner:    { hair: 'bun', hairColor: '#8d99a6', skin: 'light', outfit: 'cardigan', top: '#c0392b', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#222222', acc: [], halo: '#ffffff' },
   sales_kang: { hair: 'short', hairColor: '#111111', skin: 'light', outfit: 'suit', top: '#8e3b2f', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#5a2a22', acc: ['tie:#c0392b'], halo: '#ffd9c2' },
   legal_yoon: { hair: 'long', hairColor: '#1f2a5c', skin: 'fair', outfit: 'suit', top: '#dbe7f7', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#1f2a44', acc: ['glasses'], halo: '#e6f0ff' },
   pm_lead:    { hair: 'bob', hairColor: '#2f6fd6', skin: 'fair', outfit: 'shirt', top: '#f4f4f4', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#3a4a6a', acc: ['lanyard:#3b5bd6', 'badge'], halo: '#ffffff' }, // art: blue bob, white blouse, lanyard
   design_lead:{ hair: 'curly', hairColor: '#f2789f', skin: 'fair', outfit: 'shirt', top: '#f5b8c8', shirt: '#f5b8c8', bottom: 'skirt', bottomColor: '#5b9bd5', acc: ['cap:#5b9bd5'], halo: '#ffd1ec' }, // art: pink curls under a blue beret, striped pastel tee
   cmo:        { hair: 'long', hairColor: '#d94f3a', skin: 'fair', outfit: 'suit', top: '#1f2a3a', shirt: '#2a3a5a', bottom: 'pants', bottomColor: '#1f2a3a', acc: ['sunglasses'], halo: '#ff9f8a' },
-  founder:    { hair: 'long', hairColor: '#e8eaf0', skin: 'fair', outfit: 'coat', top: '#2a3050', shirt: '#161a2c', bottom: 'pants', bottomColor: '#1e2236', acc: ['glasses', 'trim:#d4a017'], halo: '#d4a017' },
+  // artHair:false — 은발이 그늘진 쪽(#937aa6)으로 뽑힌다
+  founder:    { hair: 'long', hairColor: '#e8eaf0', artHair: false, skin: 'fair', outfit: 'coat', top: '#2a3050', shirt: '#161a2c', bottom: 'pants', bottomColor: '#1e2236', acc: ['glasses', 'trim:#d4a017'], halo: '#d4a017' },
   intern_seo: { hair: 'long', hairColor: '#b98a5c', skin: 'fair', outfit: 'shirt', top: '#f5f5f5', shirt: '#f5f5f5', bottom: 'skirt', bottomColor: '#8fb8e8', acc: ['lanyard:#3b5bd6'], halo: '#fff4c2' },
   pr_yoo:     { hair: 'bob', hairColor: '#d63a3a', skin: 'fair', outfit: 'shirt', top: '#f5f5f5', shirt: '#f5f5f5', bottom: 'skirt', bottomColor: '#3b6fd8', acc: [], halo: '#ffc9d6' },
   nurse_han:  { hair: 'bun', hairColor: '#e9eef2', skin: 'fair', outfit: 'labcoat', top: '#ffffff', shirt: '#dfe9f3', bottom: 'skirt', bottomColor: '#f0f0f0', acc: ['badge'], halo: '#d6f0ff' },
@@ -64,11 +68,13 @@ export const DOLLS = {
   cdo:           { hair: 'long', hairColor: '#151515', skin: 'fair', outfit: 'suit', top: '#1e272e', shirt: '#00d2ff', bottom: 'pants', bottomColor: '#1e272e', acc: ['trim:#00d2ff'], halo: '#9fe9ff' },
   cco:           { hair: 'bob', hairColor: '#f4a9c8', skin: 'fair', outfit: 'suit', top: '#2f3640', shirt: '#ffffff', bottom: 'skirt', bottomColor: '#2f3640', acc: ['badge'], halo: '#ff9fb0' }, // art: pink bob, dark suit, coral halo
   chief_of_staff:{ hair: 'ponytail', hairColor: '#f3e6b8', skin: 'tan', outfit: 'suit', top: '#151515', shirt: '#f5f6fa', bottom: 'pants', bottomColor: '#151515', acc: ['tie:#151515', 'trim:#d4a017'], halo: '#ffe27a' }, // art: blond ponytail, black-gold suit, golden light
-  cso:        { hair: 'long', hairColor: '#c8b6ff', skin: 'fair', outfit: 'suit', top: '#1f2a44', shirt: '#f5f6fa', bottom: 'skirt', bottomColor: '#1f2a44', acc: ['trim:#d4a017', 'badge'], halo: '#f4e6b0' }, // matches the generated art: navy suit, gold trim, lavender waves
+  // artHair:false — 라벤더가 그늘진 쪽(#5f6190)으로 뽑힌다
+  cso:        { hair: 'long', hairColor: '#c8b6ff', artHair: false, skin: 'fair', outfit: 'suit', top: '#1f2a44', shirt: '#f5f6fa', bottom: 'skirt', bottomColor: '#1f2a44', acc: ['trim:#d4a017', 'badge'], halo: '#f4e6b0' }, // matches the generated art: navy suit, gold trim, lavender waves
   ai_lead:    { hair: 'long', hairColor: '#9ff3e6', skin: 'fair', outfit: 'labcoat', top: '#ffffff', shirt: '#00cec9', bottom: 'skirt', bottomColor: '#1e272e', acc: ['glasses', 'trim:#00cec9'], halo: '#b9fff4' },
   union_chief:{ hair: 'spiky', hairColor: '#e8c65a', skin: 'tan', outfit: 'suit', top: '#d84a2a', shirt: '#f5f6fa', bottom: 'pants', bottomColor: '#1f2330', acc: ['tie:#f5f6fa', 'trim:#f5c542'], halo: '#d9ffb0' }, // art: blond spikes, red-orange jacket, white armband
-  hacker:     { hair: 'bob', hairColor: '#1e272e', skin: 'fair', outfit: 'hoodie', top: '#2b2f4a', shirt: '#d4a017', bottom: 'skirt', bottomColor: '#2b2f4a', acc: ['headset', 'trim:#d4a017'], halo: '#ff9fd6' }, // art: navy hoodie dress with gold stripes, cyan headset, pink halo
-  chairwoman: { hair: 'long', hairColor: '#f3e6b8', skin: 'fair', outfit: 'suit', top: '#111111', shirt: '#111111', bottom: 'pants', bottomColor: '#111111', acc: ['tiara', 'trim:#d4a017'], halo: '#ffd76a' },
+  // artHair:false — 머리 영역의 66%가 네온 보라 배경이라 자동 추출이 검은 머리를 덮어쓴다(6-110)
+  hacker:     { hair: 'bob', hairColor: '#1e272e', artHair: false, skin: 'fair', outfit: 'hoodie', top: '#2b2f4a', shirt: '#d4a017', bottom: 'skirt', bottomColor: '#2b2f4a', acc: ['headset', 'trim:#d4a017'], halo: '#ff9fd6' }, // art: navy hoodie dress with gold stripes, cyan headset, pink halo
+  chairwoman: { hair: 'long', hairColor: '#eef2f7', skin: 'fair', outfit: 'suit', top: '#111111', shirt: '#111111', bottom: 'pants', bottomColor: '#111111', acc: ['tiara', 'trim:#d4a017'], halo: '#ffd76a' },
   // main hero jobs — same person (short black hair, light skin) in every job; the track colour climbs with the tier
   intern:          { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'shirt', top: '#2ec4b6', shirt: '#2ec4b6', bottom: 'pants', bottomColor: '#2c3e50', acc: ['lanyard:#3b5bd6'], halo: '#e6f7ff' },
   staff:           { hair: 'short', hairColor: '#151515', skin: 'light', outfit: 'shirt', top: '#2ec4b6', shirt: '#2ec4b6', bottom: 'pants', bottomColor: '#2c3e50', acc: ['tie:#1f2a44'], halo: '#e6f7ff' },
@@ -221,9 +227,30 @@ function applySkin(base, skin) {
   return out;
 }
 
+/**
+ * 한 캐릭터의 도트 스펙 — **색은 일러에서, 모양은 손에서.**
+ *
+ * `ART_PALETTES` 는 카드 일러에서 뽑은 머리(H)·상의(B)·가슴 포인트(W)다. 전투 스프라이트는 이미 이걸
+ * 쓰는데 도트만 손으로 적은 색을 쓰고 있어서, 일러를 다시 뽑을 때마다 둘이 어긋났다(박사원 머리색이
+ * 손 값 `#7a5230` vs 일러 `#3c3133`).
+ *
+ * 일러에서 **알 수 없는 것은 손 값을 그대로 둔다**: 머리 모양, 옷 종류, 소품, 그리고 하의 색 —
+ * 일러가 허리 위 샷이라 다리가 프레임에 없다.
+ */
+export function dollSpec(id) {
+  const base = DOLLS[id]; if (!base) return null;
+  const art = ART_PALETTES[id]; if (!art) return base;
+  return {
+    ...base,
+    ...(art.H && base.artHair !== false ? { hairColor: art.H } : {}),
+    ...(art.B ? { top: art.B } : {}),
+    ...(art.W && art.W !== art.B ? { shirt: art.W } : {}),
+  };
+}
+
 /** Build the 9-frame strip for a doll spec (browser only — needs canvas). `skin` = palette or full skin. */
 export function buildDollStrip(id, skin = null, grade = null) {
-  const base = DOLLS[id]; if (!base) return null;
+  const base = dollSpec(id); if (!base) return null;
   const s = { ...applySkin(base, skin), grade: grade ?? base.grade };
   const c = document.createElement('canvas'); c.width = FW * FRAMES; c.height = FH; const ctx = c.getContext('2d');
   const img = ctx.createImageData(c.width, c.height);
@@ -241,7 +268,7 @@ export function buildDollStrip(id, skin = null, grade = null) {
 export const hasDoll = (id) => !!DOLLS[id];
 /** Canvas-free render of one frame (for Node tooling / previews): { width, height, data: RGBA Uint8ClampedArray }. */
 export function dollPixels(id, frame = 0, skin = null, grade = null) {
-  const base = DOLLS[id]; if (!base) return null;
+  const base = dollSpec(id); if (!base) return null;
   const s = { ...applySkin(base, skin), grade: grade ?? base.grade };
   const p = new Px(); const idle = frame < 4, walk = frame >= 4 && frame < 8;
   drawDoll(p, s, { legPhase: walk ? [1, 0, 3, 0][frame - 4] : 0, bob: idle ? [0, 1, 1, 0][frame] : walk ? [0, -1, 0, -1][frame - 4] : 0, hit: frame === 8 });

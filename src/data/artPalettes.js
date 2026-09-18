@@ -2,36 +2,36 @@
 // colours of each character's illustration, so battle sprites are recoloured to match the card art.
 export const ART_PALETTES = {
   "staff_park": {
-    "H": "#3c3133",
+    "H": "#3d3235",
     "B": "#bac5d3",
     "W": "#1c3964"
   },
   "parttime": {
-    "H": "#996e54",
+    "H": "#745144",
     "B": "#363e3c",
     "W": "#717a7c"
   },
   "guard": {
+    "H": "#d1e4ed",
     "B": "#161f40",
     "W": "#b9f2fd"
   },
   "barista": {
-    "H": "#e98c5e",
+    "H": "#e98c5d",
     "B": "#65453b",
     "W": "#f9d7c2"
   },
   "courier": {
-    "H": "#f8b87f",
+    "H": "#a7a3a1",
     "B": "#f9b880",
     "W": "#cc9388"
   },
   "contract": {
-    "H": "#938987",
     "B": "#958a82",
     "W": "#978a81"
   },
   "vlookup": {
-    "H": "#15366a",
+    "H": "#15376a",
     "B": "#33c1d4",
     "W": "#143863"
   },
@@ -40,7 +40,6 @@ export const ART_PALETTES = {
     "W": "#caccd0"
   },
   "macro": {
-    "H": "#14f6f2",
     "B": "#0bf8ef",
     "W": "#0af8ef"
   },
@@ -55,31 +54,31 @@ export const ART_PALETTES = {
     "W": "#fbaa44"
   },
   "acct_lead": {
-    "H": "#406375",
+    "H": "#d8ebe7",
     "B": "#14a6b9",
     "W": "#15a6ba"
   },
   "dev_lead": {
-    "H": "#fa7496",
+    "H": "#fa7697",
     "B": "#0672da",
     "W": "#0572d9"
   },
   "ga_lead": {
+    "H": "#dee6ef",
     "B": "#0d427c",
     "W": "#0d437d"
   },
   "welfare": {
-    "H": "#ce1136",
+    "H": "#cf1136",
     "B": "#0e7896",
     "W": "#fcbfad"
   },
   "cfo": {
-    "H": "#d0b8b7",
+    "H": "#ebecf2",
     "B": "#614783",
     "W": "#614683"
   },
   "cto": {
-    "H": "#2a3150",
     "B": "#31446d",
     "W": "#2d384c"
   },
@@ -96,17 +95,17 @@ export const ART_PALETTES = {
     "B": "#1b4257"
   },
   "helpdesk": {
-    "H": "#3a3840",
+    "H": "#93a0a9",
     "B": "#423f47",
     "W": "#865d54"
   },
   "cleaner": {
-    "H": "#91847f",
+    "H": "#908480",
     "B": "#627285",
     "W": "#a67962"
   },
   "sales_kang": {
-    "H": "#111e41",
+    "H": "#121e41",
     "B": "#823653"
   },
   "legal_yoon": {
@@ -115,40 +114,41 @@ export const ART_PALETTES = {
     "W": "#b2cade"
   },
   "pm_lead": {
-    "H": "#578ace",
+    "H": "#243b6e",
     "B": "#ced7e2",
     "W": "#cdd7e2"
   },
   "design_lead": {
-    "H": "#2d88c9",
     "B": "#e49ea1",
     "W": "#f5cecc"
   },
   "cmo": {
-    "H": "#f69189",
+    "H": "#f6918a",
     "B": "#0f2648",
     "W": "#e3b6b3"
   },
   "founder": {
-    "H": "#947ca6",
+    "H": "#937aa6",
     "B": "#6f7087",
     "W": "#735b4d"
   },
   "intern_seo": {
-    "H": "#5e4e4e",
+    "H": "#5d4e4e",
     "B": "#c3bdb6",
     "W": "#c2bcb5"
   },
   "pr_yoo": {
-    "H": "#bf3646",
+    "H": "#be3646",
     "B": "#79c3e2",
     "W": "#79c3e1"
   },
   "nurse_han": {
+    "H": "#b5e8fc",
     "B": "#80bed4",
     "W": "#7fbdd4"
   },
   "lab_park": {
+    "H": "#e2eaf0",
     "B": "#99cdd8",
     "W": "#9aced8"
   },
@@ -158,35 +158,36 @@ export const ART_PALETTES = {
     "W": "#fcf2e4"
   },
   "cso": {
-    "H": "#8377d1",
+    "H": "#5f6190",
     "B": "#c997b3",
     "W": "#cc9bb5"
   },
   "ai_lead": {
+    "H": "#c9f0df",
     "B": "#376c7c",
     "W": "#d0aeb0"
   },
   "union_chief": {
-    "H": "#503e31",
     "B": "#4f6c81",
     "W": "#aabbd4"
   },
   "hacker": {
-    "H": "#857bba",
+    "H": "#847aba",
     "B": "#292d46",
     "W": "#292d45"
   },
   "intern_min": {
+    "H": "#f4898d",
     "B": "#f7eaf1",
     "W": "#539daf"
   },
   "security_yang": {
-    "H": "#2a3445",
+    "H": "#2a3547",
     "B": "#ddeef4",
     "W": "#a35748"
   },
   "mail_cho": {
-    "H": "#5a4645",
+    "H": "#857c72",
     "B": "#234a6d",
     "W": "#244b6f"
   },
@@ -196,16 +197,17 @@ export const ART_PALETTES = {
     "W": "#9372dc"
   },
   "reception_go": {
-    "H": "#3e2e2b",
+    "H": "#382826",
     "B": "#a98680",
     "W": "#243755"
   },
   "trainer_seok": {
-    "H": "#303444",
+    "H": "#303344",
     "B": "#f9a75a",
     "W": "#b77773"
   },
   "translator_ji": {
+    "H": "#c5e9fa",
     "B": "#fdede8",
     "W": "#f3f8fa"
   },
@@ -215,21 +217,20 @@ export const ART_PALETTES = {
     "W": "#68687b"
   },
   "logistics_bae": {
+    "H": "#fceec1",
     "B": "#75aad1",
     "W": "#eb9764"
   },
   "cro": {
-    "H": "#423d43",
     "B": "#424453",
     "W": "#424553"
   },
   "cpo": {
-    "H": "#52403b",
+    "H": "#53403b",
     "B": "#58909e",
     "W": "#5b7a89"
   },
   "ir_lead": {
-    "H": "#3f3c4f",
     "B": "#34323d",
     "W": "#b78076"
   },
@@ -248,55 +249,57 @@ export const ART_PALETTES = {
     "W": "#fdf3f0"
   },
   "cco": {
-    "H": "#ec99a4",
     "B": "#e2adab",
     "W": "#b77873"
   },
   "chief_of_staff": {
+    "H": "#f3e1aa",
     "B": "#3b3e49",
     "W": "#fdfee0"
   },
   "chairwoman": {
-    "H": "#9199b8",
     "B": "#4b6693",
     "W": "#4a6693"
   },
   "intern": {
-    "H": "#636096",
+    "H": "#fdecc0",
     "B": "#1e5690",
     "W": "#052582"
   },
   "staff": {
+    "H": "#fee1cf",
     "B": "#57ece0"
   },
   "sales_senior": {
+    "H": "#fef0ec",
     "B": "#a5c0e0",
     "W": "#a9c3e2"
   },
   "sales_manager": {
-    "H": "#cf3d41",
     "B": "#433b3e",
     "W": "#443d3f"
   },
   "sales": {
-    "H": "#343849",
+    "H": "#353849",
     "B": "#a2152e",
     "W": "#292d43"
   },
   "finance_senior": {
+    "H": "#7095af",
     "B": "#fdddc8"
   },
   "finance_manager": {
+    "H": "#fee7ab",
     "B": "#3aabbb",
     "W": "#fdeeea"
   },
   "finance": {
-    "H": "#fcbb6e",
+    "H": "#fcbb71",
     "B": "#05adbe",
     "W": "#05acbe"
   },
   "admin_senior": {
-    "H": "#3c4256",
+    "H": "#3c4356",
     "B": "#9c5e3d",
     "W": "#faece2"
   },
@@ -306,7 +309,6 @@ export const ART_PALETTES = {
     "W": "#3e4249"
   },
   "admin": {
-    "H": "#202d44",
     "B": "#9b98aa",
     "W": "#1e2739"
   }
