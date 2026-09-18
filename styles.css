@@ -79,7 +79,10 @@ button:disabled { cursor: default; opacity: .55; }
 
 /* ------------------------------------------------------------ workspace -- */
 .workspace { flex: 1; display: flex; min-height: 0; }
-.sheets { flex: 1; overflow-y: auto; overflow-x: hidden; background: #fff; min-width: 0; }
+/* `scrollbar-gutter: stable` — 스크롤바 자리를 **항상** 비워 둔다. 없으면 세로 스크롤바가 생길 때마다
+   시트 폭이 15px 줄고 사라질 때 다시 늘어난다(계측 900 ↔ 885). 시트를 옮길 때와 홈에서 로그가 쌓여
+   한 화면을 넘길 때마다 화면이 움직인다 — 이 앱에서 가장 큰 스크롤 컨테이너라 영향도 가장 크다. */
+.sheets { flex: 1; overflow-y: auto; overflow-x: hidden; background: #fff; min-width: 0; scrollbar-gutter: stable; }
 .sheet { display: none; padding-bottom: 8px; }
 .sheet.active { display: block; }
 
@@ -134,7 +137,7 @@ button:disabled { cursor: default; opacity: .55; }
 
 .canvas-wrap { line-height: 0; width: 100%; height: 100%; }
 #battle { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
-.stealth-view { width: 832px; height: 416px; overflow: auto; background: #fff; }
+.stealth-view { width: 832px; height: 416px; overflow: auto; background: #fff; scrollbar-gutter: stable; }
 
 
 .progress { position: relative; width: 220px; height: 18px; background: #eee; border: 1px solid var(--line); }
@@ -903,3 +906,7 @@ body.stealth .task-pane .sub, body.stealth .task-pane .eff, body.stealth .syn-ta
 #sheet-gacha .gacha-layout .xl-table { table-layout: fixed; }
 #sheet-gacha .gacha-layout .xl-table th:first-child, #sheet-gacha .gacha-layout .xl-table td:first-child { width: 80px; }
 #sheet-gacha .gacha-layout .xl-table th:nth-child(2), #sheet-gacha .gacha-layout .xl-table td:nth-child(2) { width: 132px; }
+
+/* 조건부 스크롤 컨테이너는 **전부** 스크롤바 자리를 비워 둔다. 생겼다 사라질 때 15px 이 움직이고,
+   그게 '레이아웃이 슥슥 변한다'의 정체였다(6-105). 새 스크롤 영역을 만들 때도 같이 붙일 것. */
+#modal-body, #dispatch-pick, .bs-content, #save-text { scrollbar-gutter: stable; }
