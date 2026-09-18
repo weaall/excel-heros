@@ -155,9 +155,9 @@ export class UIManager {
     for (const k of ['grade', 'role', 'div', 'owned', 'sort']) $(`#rf-${k}`).addEventListener('change', (e) => { this.filter[k] = e.target.value; this.#buildCards(); });
     $('#btn-dismiss-all')?.addEventListener('click', () => {
       const grade = $('#rf-dismiss-grade').value; const list = this.game.dismissCandidates(grade);
-      if (!list.length) { this.toast(grade + '급 이하에 방출할 여분 카드가 없습니다 (파티·즐겨찾기·조각 없는 카드는 제외)'); return; }
+      if (!list.length) { this.toast(grade + '급 이하에 방출할 여분 카드가 없습니다 (파티·즐겨찾기·여분 있는 카드는 제외)'); return; }
       const names = list.slice(0, 6).map((v) => v.def.name).join(', ') + (list.length > 6 ? ' 외 ' + (list.length - 6) + '장' : '');
-      this.#askConfirm('여분 카드 일괄 방출', grade + '급 이하 여분 ' + list.length + '장을 방출합니다.\n' + names + '\n\n파티·즐겨찾기·조각이 없는 카드는 제외됩니다. 되돌릴 수 없습니다.', { ok: '방출', danger: true }).then((yes) => {
+      this.#askConfirm('여분 카드 일괄 방출', grade + '급 이하 여분 ' + list.length + '장을 방출합니다.\n' + names + '\n\n파티·즐겨찾기·여분이 없는 카드는 제외됩니다. 되돌릴 수 없습니다.', { ok: '방출', danger: true }).then((yes) => {
         if (!yes) return;
         const r = this.game.dismissAll(grade);
         this.toast(r.count + '장 방출 → 강화 카드 ' + fmt(r.cards) + '장' + (r.gold ? ', 골드 ' + fmt(r.gold) : ''));
@@ -670,7 +670,7 @@ export class UIManager {
       if (v.inParty) wrap.append(el('span', { class: 'card-badge' }, '배치'));
       if (e.owned && v.affection.level >= BALANCE.AFFECTION.unlockSecret) wrap.append(el('span', { class: 'card-heart', title: `호감도 Lv ${v.affection.level}` }, `♥${v.affection.level}`));
       if (v.isMain) wrap.append(el('span', { class: 'card-badge main' }, '메인'));
-      if (v.canPromote) wrap.append(el('span', { class: 'card-star-up', title: `조각 ${v.promoteCost}개로 ★${v.star + 1} — 레벨 상한이 열립니다` }, '★↑'));
+      if (v.canPromote) wrap.append(el('span', { class: 'card-star-up blink', title: `같은 카드 ${v.promoteCost}장으로 ★${v.star + 1} — 레벨 상한이 열립니다` }, '한계 돌파'));
       grid.append(wrap);
       const partyBtn = e.owned && !v.isMain
         ? btn(v.inParty ? '해제' : '배치', () => this.game.toggleParty(id), `small ${v.inParty ? '' : 'primary'}`, !v.inParty && this.game.state.party.length >= BALANCE.PARTY_SIZE)
@@ -685,8 +685,8 @@ export class UIManager {
         el('td', { class: 'num', style: 'font-weight:700' }, e.owned ? fmt(v.power) : '-'),
         el('td', { class: 'num databar-td' }, el('div', { class: 'bar', style: `width:${e.owned ? Math.max(2, Math.round((v.atk / maxAtk) * 96)) : 0}%` }), el('span', {}, e.owned ? fmt(v.atk) : '-')),
         el('td', { class: 'num', style: 'color:#e84393' }, e.owned ? `♥${v.affection.level}` : '-'),
-        el('td', { class: `num shard-td ${v.canPromote ? 'can-star' : ''}`, title: v.canPromote ? `조각 ${v.promoteCost}개로 ★${v.star + 1} 돌파 가능` : '' },
-          e.owned ? (v.canPromote ? `▲ ${e.shards} / ${v.promoteCost}` : String(e.shards)) : '-'),
+        el('td', { class: `num shard-td ${v.canPromote ? 'can-star' : ''}`, title: v.canPromote ? `같은 카드 ${v.promoteCost}장으로 ★${v.star + 1} 돌파 가능` : '' },
+          e.owned ? (v.canPromote ? `▲ ${e.shards} / ${v.promoteCost}장` : `${e.shards}장`) : '-'),
         el('td', { class: 'ctl' }, partyBtn)));
     }
     const upCount = HEROES.filter((h) => this.game.heroView(h.id).canPromote).length;
@@ -778,7 +778,7 @@ export class UIManager {
       el('div', { class: 'hb-text' },
         el('b', {}, `${def.grade}급 ${v.grade.label}`),
         el('span', {}, def.name),
-        el('small', {}, r.isNew ? '신규 영입' : `조각 +${r.shards ?? 0}`)));
+        el('small', {}, r.isNew ? '신규 영입' : `여분 +${r.shards ?? 0}장`)));
     host.append(el$);
     setTimeout(() => el$.classList.add('out'), 1500);
     setTimeout(() => el$.remove(), 2000);
@@ -878,15 +878,11 @@ export class UIManager {
     if (!e.owned) {
       // 미보유 카드도 판단 재료는 줘야 한다 — '쫓을 가치가 있나'에 답하는 줄들
       const pick = Object.values(g.pickup()).includes(id);
-      const pity = { a: BALANCE.PITY_A - s.pity.sinceA, s: BALANCE.PITY_S - s.pity.sinceS };
       table.append(row('상태', pick ? '미보유 · 오늘의 픽업' : '미보유', null, '삽입 › 데이터 가져오기에서 영입'));
       table.append(row('★1 전투력', fmt(v.power), null, '보유하면 레벨·★·강화로 올라갑니다 (ATK×2 + HP÷10)'));
       table.append(row('★1 ATK', fmt(v.atk)));
       table.append(row('★1 HP', fmt(v.hp)));
       table.append(row('공격 속도', `${v.interval}s`));
-      table.append(row('영입 확률', `${v.def.grade}급 ${(v.grade.rate * 100).toFixed(v.grade.rate < 0.01 ? 1 : 0)}%`, null,
-        `${pick ? '픽업 중이라 같은 등급 안에서 더 잘 나옵니다. ' : ''}모집 포인트로 교환하는 천장도 있습니다`));
-      table.append(row('천장까지', `A 이상 ${pity.a}회 · S ${pity.s}회`, null, '뽑을수록 줄어듭니다 — 모집 포인트 교환과는 별개입니다'));
     }
     else {
       table.append(row('레벨', `Lv ${e.level} / ${v.levelCap}`, el('div', { class: 'ctl-group' },
@@ -904,15 +900,15 @@ export class UIManager {
       table.append(row('강화', `+${e.enhance} / 한계 ${v.enhanceCap}`,
         sb(v.enhanceMaxed ? 'MAX' : `+1 (카드 ${v.enhanceCost})`, () => { if (!g.enhance(id)) this.toast(v.enhanceMaxed ? `★${v.star} 카드의 강화 한계는 +${v.enhanceCap}입니다. ★승급이나 각성으로 한계를 올리세요` : '강화 카드가 부족합니다'); }, v.canEnhance ? 'primary' : '', !v.canEnhance, '강화 카드로 +4% ATK/HP'),
         v.isMain ? '한계는 직급 승진으로 상승' : `한계 = ★×10${v.awakened ? ' + 각성 10' : ''} · 보유 강화 카드 ${fmt(s.cards)}장`));
-      if (!v.isMain) table.append(row('조각', v.promoteCost !== null ? `${e.shards} / ${v.promoteCost}` : `${e.shards} (최대 ★)`,
+      if (!v.isMain) table.append(row('같은 카드', v.promoteCost !== null ? `여분 ${e.shards}장 / 필요 ${v.promoteCost}장` : `여분 ${e.shards}장 (최대 ★)`,
         el('div', { class: 'ctl-group' },
-          sb(`★ 한계 돌파`, () => this.#promoteWithDialog(id), v.canPromote ? 'primary' : '', !v.canPromote, v.promoteCost !== null ? `조각 ${v.promoteCost}개로 ★${v.star + 1}` : '최대 ★'),
-          sb(`조각→카드`, () => g.convertShards(id), '', e.shards <= 0, `조각 ${e.shards}개 → 강화 카드 ${e.shards * v.shardCardValue}장`),
+          sb(`★ 한계 돌파`, () => this.#promoteWithDialog(id), v.canPromote ? 'primary' : '', !v.canPromote, v.promoteCost !== null ? `같은 카드 ${v.promoteCost}장으로 ★${v.star + 1}` : '최대 ★'),
+          sb(`여분→강화 카드`, () => g.convertShards(id), '', e.shards <= 0, `여분 ${e.shards}장 → 강화 카드 ${e.shards * v.shardCardValue}장`),
           (() => { const sc = g.scoutInfo(id); return sb(sc.cost !== null ? `스카우트 (골드 ${fmt(sc.cost)})` : '스카우트', () => {
             if (g.scoutShard(id) === null) this.toast(g.scoutInfo(id).why || '지금은 스카우트할 수 없습니다');
-            else this.toast(`경력직 스카우트 — 조각 +1 (오늘 ${g.scoutInfo(id).left}회 남음)`);
-          }, sc.can ? 'primary' : '', !sc.can, `골드로 조각 1개를 삽니다 · 오늘 ${sc.left} / ${sc.perDay}회 남음${sc.why ? ' — ' + sc.why : ''}`); })()),
-        v.promoteCost !== null ? `다음 한계 돌파까지 조각 ${Math.max(0, v.promoteCost - e.shards)}개 · 같은 카드가 또 나오면 조각 5~10 · 스카우트는 하루 ${BALANCE.SCOUT.perDay}회` : '★5 · 각성으로 계속 성장'));
+            else this.toast(`경력직 스카우트 — 같은 카드 +1장 (오늘 ${g.scoutInfo(id).left}회 남음)`);
+          }, sc.can ? 'primary' : '', !sc.can, `골드로 같은 카드 1장을 삽니다 · 오늘 ${sc.left} / ${sc.perDay}회 남음${sc.why ? ' — ' + sc.why : ''}`); })()),
+        v.promoteCost !== null ? `★${v.star + 1}까지 ${Math.max(0, v.promoteCost - e.shards)}장 더 · 같은 카드를 또 뽑으면 여분 +1장 · ★5까지 합계 14장` : '★5 · 각성으로 계속 성장', true));
       if (!v.isMain && v.star >= BALANCE.AWAKEN.star) table.append(row('각성', v.awakened ? '✦ 완료' : '가능',
         v.awakened ? null : sb(`✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, 'primary', !v.canAwaken),
         `ATK/HP +${Math.round(BALANCE.AWAKEN.atk * 100)}% · 특성 ×${BALANCE.AWAKEN.trait} · 스킬 ×${BALANCE.AWAKEN.skill} · 강화 한계 +${BALANCE.ENHANCE_CAP_AWAKEN}`));
@@ -1048,7 +1044,7 @@ export class UIManager {
   #promoteWithDialog(id) {
     const g = this.game; const before = g.heroView(id);
     const b = { star: before.star, atk: before.atk, hp: before.hp };
-    if (!g.promote(id)) { this.toast('조각이 부족합니다'); return; }
+    if (!g.promote(id)) { this.toast('같은 카드가 부족합니다'); return; }
     const v = g.heroView(id);
     const body = el('div', { class: 'promo-result' },
       el('div', { class: 'promo-card' }, cardCanvas(v.def, { star: v.star, title: `${stars(v.star)} · Lv ${v.entry.level}`, awakened: !!v.entry.awakened })),
@@ -1061,6 +1057,9 @@ export class UIManager {
         v.star >= BALANCE.AWAKEN.star ? el('div', { class: 'detail-line', style: 'color:#b8860b' }, `✦ 각성 가능 (강화 카드 ${v.awakenCost}장)`) : null,
       ));
     this.openModal('★ 한계 돌파 완료', body);
+    // ★이 늘어나는 순간을 **보여 준다.** 표만 뜨면 무엇이 일어났는지 읽어서 알아내야 한다.
+    $('#modal .dialog')?.classList.add('starburst');
+    setTimeout(() => $('#modal .dialog')?.classList.remove('starburst'), 1200);
     $('#modal-actions').innerHTML = ''; $('#modal-actions').append(btn('상세로', () => this.openDetail(id)), btn('확인', () => this.closeModal(), 'primary'));
     this.game.emit('sfx', 'levelup');
   }

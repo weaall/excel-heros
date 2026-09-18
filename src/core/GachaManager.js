@@ -46,17 +46,24 @@ export function pullOnce(pity, roster, rng, minGrade = null, featured = null) {
   const entry = roster[hero.id] ?? (roster[hero.id] = emptyHero());
   let isNew = false, shards = 0;
   if (!entry.owned) {
-    // New card: unlocked at ★1 right away (the GDD's 10 unlock shards are consumed implicitly).
-    entry.owned = true; entry.star = 1; entry.level = entry.level || 1; isNew = true; shards = BALANCE.UNLOCK_SHARDS;
+    // 새 카드는 그 자리에서 ★1로 해금된다. **여분은 0장** — 받은 한 장이 본체다.
+    // (예전엔 UNLOCK_SHARDS 10 을 보고했는데, 여분이 장수인 지금은 '여분 +10'이 거짓이 된다.)
+    entry.owned = true; entry.star = 1; entry.level = entry.level || 1; isNew = true; shards = 0;
   } else {
-    shards = rng.int(BALANCE.DUPLICATE_SHARDS_MIN, BALANCE.DUPLICATE_SHARDS_MAX);
+    // 중복은 **한 장**으로 쌓인다. 예전처럼 조각 5~10개를 주면 '같은 카드 N장' 이라는 규칙이 깨진다.
+    shards = 1;
     entry.shards += shards;
   }
   return { heroId: hero.id, grade, isNew, shards, pity: nextPity, pickup };
 }
 
-/** Shards needed to go from `star` to `star+1`, or null at max. */
+/**
+ * ★을 하나 올리는 데 필요한 **같은 카드 장수**. ★2는 2장, ★3은 3장, ★4는 4장, ★5는 5장 —
+ * 즉 `star + 1`. ★5까지 합계 14장이고 **등급과 무관하다.**
+ *
+ * 등급별 조각 표(D 10/20/40/80 … S 30/60/120/240)를 쓰던 동안은 "몇 장 더 뽑아야 ★3인가"를
+ * 플레이어가 셀 수 없었다. 이제 화면에 보이는 장수가 그대로 답이다.
+ */
 export function promoteCost(grade, star) {
-  const list = GRADES[grade].promote;
-  return star >= BALANCE.MAX_STAR ? null : list[star - 1];
+  return star >= BALANCE.MAX_STAR ? null : star + 1;
 }

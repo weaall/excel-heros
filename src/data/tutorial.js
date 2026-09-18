@@ -39,7 +39,7 @@ export const TUTORIAL = Object.freeze([
   },
   {
     id: 'star', title: '한계 돌파 이해하기', gems: 100,
-    text: '레벨에는 ★로 정해진 상한이 있습니다. 같은 카드를 또 뽑으면 조각이 쌓이고, 조각으로 ★을 올리면 상한이 열립니다.',
+    text: '레벨에는 ★로 정해진 상한이 있습니다. 같은 카드를 또 뽑으면 여분으로 쌓이고, ★N으로 올리려면 같은 카드 N장이 필요합니다 — 올리면 상한이 열립니다.',
     target: '.sheet-tab[data-sheet="roster"]',
     check: (g) => Object.values(g.state.heroes).some((h) => h.owned && (h.star ?? 0) >= 2) || Object.values(g.state.heroes).some((h) => (h.shards ?? 0) > 0),
   },

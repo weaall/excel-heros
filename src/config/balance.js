@@ -63,14 +63,14 @@ export const BALANCE = Object.freeze({
   ENHANCE_CAP_BY_STAR: [10, 20, 30, 40, 50], // cap per ★ (index star-1); 각성 adds ENHANCE_CAP_AWAKEN
   ENHANCE_CAP_AWAKEN: 10,
   ENHANCE_CAP_BY_TIER: [10, 20, 30, 40, 50],  // main hero: cap per job tier
-  // 레벨 상한: ★로만 열린다. 골드는 벽까지만 데려다주고, 그다음은 중복 카드(조각)의 몫.
+  // 레벨 상한: ★로만 열린다. 골드는 벽까지만 데려다주고, 그다음은 **같은 카드 N장**의 몫(★N = N장).
   // 스테이지 1단계에 약 1.74레벨이 필요하므로 ★1 ≈ 34단계 · ★3 ≈ 92단계 · ★5 ≈ 149단계 · ★5+각성 ≈ 172단계.
   LEVEL_CAP_BY_STAR: [80, 140, 200, 260, 320],
   LEVEL_CAP_AWAKEN: 50,
   MAIN_LEVEL_CAP_BY_TIER: [80, 140, 200, 260, 320], // 주인공은 ★ 대신 직급으로 열린다
   LEVEL_REFUND: 1.0,        // levels can be undone; gold is refunded at this rate so it can move between cards
   ENHANCE_COST_BASE: 10, ENHANCE_COST_GROWTH: 1.2, // enhance cards
-  // 경력직 스카우트: 골드 → 조각. ★ 사이에서 골드가 할 일을 잃지 않게 하는 유일한 상시 소비처다.
+  // 경력직 스카우트: 골드 → **같은 카드 1장**. ★ 사이에서 골드가 할 일을 잃지 않게 하는 유일한 상시 소비처다.
   // 값 = 지금 ★의 레벨 상한을 채우는 누적 골드 × costPct × 등급 배수. 하루 한도가 가챠의 자리를 지킨다.
   SCOUT: { perDay: 3, costPct: 0.35, gradeMult: { D: 0.5, C: 0.8, B: 1.2, A: 2, S: 3.5 }, minCost: 50_000 },
   SHARD_CARD_VALUE: { D: 1, C: 2, B: 4, A: 8, S: 16 }, // enhance cards per shard when converting
@@ -156,6 +156,8 @@ export const BALANCE = Object.freeze({
   GACHA_TEN_COST: 900,
   PITY_A: 50,               // 50 pulls without A+ -> guaranteed A or better
   PITY_S: 120,              // 120 pulls without S -> guaranteed S (S is 0.5%: rarer, so the floor moved out a little)
+  // 중복 카드는 한 장으로 쌓인다(한계 돌파가 '같은 카드 N장'이 된 뒤로 · 6-107). 아래 두 값은
+  // 남겨 두지만 뽑기 경로에서는 쓰이지 않는다 — 광고·업적 보상이 참조한다.
   DUPLICATE_SHARDS_MIN: 5,
   DUPLICATE_SHARDS_MAX: 10,
   UNLOCK_SHARDS: 10,
@@ -283,7 +285,7 @@ export const levelCap = (star, awakened = false, tier = null) => (tier !== null
   ? B.MAIN_LEVEL_CAP_BY_TIER[Math.min(tier, B.MAIN_LEVEL_CAP_BY_TIER.length - 1)]
   : B.LEVEL_CAP_BY_STAR[Math.max(0, Math.min(Math.max(1, star) - 1, B.LEVEL_CAP_BY_STAR.length - 1))]) + (awakened ? B.LEVEL_CAP_AWAKEN : 0);
 
-/** 조각 1개를 골드로 사는 값: 지금 ★의 상한을 채우는 누적 골드에 비례한다(그래서 후반까지 따라온다). */
+/** 같은 카드 1장을 골드로 사는 값: 지금 ★의 상한을 채우는 누적 골드에 비례한다(그래서 후반까지 따라온다). */
 export const scoutCost = (grade, star, cap) => {
   let sunk = 0; for (let l = 1; l < cap; l++) sunk += upgradeCost(l);
   return Math.max(B.SCOUT.minCost, Math.floor(sunk * B.SCOUT.costPct * (B.SCOUT.gradeMult[grade] ?? 1)));

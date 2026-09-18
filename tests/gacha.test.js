@@ -64,24 +64,33 @@ test('observed rates roughly match 48.5/30/16/5/0.5 with pity nudging up', () =>
   assert.ok(counts.S / N >= 0.005 && counts.S / N < 0.013);
 });
 
-test('pullOnce unlocks new heroes at 1 star and gives 5-10 shards on duplicates', () => {
+test('pullOnce: 새 카드는 ★1 · 여분 0장, 중복은 정확히 1장씩 쌓인다', () => {
   const rng = createRng(99);
   const roster = {};
   let pity = initialPity();
   let news = 0, dupes = 0;
-  for (let i = 0; i < 4000; i++) { // S is 0.5% and there are 8 S cards, so it takes a while to see them all
+  for (let i = 0; i < 4000; i++) { // S is 0.5% and there are 9 S cards, so it takes a while to see them all
     const r = pullOnce(pity, roster, rng); pity = r.pity;
-    if (r.isNew) { news++; assert.equal(roster[r.heroId].star, 1); assert.equal(r.shards, BALANCE.UNLOCK_SHARDS); }
-    else { dupes++; assert.ok(r.shards >= 5 && r.shards <= 10); }
+    if (r.isNew) { news++; assert.equal(roster[r.heroId].star, 1); assert.equal(r.shards, 0, '본체를 받았으니 여분은 0'); }
+    else { dupes++; assert.equal(r.shards, 1, '중복은 한 장 — 한계 돌파가 장수로 세어지므로'); }
   }
   assert.equal(news, HEROES.length, 'all heroes eventually unlocked');
   assert.ok(dupes > 0);
+  // 쌓인 여분이 곧 '몇 장 더 뽑았는가'다
+  for (const [id, e] of Object.entries(roster)) assert.ok(Number.isInteger(e.shards) && e.shards >= 0, `${id} 여분이 정수`);
 });
 
-test('promoteCost follows grade table and is null at max star', () => {
-  assert.equal(promoteCost('D', 1), 10);
-  assert.equal(promoteCost('S', 4), 240);
-  assert.equal(promoteCost('S', 5), null);
+test('한계 돌파 비용: ★N으로 올리려면 같은 카드 N장 — 등급과 무관하다', () => {
+  for (const gr of GRADE_ORDER) {
+    assert.equal(promoteCost(gr, 1), 2, `${gr} ★2는 2장`);
+    assert.equal(promoteCost(gr, 2), 3, `${gr} ★3은 3장`);
+    assert.equal(promoteCost(gr, 3), 4, `${gr} ★4는 4장`);
+    assert.equal(promoteCost(gr, 4), 5, `${gr} ★5는 5장`);
+    assert.equal(promoteCost(gr, 5), null, `${gr} ★5가 최대`);
+  }
+  // ★5까지 합계는 14장이고 모든 등급이 같다 — D가 쉽고 S가 어려운 표를 없앤 것이 요점이다
+  const total = (gr) => [1, 2, 3, 4].reduce((a2, st) => a2 + promoteCost(gr, st), 0);
+  for (const gr of GRADE_ORDER) assert.equal(total(gr), 14, `${gr} ★5까지 14장`);
 });
 
 test('오늘의 픽업: deterministic per date, rotates daily, featured card lands ~50% of its grade', async () => {
