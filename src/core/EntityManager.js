@@ -102,9 +102,19 @@ export class EntityManager {
   fx(type, props) { this.effects.push({ type, t: 0, life: props.life ?? 0.4, ...props }); }
 
   // ---------------------------------------------------------------- stage --
-  startStage() {
+  /**
+   * 새 스테이지 시작.
+   * @param {boolean} regroup 재정비 여부. 후퇴·전멸·야근처럼 **판을 다시 까는** 경우에만 true 이고,
+   *   그때만 쓰러진 사원이 일어난다. 전진(도전 성공)은 false — 그래서 깊이 밀수록 파티가 줄어들고,
+   *   그 줄어듦이 곧 '이 파티의 한계'가 된다. 살아 있는 사원은 언제나 체력만 회복한다.
+   */
+  startStage(regroup = false) {
     this.monsters = []; this.projectiles = []; this.boss = null; this.bossTimer = 0; this.wave = 0;
-    for (const h of this.heroes) { h.alive = true; h.hp = h.maxHp; h.reviveT = 0; h.x = h.homeX; h.y = h.homeY; h.targetId = null; h.anim = 'walk'; }
+    for (const h of this.heroes) {
+      if (regroup) { h.alive = true; h.reviveT = 0; }
+      if (h.alive) h.hp = h.maxHp;
+      h.x = h.homeX; h.y = h.homeY; h.targetId = null; h.anim = 'walk';
+    }
     this.traveling = true; this.travelT = TRAVEL_TIME * 0.6;
   }
 

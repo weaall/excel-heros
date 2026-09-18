@@ -490,3 +490,35 @@ test('특성: passive trait values scale with stars, in and out of combat', asyn
   assert.ok(Math.abs(b.sum - a.sum) > 1e-6);
   assert.ok(BALANCE.TRAIT_STAR.perStar > 0);
 });
+
+// 전진은 소모전이어야 한다. 스테이지가 넘어갈 때마다 전원이 되살아나면 죽음은 여전히 공짜다 —
+// 실측으로 부활 스킬을 넣든 빼든 같은 단계에 도달했다(151 vs 149). 이제 **전진만** 쓰러진 사원을 남긴다.
+test('전진은 소모전: advancing keeps the fallen down, regrouping brings them back', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
+  const g = new GameManager({ save: memSave() });
+  for (const d of HEROES.filter((h) => h.id !== MAIN_ID).slice(0, 4)) {
+    Object.assign(g.state.heroes[d.id], { owned: true, star: 1, level: 30 });
+    g.state.party.push(d.id);
+  }
+  g.state.stage = 5; g.state.maxStage = 5; g.state.maxCleared = 5; g.state.challenging = false;
+  g.entities.rebuildParty();
+  const down = () => { const h = g.entities.heroes[1]; h.alive = false; h.hp = 0; return h; };
+
+  // 전진: 쓰러진 사원은 그대로 남는다
+  const a = down();
+  assert.equal(g.startChallenge(), true);
+  assert.equal(a.alive, false, '도전을 이어 가면 쓰러진 사원은 일어나지 않는다 — 그게 이 파티의 한계다');
+  assert.ok(g.entities.heroes.filter((h) => h.alive).length > 0, '살아 있는 사원은 계속 싸운다');
+  assert.ok(g.entities.heroes.filter((h) => h.alive).every((h) => h.hp === h.maxHp), '살아남은 사원은 체력을 회복한다');
+
+  // 후퇴: 재정비이므로 전원이 돌아온다
+  g.cancelChallenge();
+  assert.ok(g.entities.heroes.every((h) => h.alive), '후퇴하면 팀이 복구된다');
+
+  // 전멸도 재정비다
+  for (const h of g.entities.heroes) { h.alive = false; h.hp = 0; }
+  g.onPartyWiped();
+  assert.ok(g.entities.heroes.every((h) => h.alive), '전멸 후에도 다시 시작할 수 있어야 한다');
+});

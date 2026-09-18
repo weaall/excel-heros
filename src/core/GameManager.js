@@ -49,7 +49,7 @@ export class GameManager extends Emitter {
     this.overtime = null; // { t, kills, elites, stage } while 야근 모드 is running
     this.entities = new EntityManager(this);
     this.entities.rebuildParty();
-    this.entities.startStage();
+    this.entities.startStage(true); // 게임 시작 = 재정비
   }
 
   // ------------------------------------------------------------- derived --
@@ -71,7 +71,7 @@ export class GameManager extends Emitter {
     for (const k of Object.keys(s.team)) s.team[k] = 0;
     this.logs = [];
     this.log(`회사 이전 완료: 지분 +${info.gain} (총 ${s.prestige.shares}, 파티 ATK·골드 +${Math.round(this.prestigeBonus() * 100)}%)`, 'stage');
-    this.entities = new EntityManager(this); this.entities.rebuildParty(); this.entities.startStage();
+    this.entities = new EntityManager(this); this.entities.rebuildParty(); this.entities.startStage(true); // 회사 이전 = 재정비
     this.persist(); this.emit('prestige', info); this.emit('reset');
     return { ...info, total: s.prestige.shares };
   }
@@ -966,7 +966,7 @@ export class GameManager extends Emitter {
     const O = BALANCE.OVERTIME;
     if (this.state.daily.overtimeDone) this.state.daily.overtimeExtra = Math.max(0, (this.state.daily.overtimeExtra ?? 0) - 1); // extra run bought with an ad
     this.overtime = { t: O.duration, kills: 0, elites: 0, stage: Math.max(1, this.state.maxStage + O.stageOffset), gold: 0 };
-    this.entities.startStage(); this.entities.travelT = O.travel;
+    this.entities.startStage(true); this.entities.travelT = O.travel;
     this.log(`야근 모드 시작: ${stageLabel(this.overtime.stage)} 난이도, ${O.duration}초 동안 처치 수만큼 보석`, 'boss');
     this.emit('overtime-start', this.overtime); this.emit('overtime'); this.emit('stage');
     return true;
@@ -979,7 +979,7 @@ export class GameManager extends Emitter {
     this.state.stats.overtimes = (this.state.stats.overtimes ?? 0) + 1; this.state.stats.overtimeBest = Math.max(this.state.stats.overtimeBest ?? 0, o.kills);
     const report = { ...o, gems, cards, best: this.state.stats.overtimeBest };
     this.overtime = null;
-    this.entities.startStage();
+    this.entities.startStage(true);  // 야근 종료 = 재정비
     this.log(`야근 종료: 처치 ${o.kills} (엘리트 ${o.elites}) → 보석 +${gems}, 강화 카드 +${cards}`, 'stage');
     this.emit('overtime-end', report); this.emit('overtime'); this.emit('gems'); this.emit('cards'); this.emit('stage'); this.emit('quests');
     return report;
@@ -1037,7 +1037,7 @@ export class GameManager extends Emitter {
     const s = this.state;
     s.challenging = false; s.kills = 0;
     if (s.stage > 1 && s.stage > s.maxCleared) s.stage -= 1;
-    this.entities.startStage();
+    this.entities.startStage(true); // 후퇴 = 재정비 — 여기서만 쓰러진 사원이 일어난다
     this.log(`${reason}. ${this.stageLabel()}에서 자동 사냥`, 'warn');
     this.emit('stage'); this.emit('kills'); this.emit('challenge');
   }
@@ -1208,7 +1208,7 @@ export class GameManager extends Emitter {
     const fc = this.challengeForecast(s.stage + 1);
     if (s.settings.autoAdvance && (!s.settings.safeAdvance || fc.prob >= BALANCE.SAFE_ADVANCE_MIN)) this.startChallenge();
     else {
-      this.entities.startStage();
+      this.entities.startStage(true);  // 전진을 멈추고 사냥 = 재정비
       if (s.settings.autoAdvance) { this.waitingAdvance = true; this.log(`${stageLabel(s.stage + 1)} 승산 ${Math.round(fc.prob * 100)}% — 강화 후 자동 진행 재개`, 'warn'); }
       else this.log(`${this.stageLabel()}에서 자동 사냥 중 (다음 단계 도전 대기)`, 'info');
       this.emit('challenge');
@@ -1225,10 +1225,10 @@ export class GameManager extends Emitter {
   /** Party wipe: a failed challenge falls back to farming the previous stage; a farming wipe just restarts. */
   onPartyWiped() {
     const s = this.state;
-    if (this.overtime) { this.entities.startStage(); this.entities.travelT = BALANCE.OVERTIME.travel; this.log('야근 중 전원 번아웃 — 재정비 후 계속', 'warn'); this.emit('wipe'); return; }
-    if (this.isChallenging() && s.stage === 1 && s.maxCleared === 0) { this.entities.startStage(); this.log('팀 전원 번아웃. Phase 1-1 재정비 (튜토리얼: 진행도 유지)', 'warn'); this.emit('stage'); }
+    if (this.overtime) { this.entities.startStage(true); this.entities.travelT = BALANCE.OVERTIME.travel; this.log('야근 중 전원 번아웃 — 재정비 후 계속', 'warn'); this.emit('wipe'); return; }
+    if (this.isChallenging() && s.stage === 1 && s.maxCleared === 0) { this.entities.startStage(true); this.log('팀 전원 번아웃. Phase 1-1 재정비 (튜토리얼: 진행도 유지)', 'warn'); this.emit('stage'); }
     else if (this.isChallenging()) this.#failChallenge('팀 전원 번아웃');
-    else { this.entities.startStage(); this.log(`팀 전원 번아웃. ${this.stageLabel()} 사냥 재시작`, 'warn'); this.emit('stage'); }
+    else { this.entities.startStage(true); this.log(`팀 전원 번아웃. ${this.stageLabel()} 사냥 재시작`, 'warn'); this.emit('stage'); }
     this.emit('wipe');
   }
 
@@ -1265,7 +1265,7 @@ export class GameManager extends Emitter {
   loadCloudSave(raw) {
     const s = migrate(raw); if (!s) return false;
     this.state = s; Quests.ensureDaily(this.state);
-    this.entities.rebuildParty(); this.entities.startStage();
+    this.entities.rebuildParty(); this.entities.startStage(true);  // 저장본 불러오기 = 재정비
     this.persist(); this.emit('reset'); this.log('서버 저장본을 불러왔습니다', 'info');
     return true;
   }
@@ -1289,7 +1289,7 @@ export class GameManager extends Emitter {
   reset() { this.save.clear(); this.state = createInitialState(); this.logs = []; this.#rebuildWorld(); }
   #rebuildWorld() {
     Quests.ensureDaily(this.state);
-    this.entities = new EntityManager(this); this.entities.rebuildParty(); this.entities.startStage();
+    this.entities = new EntityManager(this); this.entities.rebuildParty(); this.entities.startStage(true);  // 세계 재구성 = 재정비
     this.persist(); this.emit('reset');
   }
 
