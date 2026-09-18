@@ -16,6 +16,7 @@ const { createInitialState } = await import(R + 'core/state.js');
 const { GameManager } = await import(R + 'core/GameManager.js');
 const { BALANCE } = await import(R + 'config/balance.js');
 const { HEROES, MAIN_ID } = await import(R + 'data/heroes.js');
+const { boardEntry, boardScore } = await import(R + 'core/plausibility.js');
 
 const HOURS = Number(process.env.HOURS ?? 2);
 const RUNS = Number(process.env.RUNS ?? 3);
@@ -59,6 +60,9 @@ function run(seed, mutate) {
   mutate?.(g);
 
   let deaths = 0, wipes = 0, peak = 0;
+  // 주 지표: 각 관문에 **처음** 도달한 시각(초). 강한 파티가 더 늦게 도달할 방법은 없다.
+  const GATES = [60, 90, 120];
+  const reached = new Map();
   const realWipe = g.onPartyWiped.bind(g); g.onPartyWiped = () => { wipes++; return realWipe(); };
   g.on('log', (row) => { if (/쓰러짐/.test(row.text)) deaths++; });
 
@@ -66,7 +70,7 @@ function run(seed, mutate) {
   const DT = 0.2;
   while (t < HOURS * 3600) {
     g.tick(DT); t += DT; act += DT;
-    if (g.state.maxCleared > peak) peak = g.state.maxCleared;
+    if (g.state.maxCleared > peak) { peak = g.state.maxCleared; for (const gate of GATES) if (peak >= gate && !reached.has(gate)) reached.set(gate, t); }
     if (g.braceFormula) { const f = g.braceInfo(); g.submitBraceFormula(f.a + f.b); } // 항상 맞힌다 (변인 고정)
     if (act >= 30) { act = 0;
       if (!g.state.settings.autoAdvance) g.setAutoAdvance(true); // 전멸하면 게임이 자동 진행을 끈다 — 사람은 다시 켠다 (상태를 직접 건드리면 도전이 다시 시작되지 않는다)
@@ -77,7 +81,14 @@ function run(seed, mutate) {
       g.autoParty(); g.autoEquipParty(); g.upgradeCheapestLoop();
     }
   }
-  return { stage: peak, kills: g.state.stats.totalKills ?? 0, bosses: g.state.stats.bossKills ?? 0, deaths, wipes };
+  // 지표는 **순위표 점수**다. `maxCleared` 하나로는 회사 이전이 있는 게임을 못 잰다 — 이전은 단계를
+  // 일부러 되돌려 영구 지분을 사는 거래이고, 센 파티는 그 거래를 더 자주 한다. 그래서 '최고 단계'로
+  // 재면 센 쪽이 더 낮게 나온다(측정: 같은 시드에서 센 판이 100분 내내 앞섰는데 240분엔 동점).
+  const score = boardScore(boardEntry(g.state, '감사', g.partyDPS()));
+  const cap = HOURS * 3600;
+  const out = { score: Math.round(score), shares: g.state.prestige?.shares ?? 0, stage: peak, kills: g.state.stats.totalKills ?? 0, bosses: g.state.stats.bossKills ?? 0, deaths, wipes };
+  for (const gate of GATES) out[`t${gate}`] = Math.round(reached.get(gate) ?? cap); // 못 가면 최악값
+  return out;
 }
 
 // BALANCE 는 Object.freeze 이므로 **최상위 스칼라는 A/B 로 못 끈다**(대입이 조용히 무시된다).
@@ -96,7 +107,8 @@ const snap = snapshot();
 
 console.log(`시스템 A/B 감사 — ${HOURS}시간 × ${RUNS}판 · 시드 고정 짝비교\n`);
 const base = Array.from({ length: RUNS }, (_, i) => run(i));
-console.log('기준선          클리어', String(avg(base, 'stage')).padStart(4), '· 처치', String(avg(base, 'kills')).padStart(7), '· 보스', String(avg(base, 'bosses')).padStart(3), '· 쓰러짐', String(avg(base, 'deaths')).padStart(4));
+const mmss = (x) => { const sec = Math.round(x); return `${Math.floor(sec / 60)}분${String(sec % 60).padStart(2, '0')}초`; };
+console.log('기준선   60단계', mmss(avg(base, 't60')), '· 90단계', mmss(avg(base, 't90')), '· 120단계', mmss(avg(base, 't120')), '· 지분', String(avg(base, 'shares')).padStart(4), '· 최고', String(avg(base, 'stage')).padStart(4), '· 쓰러짐', String(avg(base, 'deaths')).padStart(4));
 console.log('-'.repeat(84));
 
 const rows = [];
@@ -106,17 +118,21 @@ for (const k of keys) {
   const runs = Array.from({ length: RUNS }, (_, i) => run(i, (g) => sys.off(g))); // 기준선 i판과 같은 시드
   restore(snap);
   const d = (key) => paired(runs, base, key);
-  const pct = avg(base, 'stage') ? (d('stage') / avg(base, 'stage')) * 100 : 0;
-  rows.push({ k, name: sys.name, stage: avg(runs, 'stage'), dStage: d('stage'), pct, deaths: avg(runs, 'deaths') });
+  // 시스템을 끄면 관문 도달이 **늦어져야** 한다. 세 관문의 지연을 평균해 한 숫자로 본다(+ = 느려졌다).
+  const delays = ['t60', 't90', 't120'].map((k) => (avg(base, k) ? (d(k) / avg(base, k)) * 100 : 0));
+  const pct = delays.reduce((a2, b2) => a2 + b2, 0) / delays.length;
+  rows.push({ k, name: sys.name, pct, deaths: avg(runs, 'deaths') });
   console.log(
     `끔: ${sys.name}`.padEnd(22),
-    '클리어', String(avg(runs, 'stage')).padStart(4),
-    `(${d('stage') >= 0 ? '+' : ''}${d('stage')}, ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)`.padStart(18),
-    '· 쓰러짐', String(avg(runs, 'deaths')).padStart(4),
+    '60', mmss(avg(runs, 't60')).padStart(8), '· 90', mmss(avg(runs, 't90')).padStart(8), '· 120', mmss(avg(runs, 't120')).padStart(8),
+    `평균 ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`.padStart(13),
+    '· 지분', String(avg(runs, 'shares')).padStart(4),
   );
 }
 console.log('-'.repeat(84));
 const dead = rows.filter((r) => Math.abs(r.pct) < 3);
+const wrong = rows.filter((r) => r.pct < -3);
 console.log(dead.length
   ? `꺼도 3% 미만으로만 움직이는 시스템: ${dead.map((r) => r.name).join(', ')} — 밸런스에 기여하지 않는다는 신호다.`
   : '모든 시스템이 꺼면 티가 난다.');
+if (wrong.length) console.log(`⚠ 껐더니 **빨라진** 시스템: ${wrong.map((r) => `${r.name} ${r.pct.toFixed(1)}%`).join(', ')} — 버프가 손해라는 뜻이므로 지표나 게임 어딘가가 틀렸다.`);

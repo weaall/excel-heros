@@ -8,6 +8,9 @@ export const BALANCE = Object.freeze({
   // --- GDD formulas -------------------------------------------------------
   UPGRADE_COST_BASE: 10,   UPGRADE_COST_GROWTH: 1.105, // Cost = floor(10 * 1.105^(L-1)) — see docs/BALANCE.md 6-58
   MONSTER_HP_BASE: 50,     MONSTER_HP_GROWTH: 1.18,   // HP   = floor(50 * 1.18^(S-1))
+  // 깊이 갈수록 초당 살 수 있는 레벨이 줄어드는 것은 **의도된 벽**이다(회사 이전이 존재하는 이유).
+  // 측정: 118단계의 초당/레벨비용은 10단계의 1/12.5. 이 기울기를 없애면 벽도 없어진다 —
+  // `tests/balance.test.js` 의 drift 검사가 그 경계를 지킨다(1.005 < drift, drift^50 < 6).
   GOLD_BASE: 5,            GOLD_GROWTH: 1.16,         // Gold = floor(5  * 1.16^(S-1))
 
   // --- Idle / offline (user decision: open = 1.0x, closed = 0.6x up to 10h) --
