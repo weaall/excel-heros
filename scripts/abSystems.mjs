@@ -101,6 +101,10 @@ function run(seed, mutate, reapply) {
       if (!g.state.settings.autoAdvance) g.setAutoAdvance(true); // 전멸하면 게임이 자동 진행을 끈다 — 사람은 다시 켠다 (상태를 직접 건드리면 도전이 다시 시작되지 않는다)
       let n = 0; while (g.state.gems >= 900 && n++ < 30) { if (!g.pull(10)) break; }
       for (const id of Object.keys(g.state.heroes)) if (g.heroView(id).canPromote) g.promote(id);
+      // **스킬 레벨도 올린다.** 안 올리면 `skillLv` 변종이 아무것도 안 끄는 셈이라 '기여 없음'으로
+      // 나온다 — 실제로 6-132 이전 표의 스킬 레벨 값은 그 상태에서 나온 숫자였다. 사람은 파티에 넣은
+      // 카드의 스킬을 올린다. 카드는 한계 돌파에도 쓰이므로 **파티에 있는 카드만** 올린다.
+      for (const id of g.state.party) if (g.skillLevelInfo(id)?.can) g.upgradeSkill(id);
       const mp = g.mainPromotionInfo(); if (mp && !mp.maxed && mp.ok && mp.options?.length) g.promoteMain(mp.options[0].id);
       if (g.prestigeAdvice()) g.prestige();
       g.autoParty(); g.autoEquipParty(); g.upgradeCheapestLoop();
@@ -125,7 +129,24 @@ const snapshot = () => JSON.parse(JSON.stringify({
   TANK: BALANCE.TANK, ROLE_PASSIVE: BALANCE.ROLE_PASSIVE, SKILL_STAR: BALANCE.SKILL_STAR, TRAIT_STAR: BALANCE.TRAIT_STAR,
   COMBO: BALANCE.COMBO, AFFECTION: BALANCE.AFFECTION, SKILL_LEVEL: BALANCE.SKILL_LEVEL, COLLECTION: BALANCE.COLLECTION,
 }));
-const restore = (snap) => { for (const [k, v] of Object.entries(snap)) Object.assign(BALANCE[k], v); for (const [k, v] of Object.entries(MOD_SNAP)) Object.assign(MODIFIERS[k], v); };
+/**
+ * **얕은 `Object.assign` 은 스냅샷을 BALANCE 안으로 별칭시킨다.**
+ *
+ * `Object.assign(BALANCE.ROLE_PASSIVE, snap.ROLE_PASSIVE)` 는 `BALANCE.ROLE_PASSIVE.healer` 를
+ * **스냅샷이 들고 있는 바로 그 객체**로 바꿔 놓는다. 그다음 변종의 `off()` 가 그 객체를 0으로 만들면
+ * **스냅샷 자체가 0이 되고**, 이후의 모든 복원이 0을 복원한다. 즉 첫 변종 이후로는 앞서 끈 시스템이
+ * **계속 꺼진 채로** 다음 시스템을 재게 된다(6-132에서 잡았다 — 서로 다른 두 시스템이 소수점까지
+ * 같은 결과를 내서 들켰다).
+ *
+ * 그래서 **잎 값만 써 넣는다.** 객체 신원을 바꾸지 않으므로 별칭이 생길 수 없다.
+ */
+const deepAssign = (dst, src) => {
+  for (const [k, v] of Object.entries(src)) {
+    if (v && typeof v === 'object' && !Array.isArray(v)) deepAssign(dst[k] ?? (dst[k] = {}), v);
+    else dst[k] = v;
+  }
+};
+const restore = (snap) => { for (const [k, v] of Object.entries(snap)) deepAssign(BALANCE[k], v); for (const [k, v] of Object.entries(MOD_SNAP)) deepAssign(MODIFIERS[k], v); };
 
 // 시드를 짝지었으므로 판별 차이를 평균한다(중앙값보다 민감하고, 짝 비교라 뽑기 운이 상쇄된다).
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
