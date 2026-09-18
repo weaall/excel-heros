@@ -248,7 +248,8 @@ test('수식 대응: a solved formula is spent on one special, not every one', a
 // ------------------------------------------------ 죽음의 값 · 탱커의 직무 --
 // 자동 부활이 있으면 탱커 하나만 키워 영원히 전진할 수 있고, 힐러도 부활 스킬도 쓸 이유가 없다.
 // 죽음에 값을 붙이고, 그 대가로 탱커에게 상시 역할을 준다.
-test('죽음: a downed hero stays down for the whole stage attempt', async () => {
+// 6-114: 값이 **영원**이면 안 된다. 쓰러진 사원은 대기 뒤에 돌아오고, 같은 전진 안에서 또 쓰러지면 더 오래 기다린다.
+test('죽음: a downed hero waits out a recovery timer, and the wait grows each time', async () => {
   const { createInitialState } = await import('../src/core/state.js');
   const { GameManager } = await import('../src/core/GameManager.js');
   const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
@@ -260,12 +261,32 @@ test('죽음: a downed hero stays down for the whole stage attempt', async () =>
   }
   g.entities.rebuildParty();
   for (let i = 0; i < 60 && !g.entities.monsters.length; i++) g.tick(0.1);
+  const { BALANCE } = await import('../src/config/balance.js');
+  const RC = BALANCE.RECOVER;
   const em = g.entities, down = em.heroes[1];
-  down.alive = false; down.hp = 0; down.reviveT = 0;
-  // 스테이지가 끝나면 전원 회복이 정상이므로, 끝나지 않게 붙잡아 둔다
-  for (let i = 0; i < 300; i++) { for (const m of em.monsters) { m.hp = m.maxHp = 1e9; } g.tick(0.1); }
-  assert.equal(down.alive, false, '30초가 지나도 스스로 일어나면 안 된다 — 부활 스킬만이 예외다');
+  const hold = () => { for (const m of em.monsters) { m.hp = m.maxHp = 1e9; } }; // 스테이지가 안 끝나게 붙잡아 둔다
+  em.__testKill = (h) => { h.hp = 1; em.__damage?.(h, 10); };
+
+  // 첫 번째 쓰러짐: 기본 대기
+  down.alive = false; down.hp = 0; down.downs = 1; down.reviveT = RC.sec;
+  for (let i = 0; i < Math.round((RC.sec - 2) / 0.1); i++) { hold(); g.tick(0.1); }
+  assert.equal(down.alive, false, `${RC.sec}초 전에는 못 일어난다`);
   assert.ok(em.heroes.some((h) => h.alive), '나머지는 계속 싸운다');
+  let hpOnReturn = null;
+  for (let i = 0; i < 40 && hpOnReturn === null; i++) { hold(); g.tick(0.1); if (down.alive) hpOnReturn = down.hp / down.maxHp; }
+  assert.equal(down.alive, true, '대기가 끝나면 스스로 돌아온다');
+  // 돌아온 **그 순간**을 본다 — 몇 초 더 돌리면 재생이 붙어서 재는 값이 달라진다
+  assert.ok(Math.abs(hpOnReturn - RC.hpPct) < 0.02, `체력 ${RC.hpPct * 100}%로 돌아온다 (실제 ${(hpOnReturn * 100).toFixed(0)}%)`);
+
+  // 두 번째 쓰러짐: 같은 전진 안이므로 더 오래 기다린다
+  down.alive = false; down.hp = 0; down.downs = 2; down.reviveT = RC.sec + RC.perDown;
+  for (let i = 0; i < Math.round((RC.sec + 1) / 0.1); i++) { hold(); g.tick(0.1); }
+  assert.equal(down.alive, false, '두 번째는 기본 대기만으로 안 일어난다 — 누적이 붙는다');
+
+  // 재정비하면 누적이 0으로 돌아간다
+  em.startStage(true);
+  assert.equal(down.alive, true, '재정비는 전원을 일으킨다');
+  assert.equal(down.downs, 0, '재정비는 누적 대기도 지운다');
 });
 
 test('죽음: a full wipe retreats to the last cleared stage', async () => {

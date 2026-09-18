@@ -42,11 +42,13 @@ const SYSTEMS = {
   skillStar: { name: '★ 스킬 2차 효과', off: () => { for (const k of Object.keys(BALANCE.SKILL_STAR)) BALANCE.SKILL_STAR[k] = 0; } },
   traitStar: { name: '특성 ★ 배율',    off: () => { BALANCE.TRAIT_STAR.perStar = 0; } },
   combo:   { name: '콤보',             off: () => { BALANCE.COMBO.max = 0; BALANCE.COMBO.perHit = 0; } },
-  attrition: { name: '전진 소모전',    off: (g) => { const real = g.entities.startStage.bind(g.entities); g.entities.startStage = () => real(true); } },
+  // `onEntities` 는 **회사 이전으로 `g.entities` 가 새로 만들어질 때마다** 다시 걸린다. 이게 없으면
+  // 전진 소모전·부문 시너지는 첫 이전 전까지만 꺼져 있었고, 표는 그걸 '거의 기여 없음'으로 읽었다.
+  attrition: { name: '전진 소모전',    onEntities: (g) => { const real = g.entities.startStage.bind(g.entities); g.entities.startStage = () => real(true); } },
   // --- 여기서부터는 6-100에서 추가. 재지 않던 시스템은 죽어 있어도 모른다.
-  equip:   { name: '비품',             off: (g) => { g.autoEquipParty = () => 0; for (const e of Object.values(g.state.heroes)) e.equip = {}; } },
+  equip:   { name: '비품',             off: (g) => { g.autoEquipParty = () => 0; }, onEntities: (g) => { for (const e of Object.values(g.state.heroes)) e.equip = {}; g.entities.refreshHeroStats(); } },
   affection: { name: '호감도',         off: () => { BALANCE.AFFECTION.bonusPerLevel = 0; } },
-  synergy: { name: '부문 시너지',      off: (g) => { const real = g.synergy.bind(g); g.synergy = () => ({ ...real(), perks: { gold: 0, regen: 0, revive: 0, boss: 0, cooldown: 0, crit: 0, skill: 0 } }); g.entities.refreshHeroStats(); } },
+  synergy: { name: '부문 시너지',      off: (g) => { const real = g.synergy.bind(g); g.synergy = () => ({ ...real(), perks: { gold: 0, regen: 0, revive: 0, boss: 0, cooldown: 0, crit: 0, skill: 0 } }); }, onEntities: (g) => g.entities.refreshHeroStats() },
   skillLv: { name: '스킬 레벨',        off: () => { BALANCE.SKILL_LEVEL.powerPerLevel = 0; BALANCE.SKILL_LEVEL.cooldownPerLevel = 0; } },
   collection: { name: '도감 보너스',   off: () => { BALANCE.COLLECTION.atkPerHero = 0; BALANCE.COLLECTION.atkPerStar = 0; BALANCE.COLLECTION.goldPerHero = 0; } },
   // 하니스는 늘 수식을 맞힌다. 끄면 '한 번도 안 맞히는 플레이' = 방치 플레이어가 잃는 양이 나온다.
@@ -54,7 +56,7 @@ const SYSTEMS = {
 };
 
 /** 한 판을 HOURS 시간 돌리고 결과 지표를 낸다. 플레이어 행동은 모든 판에서 동일하다. */
-function run(seed, mutate) {
+function run(seed, mutate, reapply) {
   seedRandom(seed);
   const g = new GameManager({ save: mem() });
   g.state.settings.autoAdvance = true; g.state.settings.autoUpgrade = true;
@@ -66,6 +68,10 @@ function run(seed, mutate) {
   }
   g.entities.rebuildParty();
   mutate?.(g);
+  // 회사 이전은 `this.entities` 를 **새 객체로 갈아치운다**. 인스턴스에 건 패치는 그때 사라지므로
+  // 매 틱 신원을 확인하고 다시 건다 — 안 그러면 '꺼 둔' 시스템이 몇 분 만에 혼자 켜진다.
+  let seenEntities = g.entities;
+  reapply?.(g);
 
   let deaths = 0, wipes = 0, peak = 0;
   // 주 지표: 각 관문에 **처음** 도달한 시각(초). 강한 파티가 더 늦게 도달할 방법은 없다.
@@ -78,6 +84,7 @@ function run(seed, mutate) {
   const DT = 0.2;
   while (t < HOURS * 3600) {
     g.tick(DT); t += DT; act += DT;
+    if (g.entities !== seenEntities) { seenEntities = g.entities; reapply?.(g); }
     if (g.state.maxCleared > peak) { peak = g.state.maxCleared; for (const gate of GATES) if (peak >= gate && !reached.has(gate)) reached.set(gate, t); }
     if (g.braceFormula && !g.__skipBrace) { const f = g.braceInfo(); g.submitBraceFormula(f.a + f.b); } // 기본은 항상 맞힌다 (변인 고정)
     if (act >= 30) { act = 0;
@@ -152,7 +159,7 @@ const rows = [];
 for (const k of keys) {
   restore(snap);
   const sys = SYSTEMS[k];
-  const runs = Array.from({ length: RUNS }, (_, i) => run(i, (g) => sys.off(g))); // 기준선 i판과 같은 시드
+  const runs = Array.from({ length: RUNS }, (_, i) => run(i, (g) => sys.off?.(g), (g) => sys.onEntities?.(g))); // 기준선 i판과 같은 시드
   restore(snap);
   // 시스템을 끄면 관문 도달이 **늦어져야** 한다. 쓸 수 있는 관문의 지연만 평균한다(+ = 느려졌다).
   const delays = []; let bounded = 0;

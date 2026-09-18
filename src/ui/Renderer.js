@@ -276,10 +276,15 @@ export class Renderer {
     const sx = Math.round(h.x + dash - 32 + knock + (h.shake ? (Math.random() - 0.5) * 3 * h.shake : 0)), sy = Math.round(h.y - 60 + bob);
     this.#shadow(h.x + dash, h.y + 2, 18);
     if (!h.alive) {
-      const k = 1; // 자동 부활이 없어졌다 — 쓰러진 모습 그대로 (부활 스킬만이 일으킨다)
-      ctx.save(); ctx.globalAlpha = 0.35 + 0.35 * (1 - k); ctx.translate(h.x - 8, h.y); ctx.rotate(-Math.PI / 2 * k); ctx.drawImage(img, -24, -60); ctx.restore();
-      ctx.fillStyle = '#bdc3c7'; ctx.font = 'bold 12px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(`${Math.ceil(h.reviveT)}s`, h.x, h.y + 16);
+      // 인사 복구 대기(6-114). 남은 초를 **숫자와 막대 둘 다**로 보여 준다 — 숫자만 있으면 얼마나 남았는지
+      // 눈으로 가늠이 안 되고, 막대만 있으면 그게 체력 바인지 대기 바인지 구분이 안 된다.
+      ctx.save(); ctx.globalAlpha = 0.35; ctx.translate(h.x - 8, h.y); ctx.rotate(-Math.PI / 2); ctx.drawImage(img, -24, -60); ctx.restore();
+      if (h.reviveT > 0) {
+        const total = Math.max(1, h.reviveMax ?? h.reviveT);
+        this.#hpBar(h.x, h.y + 6, 1 - h.reviveT / total, '#7f8c8d', 40);
+        ctx.fillStyle = '#d6dbdf'; ctx.font = 'bold 11px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(`복귀 ${Math.ceil(h.reviveT)}s`, h.x, h.y + 18);
+      }
       return;
     }
     if (dash !== 0) { ctx.save(); ctx.globalAlpha = 0.28; ctx.drawImage(img, Math.round(h.x - 32), sy); ctx.globalAlpha = 0.14; ctx.drawImage(img, Math.round(h.x + dash * 0.5 - 32), sy); ctx.restore(); }

@@ -70,7 +70,7 @@ export class EntityManager {
     return {
       id: nextId++, kind: 'hero', heroId: def.heroId, def, role: def.role, trait: def.trait,
       x: 0, y: 0, homeX: 0, homeY: 0, hp: 1, maxHp: 1, atk: 1, interval: 1, cd: Math.random() * 0.5,
-      range: 0, alive: true, reviveT: 0, targetId: null,
+      range: 0, alive: true, reviveT: 0, reviveMax: 0, downs: 0, targetId: null,
       anim: 'idle', animT: 0, skillCd: 2 + Math.random() * 3, skillCdMax: 5, star: 1, level: 1, shake: 0, flash: 0, dashTo: 0,
     };
   }
@@ -113,7 +113,7 @@ export class EntityManager {
   startStage(regroup = false) {
     this.monsters = []; this.projectiles = []; this.boss = null; this.bossTimer = 0; this.wave = 0;
     for (const h of this.heroes) {
-      if (regroup) { h.alive = true; h.reviveT = 0; }
+      if (regroup) { h.alive = true; h.reviveT = 0; h.downs = 0; } // 재정비 = 누적 대기도 0
       if (h.alive) h.hp = h.maxHp;
       h.x = h.homeX; h.y = h.homeY; h.targetId = null; h.anim = 'walk';
     }
@@ -133,7 +133,7 @@ export class EntityManager {
     const g = this.game;
     if (g.isChallenging?.() || g.overtime) return;
     let up = 0;
-    for (const h of this.heroes) if (!h.alive) { h.alive = true; h.reviveT = 0; h.hp = h.maxHp; h.x = h.homeX; h.y = h.homeY; h.targetId = null; up++; }
+    for (const h of this.heroes) { h.downs = 0; if (!h.alive) { h.alive = true; h.reviveT = 0; h.hp = h.maxHp; h.x = h.homeX; h.y = h.homeY; h.targetId = null; up++; } }
     if (up) g.log?.(`사냥 중 인사 복구 — ${up}명 복귀`, 'info');
   }
 
@@ -232,7 +232,20 @@ export class EntityManager {
     // --- heroes ---------------------------------------------------------
     for (const h of this.heroes) {
       h.shake = Math.max(0, h.shake - dt * 8); h.flash = Math.max(0, h.flash - dt);
-      if (!h.alive) continue; // 쓰러지면 이 스테이지 동안 일어나지 못한다 — 부활 스킬만이 예외다
+      if (!h.alive) { // 인사 복구 대기. 다 되면 절반 체력으로 돌아온다 — 부활 스킬은 이 대기를 건너뛰는 값이다.
+        // `reviveT` 가 0인 채로 쓰러져 있으면 **복구 예약이 없다**는 뜻이다(전멸 판정 등 외부에서 눕힌 경우).
+        if (h.reviveT > 0) {
+          h.reviveT -= dt;
+          if (h.reviveT <= 0) {
+            h.alive = true; h.reviveT = 0; h.hp = Math.max(1, Math.round(h.maxHp * BALANCE.RECOVER.hpPct));
+            h.x = h.homeX; h.y = h.homeY; h.targetId = null; h.anim = 'idle'; h.cd = h.interval;
+            this.fx('sparkle', { x: h.x, y: h.y - 20, color: '#2ecc71', n: 10 });
+            this.floaters.push({ x: h.x, y: h.y - 60, text: '복귀', color: '#27ae60', t: 0 });
+            this.game.log(`${h.def.name} 복귀 (체력 ${Math.round(BALANCE.RECOVER.hpPct * 100)}%)`, 'info');
+          }
+        }
+        continue;
+      }
       if (this.traveling) continue;
       h.animT += dt;
       // 전투 중과 전투 밖의 회복을 분리한다. 전투 중에 알아서 차오르면 힐러를 넣을 이유가 사라진다.
@@ -567,10 +580,13 @@ export class EntityManager {
         else this.game.emit('sfx', 'kill');
         this.game.onMonsterKilled(target);
       } else {
-        target.reviveT = 0;
+        // 인사 복구: 스스로 돌아오지만 **밀어붙일수록 오래 걸린다**(같은 전진 안에서 누적).
+        const RC = BALANCE.RECOVER;
+        target.downs = (target.downs ?? 0) + 1;
+        target.reviveT = target.reviveMax = Math.min(RC.max, RC.sec + RC.perDown * (target.downs - 1));
         this.fx('puff', { x: target.x, y: target.y, color: '#95a5a6', life: 0.4 });
         const left = this.heroes.filter((h) => h.alive).length;
-        this.game.log(`${target.def.name} 쓰러짐 (남은 인원 ${left}명 — 부활 스킬로만 복귀)`, 'warn');
+        this.game.log(`${target.def.name} 쓰러짐 (남은 인원 ${left}명 — ${Math.round(target.reviveT)}초 뒤 복귀)`, 'warn');
       }
     }
     return dealt;

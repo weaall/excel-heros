@@ -497,7 +497,7 @@ export class UIManager {
     const ent = this.selectedEntity; if (!ent) return null;
     if (ent.kind === 'hero') {
       const alive = ent.alive; const v = this.game.heroView(ent.heroId);
-      return `=HERO("${ent.def.name}", LV=${v.entry.level}, ATK=${fmt(ent.atk)}, HP=${alive ? Math.round(ent.hp) : 0}/${ent.maxHp}${alive ? '' : ', STATUS="병가"'})`;
+      return `=HERO("${ent.def.name}", LV=${v.entry.level}, ATK=${fmt(ent.atk)}, HP=${alive ? Math.round(ent.hp) : 0}/${ent.maxHp}${alive ? '' : ', STATUS="복귀 ${Math.ceil(ent.reviveT)}초"'})`;
     }
     if (!ent.alive) return null;
     return `=${ent.isBoss ? 'BOSS' : ent.def.chest ? 'CHEST' : 'MONSTER'}("${ent.def.name}", HP=${fmt(Math.round(ent.hp))}/${fmt(ent.maxHp)}, ATK=${fmt(ent.atk)}${ent.elite ? ', ELITE=TRUE' : ''})`;
@@ -1799,7 +1799,7 @@ export class UIManager {
     const em = this.game.entities; const tbody = $('#stealth-table tbody'); tbody.innerHTML = '';
     let n = 2;
     for (const h of em.heroes) {
-      tbody.append(el('tr', {}, el('td', {}, `A${n++}`), el('td', {}, `${h.def.name} 처리`), el('td', {}, '인사'), el('td', {}, h.alive ? `${Math.round((h.hp / h.maxHp) * 100)}%` : '대기'), el('td', { class: 'num' }, fmt(h.atk))));
+      tbody.append(el('tr', {}, el('td', {}, `A${n++}`), el('td', {}, `${h.def.name} 처리`), el('td', {}, '인사'), el('td', {}, h.alive ? `${Math.round((h.hp / h.maxHp) * 100)}%` : `복귀 ${Math.ceil(h.reviveT)}s`), el('td', { class: 'num' }, fmt(h.atk))));
     }
     for (const m of em.monsters.filter((m) => m.alive)) {
       tbody.append(el('tr', {}, el('td', {}, `B${n++}`), el('td', {}, `${m.def.name} 검증`), el('td', {}, '품질'), el('td', {}, `${Math.round((m.hp / m.maxHp) * 100)}%`), el('td', { class: 'num' }, fmt(m.hp))));
