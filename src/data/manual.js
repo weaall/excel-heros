@@ -11,6 +11,7 @@ import { BALANCE } from '../config/balance.js';
 
 // 숫자는 **BALANCE 에서 읽어 쓴다.** 손으로 적어 두면 값을 바꿀 때마다 설명서가 조용히 낡는다.
 const rate = (v) => `${+(v * 100).toFixed(2)}%`;
+const P = BALANCE.ROLE_PASSIVE;
 
 export const MANUAL = Object.freeze([
   {
@@ -65,10 +66,10 @@ export const MANUAL = Object.freeze([
       '그래서 파티를 짤 때 스킬만 보면 안 됩니다. 힐러 하나를 넣는 것만으로 전원이 계속 회복하고, 근접이 몰이를 하면 점점 빨라집니다.',
     ],
     rows: [
-      ['탱커', '동료가 맞을 타격을 **확률로 가로챕니다.** 가로챈 몫은 감면됩니다 (★1 30% → ★5 58%)'],
-      ['힐러', '파티 전원이 **초당 회복**합니다 (★1 0.6%/s → ★5 1.2%/s, 힐러가 여럿이면 합산)'],
-      ['근접', '적을 **처치하면 2.5초 동안 자신의 공격이 빨라집니다** (★1 ×1.12 → ★5 ×1.28)'],
-      ['원거리', '기본 공격이 **확률로 뒤쪽 적까지 관통**합니다 (★1 18% → ★5 38%, 피해 50%)'],
+      ['탱커', `동료가 맞을 타격을 **확률로 가로챕니다.** 가로챈 몫은 감면되고, 동료를 눕힐 한 방은 **확정으로** 가로챕니다(${BALANCE.TANK.saveCd}초마다 한 번) (★1 ${rate(BALANCE.TANK.chance)} → ★5 ${rate(Math.min(BALANCE.TANK.chanceMax, BALANCE.TANK.chance + BALANCE.TANK.chancePerStar * 4))})`],
+      ['힐러', `파티 전원이 **초당 회복**하고(★1 ${rate(P.healer.regen)}/s → ★5 ${rate(P.healer.regen + P.healer.perStar * 4)}/s, 힐러가 여럿이면 합산), 체력이 낮은 동료에게 **직접 치유를 쏩니다**(최대 HP의 ${rate(P.healer.castPct)})`],
+      ['근접', `적을 **처치하면 ${P.melee.dur}초 동안 자신의 공격이 빨라집니다** (★1 ×${(1 + P.melee.haste).toFixed(2)} → ★5 ×${(1 + P.melee.haste + P.melee.perStar * 4).toFixed(2)})`],
+      ['원거리', `기본 공격이 **확률로 뒤쪽 적까지 관통**합니다 (★1 ${rate(P.ranged.pierce)} → ★5 ${rate(P.ranged.pierce + P.ranged.perStar * 4)}, 피해 ${rate(P.ranged.dmg)})`],
     ],
   },
   {
