@@ -168,6 +168,17 @@ const paired = (runs, base, key) => {
   return d.length ? { d: Math.round(mean(d) * 10) / 10, n: d.length, bounded } : null;
 };
 
+// **스냅샷 자체가 변하지 않았는지 매번 확인한다.** 이 스크립트는 정확히 이 방식으로 한 번 조용히
+// 틀렸다(6-132): 복원이 스냅샷을 BALANCE 안으로 별칭시켜서, 두 번째 줄부터는 앞서 끈 시스템이 계속
+// 꺼진 채로 측정됐다. 서로 다른 두 시스템이 같은 숫자를 낼 때까지 아무도 몰랐다.
+const SNAP_FINGERPRINT = JSON.stringify(snapshot());
+const assertSnapshotIntact = (where) => {
+  if (JSON.stringify(snap) === SNAP_FINGERPRINT) return;
+  console.log(`
+⚠⚠ 스냅샷이 오염됐다 (${where}). 이 표의 이후 줄은 **믿을 수 없다** — 복원이 값을 쓰지 않고 객체를 붙여 넣고 있다.`);
+  process.exit(1);
+};
+
 const want = process.argv.slice(2).filter((a) => SYSTEMS[a]);
 const keys = want.length ? want : Object.keys(SYSTEMS);
 const snap = snapshot();
@@ -190,8 +201,10 @@ const rows = [];
 const baseDeaths = avg(base, 'deaths') ?? 0;
 for (const k of keys) {
   restore(snap);
+  assertSnapshotIntact(`${k} 직전`);
   const sys = SYSTEMS[k];
   const runs = Array.from({ length: RUNS }, (_, i) => run(i, (g) => sys.off?.(g), (g) => sys.onEntities?.(g))); // 기준선 i판과 같은 시드
+  assertSnapshotIntact(`${k} 직후`);
   restore(snap);
   // 시스템을 끄면 관문 도달이 **늦어져야** 한다. 쓸 수 있는 관문의 지연만 평균한다(+ = 느려졌다).
   const delays = []; let bounded = 0;
