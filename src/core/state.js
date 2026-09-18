@@ -41,7 +41,7 @@ export function createInitialState(now = Date.now()) {
     redeemed: {},
     tutorial: { done: {}, flags: {}, bonus: false, hidden: false }, // 신입 사원 교육 진행          // 보석 코드 → 사용 시각 (한 저장당 1회)        // episode id -> true (first read rewarded) // 모집 포인트: +1 per row pulled, spend SPARK_COST on the current pickup card
     team: { coffee: 0, payroll: 0, chairs: 0, sales: 0 },
-    settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true, safeAdvance: true, cloud: { url: '', name: '' }, coachDone: false, prologueSeen: false, autoReclaim: true },
+    settings: { excel: false, autoAdvance: true, autoUpgrade: false, sound: false, gridlines: true, safeAdvance: true, banner: 'pickup', cloud: { url: '', name: '' }, coachDone: false, prologueSeen: false, autoReclaim: true },
     daily: { date: localDateKey(now), quests: dailyQuestIds(localDateKey(now)), progress: {}, claimed: {}, loginClaimed: false, allClearClaimed: false, adsUsed: 0, scoutUsed: 0 },
     stats: { totalKills: 0, totalGold: 0, totalPulls: 0, pullGrades: { D: 0, C: 0, B: 0, A: 0, S: 0 }, bossKills: 0, bossFails: 0, playSeconds: 0, enhances: 0 },
     achievements: {},     // achievement id -> claimed tier count

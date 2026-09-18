@@ -2,7 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/utils/rng.js';
 import { rollGrade, rollGradeRaw, pullOnce, initialPity, promoteCost } from '../src/core/GachaManager.js';
-import { GRADES, GRADE_ORDER, HEROES, MAIN_ID } from '../src/data/heroes.js';
+import { GRADES, GRADE_ORDER, HEROES, MAIN_ID, heroesOfGrade } from '../src/data/heroes.js';
+import { createInitialState } from '../src/core/state.js';
+import { GameManager } from '../src/core/GameManager.js';
+
+const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
 import { BALANCE } from '../src/config/balance.js';
 
 test('grade rates sum to 1 and rollGradeRaw maps boundaries (D48.5/C30/B16/A5/S0.5)', () => {

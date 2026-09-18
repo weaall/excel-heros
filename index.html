@@ -230,6 +230,15 @@
               <div class="pickup-cards" id="pickup-cards"></div>
               <div class="pickup-foot muted small">해당 등급이 나오면 50%는 픽업 카드 · 모집 포인트 <b>150</b>(S) / <b>60</b>(A)으로 픽업 카드와 직접 교환 가능</div>
             </div>
+          <div class="banner-pick" role="radiogroup" aria-label="모집 창구">
+            <button id="banner-pickup" class="xl-btn banner-opt" role="radio" aria-checked="true" title="그 등급이 나오면 절반은 오늘의 픽업 카드 · 나머지 절반은 등급 전체에서 균등">
+              픽업 모집<small>픽업 카드 확률 ↑</small>
+            </button>
+            <button id="banner-standard" class="xl-btn banner-opt" role="radio" aria-checked="false" title="픽업 가중 없음 — 등급 안에서 모든 카드가 완전히 동등. 픽업이 아닌 특정 카드를 노릴 때 두 배 유리">
+              일반 모집<small>등급 내 완전 균등</small>
+            </button>
+          </div>
+          <div class="banner-note muted small" id="banner-note"></div>
           <div class="gacha-actions">
             <button id="pull1" class="xl-btn big">1행 가져오기<small>보석 100</small></button>
             <button id="pull10" class="xl-btn big primary">10행 가져오기<small>보석 900</small></button>
@@ -244,8 +253,8 @@
                 <tr><td class="g-D">D · 일반</td><td class="num">48.5%</td><td>—</td></tr>
                 <tr><td class="g-C">C · 희귀</td><td class="num">30%</td><td>—</td></tr>
                 <tr><td class="g-B">B · 고급</td><td class="num">16%</td><td>—</td></tr>
-                <tr><td class="g-A">A · 영웅</td><td class="num">5% <span class="muted small">(픽업 2.5%)</span></td><td><b id="pity-a">50</b>회 안에 A 이상 확정</td></tr>
-                <tr><td class="g-S">S · 전설</td><td class="num">0.5% <span class="muted small">(픽업 0.25%)</span></td><td><b id="pity-s">120</b>회 안에 S 확정</td></tr>
+                <tr><td class="g-A">A · 영웅</td><td class="num"><span id="rate-A">5%</span> <span class="muted small" id="rate-A-note"></span></td><td><b id="pity-a">50</b>회 안에 A 이상 확정</td></tr>
+                <tr><td class="g-S">S · 전설</td><td class="num"><span id="rate-S">0.5%</span> <span class="muted small" id="rate-S-note"></span></td><td><b id="pity-s">120</b>회 안에 S 확정</td></tr>
                 <tr><td colspan="3" class="muted small" id="ten-rule">10행 가져오기는 항상 A 이상 1장을 보장합니다. 첫 10행은 <b>S 확정</b>(신입 환영).</td></tr>
               </tbody>
             </table>

@@ -784,7 +784,14 @@ export class GameManager extends Emitter {
   }
   /** 뽑기 값. 한 곳에서만 계산해 표시와 판정이 어긋나지 않게 한다. */
   pullCost(count) { return count === 10 ? BALANCE.GACHA_TEN_COST : BALANCE.GACHA_SINGLE_COST * count; }
-  pull(count) {
+  /**
+   * 모집. `banner` 가 `'standard'` 면 **픽업 가중을 걸지 않는다** — 등급 안에서 모든 카드가 완전히 동등하다.
+   * `'pickup'`(기본)이면 그 등급이 나왔을 때 절반은 그날의 픽업 카드다.
+   *
+   * 특정한 '픽업이 아닌' S 를 노릴 때 일반 창구가 정확히 두 배 유리하다(0.5×1/N → 1/N). 그게 고르는 이유다.
+   * 천장과 모집 포인트는 두 창구가 **공유한다** — 창구를 옮겨 다녀서 손해를 보면 선택지가 아니라 함정이다.
+   */
+  pull(count, banner = this.state.settings.banner ?? 'pickup') {
     const cost = this.pullCost(count);
     if (this.state.gems < cost) { this.toast('보석이 부족합니다'); return null; }
     this.state.gems -= cost;
@@ -793,7 +800,7 @@ export class GameManager extends Emitter {
     const results = []; let gotMin = false; const minIdx = GRADES[minGrade] ? ['D', 'C', 'B', 'A', 'S'].indexOf(minGrade) : 99;
     for (let i = 0; i < count; i++) {
       const force = count === 10 && i === count - 1 && !gotMin ? minGrade : null;
-      const r = pullOnce(this.state.pity, this.state.heroes, this.rng, force, this.pickup());
+      const r = pullOnce(this.state.pity, this.state.heroes, this.rng, force, banner === 'standard' ? null : this.pickup());
       if (['D', 'C', 'B', 'A', 'S'].indexOf(r.grade) >= minIdx) gotMin = true;
       if (force) r.guaranteed = true;
       this.state.pity = r.pity; this.state.stats.totalPulls++; this.state.stats.pullGrades[r.grade] = (this.state.stats.pullGrades[r.grade] ?? 0) + 1; this.state.recruit.points++;
@@ -802,7 +809,7 @@ export class GameManager extends Emitter {
     }
     Quests.addProgress(this.state, 'pull', count);
     this.entities.rebuildParty();
-    this.log(`데이터 가져오기: ${count}행 임포트 완료`, 'gacha');
+    this.log(`데이터 가져오기: ${count}행 임포트 완료${banner === 'standard' ? ' (전체 범위)' : ''}`, 'gacha');
     this.emit('gems'); this.emit('roster'); this.emit('party'); this.emit('quests'); this.emit('gacha', results);
     return results;
   }

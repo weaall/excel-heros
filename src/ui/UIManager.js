@@ -1,6 +1,6 @@
 // DOM layer: ribbon, formula bar, sheets, task pane, card grid, quests, boss-key view, dialogs.
 import { BALANCE, teamUpgradeCost, isBossStage, stageLabel } from '../config/balance.js';
-import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, SKILLS, MAIN_ID, MAIN_TIER_TITLES, MAIN_TRACKS } from '../data/heroes.js';
+import { HEROES, GRADES, GRADE_ORDER, ROLES, TRAITS, SKILLS, MAIN_ID, MAIN_TIER_TITLES, MAIN_TRACKS, heroesOfGrade } from '../data/heroes.js';
 import { stagePool, eliteChance, bossForStage, MONSTER_TYPES, BOSSES, PALETTES, phaseOf } from '../data/monsters.js';
 import { DIVISIONS, PERKS, divisionOf, divisionName } from '../data/divisions.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
@@ -25,7 +25,7 @@ import * as Quests from '../core/QuestManager.js';
 import { fmt, fmtTime, pct, stars } from '../utils/format.js';
 import * as Ads from './Ads.js';
 import { starMult } from '../config/balance.js';
-import { SPARK_COST } from '../data/pickup.js';
+import { SPARK_COST, PICKUP_RATE } from '../data/pickup.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const el = (tag, attrs = {}, ...children) => {
@@ -231,6 +231,9 @@ export class UIManager {
     $('#set-auto').addEventListener('change', (e) => this.game.setAutoAdvance(e.target.checked));
     $('#set-stealth').addEventListener('change', (e) => this.game.toggleExcel(e.target.checked));
 
+    for (const [id, v] of [['#banner-pickup', 'pickup'], ['#banner-standard', 'standard']]) {
+      $(id)?.addEventListener('click', () => { this.game.state.settings.banner = v; this.game.persist(); this.#refreshGacha(); });
+    }
     $('#pull1').addEventListener('click', () => this.#pull(1));
     $('#pull10').addEventListener('click', () => this.#pull(10));
 
@@ -1144,9 +1147,22 @@ export class UIManager {
       <tr><th>A 이상 확정까지</th><td class="num">${BALANCE.PITY_A - s.pity.sinceA}회</td></tr>
       <tr><th>S 확정까지</th><td class="num">${BALANCE.PITY_S - s.pity.sinceS}회</td></tr>
       <tr><th>모집 포인트</th><td class="num">${fmt(g.recruitPoints())}</td></tr>
+      <tr><th>선택한 창구</th><td>${(s.settings.banner ?? 'pickup') === 'standard' ? '일반 모집 — 등급 안에서 완전 균등' : '픽업 모집 — 그 등급의 절반은 픽업 카드'}</td></tr>
       <tr><th>오늘의 픽업</th><td>${Object.entries(ids).map(([gr, id]) => `${gr}급 ${g.heroView(id).def.name}`).join(' · ')}</td></tr>
       <tr><th>픽업 기간</th><td>${g.pickupDaysLeft()}일 남음 · 3일마다 교체</td></tr>
     </tbody>` }));
+    // 창구를 여기서도 고를 수 있어야 한다 — 시트에만 두면 대화상자로 뽑는 사람은 못 고른다
+    const bannerRow = el('div', { class: 'detail-actions' });
+    const mk = (v, label, tip) => {
+      const b2 = btn(label, () => { g.state.settings.banner = v; g.persist(); this.closeModal(); this.#openImportDialog(); }, (s.settings.banner ?? 'pickup') === v ? 'primary' : '');
+      b2.title = tip; return b2;
+    };
+    bannerRow.append(
+      el('span', { class: 'muted small' }, '창구 '),
+      mk('pickup', '픽업 모집', '그 등급이 나오면 절반은 오늘의 픽업 카드'),
+      mk('standard', '일반 모집', '픽업 가중 없음 — 등급 안에서 완전 균등'),
+    );
+    body.append(bannerRow);
     const row = el('div', { class: 'detail-actions' });
     const one = g.pullCost(1), ten = g.pullCost(10);
     row.append(
@@ -1165,8 +1181,32 @@ export class UIManager {
     this.gachaLog.length = Math.min(this.gachaLog.length, 30);
     this.#refreshGacha();
   }
+  /** 창구 선택 상태와 그 창구의 실제 확률 한 줄. 숫자는 카드 수에서 계산한다 — 손으로 적으면 어긋난다. */
+  #refreshBanner() {
+    const s = this.game.state; const b = s.settings.banner ?? 'pickup';
+    for (const [id, v] of [['#banner-pickup', 'pickup'], ['#banner-standard', 'standard']]) {
+      const el2 = $(id); if (!el2) continue;
+      el2.classList.toggle('active', b === v); el2.setAttribute('aria-checked', String(b === v));
+    }
+    // 확률 표의 등급 줄도 창구에 맞춘다 — "(픽업 2.5%)" 는 일반 창구에서 거짓이다.
+    for (const gr of ['S', 'A']) {
+      const rate = $(`#rate-${gr}`), sub = $(`#rate-${gr}-note`); if (!rate) continue;
+      const n = heroesOfGrade(gr).length;
+      rate.textContent = `${(GRADES[gr].rate * 100).toFixed(GRADES[gr].rate < 0.01 ? 1 : 0)}%`;
+      if (sub) sub.textContent = b === 'standard' ? `(${n}종 균등 · 한 장당 ${(GRADES[gr].rate / n * 100).toFixed(2)}%)` : `(픽업 ${(GRADES[gr].rate * PICKUP_RATE * 100).toFixed(2)}%)`;
+    }
+    const note = $('#banner-note'); if (!note) return;
+    const nS = heroesOfGrade('S').length, nA = heroesOfGrade('A').length;
+    const pct = (x) => `${(x * 100).toFixed(2)}%`;
+    if (b === 'pickup') {
+      note.textContent = `픽업 범위: S 픽업 ${pct(GRADES.S.rate * PICKUP_RATE)} · 그 외 S 한 장당 ${pct(GRADES.S.rate * (1 - PICKUP_RATE) / nS)} (S ${nS}종) · A 픽업 ${pct(GRADES.A.rate * PICKUP_RATE)}`;
+    } else {
+      note.textContent = `전체 범위: 픽업 가중 없음 — S 한 장당 ${pct(GRADES.S.rate / nS)} (S ${nS}종) · A 한 장당 ${pct(GRADES.A.rate / nA)} (A ${nA}종). 픽업이 아닌 카드를 노리면 이쪽이 두 배 유리합니다.`;
+    }
+  }
   #refreshGacha() {
     const s = this.game.state;
+    this.#refreshBanner();
     $('#gems-cell').textContent = fmt(s.gems); $('#gems-top').textContent = fmt(s.gems);
     $('#pull1').disabled = s.gems < this.game.pullCost(1); $('#pull10').disabled = s.gems < this.game.pullCost(10);
     $('#pity-a').textContent = BALANCE.PITY_A - s.pity.sinceA;

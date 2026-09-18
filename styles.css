@@ -888,3 +888,12 @@ body.stealth .task-pane .sub, body.stealth .task-pane .eff, body.stealth .syn-ta
 .code-msg { font-size: 12px; color: var(--muted); margin: 8px 0 6px; }
 .code-msg.ok { color: #1e7a45; font-weight: 600; }
 .code-msg.bad { color: #b03a2e; font-weight: 600; }
+
+/* 모집 창구 선택 (픽업 범위 / 전체 범위) */
+.banner-pick { display: flex; gap: 0; justify-content: center; margin: 8px 0 0; }
+.banner-opt { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 150px; padding: 6px 12px; font-weight: 600; border-radius: 0; }
+.banner-opt + .banner-opt { margin-left: -1px; }
+.banner-opt small { font-weight: 400; font-size: 11px; color: var(--muted); }
+.banner-opt.active { background: var(--xl-green); border-color: var(--xl-green); color: #fff; }
+.banner-opt.active small { color: rgba(255,255,255,.85); }
+.banner-note { text-align: center; margin: 6px 10px 0; line-height: 1.5; }
