@@ -546,3 +546,31 @@ test('전진은 소모전: advancing keeps the fallen down, regrouping brings th
   g.onPartyWiped();
   assert.ok(g.entities.heroes.every((h) => h.alive), '전멸 후에도 다시 시작할 수 있어야 한다');
 });
+
+// 6-123: 인사 복구는 쓰러진 사람이 없을 때 회복만 줬는데 그 회복은 거의 전부 넘쳐서 버려졌다
+// (벤치 14종 중 꼴찌, +3.5). 이제 **재고용 보장**을 걸고, 다음에 쓰러지는 한 명을 그 자리에서 일으킨다.
+test('인사 복구: 쓰러진 사람이 없으면 재고용 보장을 걸고, 다음에 쓰러지는 한 명이 즉시 복귀한다', async () => {
+  const { BALANCE } = await import('../src/config/balance.js');
+  const reviveId = HEROES.find((h) => h.skill.type === 'revive').id;
+  const { g, em, h } = setup(reviveId);
+  for (const a of em.heroes) { a.alive = true; a.hp = a.maxHp; }
+
+  em.castSkill(h, em.monsters[0], em.monsters, em.heroes);
+  assert.ok(em.reviveGuard && em.reviveGuard.until > em.time, '쓰러진 사람이 없으면 보장이 걸린다');
+
+  // 보장이 있는 동안 한 명을 실제 피해 경로로 눕힌다 — 그 자리에서 일어나야 한다
+  const victim = em.heroes.find((a) => a !== h);
+  victim.hp = 1;
+  const m = em.monsters.find((x) => x.alive);
+  m.atk = victim.maxHp * 10; m.arrived = true;
+  em.__testHit(m, victim);
+  assert.equal(victim.alive, true, '재고용 보장이 그 자리에서 일으킨다');
+  assert.ok(victim.hp > 1, `보장 HP 로 돌아온다 (${victim.hp}/${victim.maxHp})`);
+  assert.equal(em.reviveGuard, null, '보장은 한 번 쓰면 소모된다');
+
+  // 소모된 뒤에는 평소대로 대기가 걸린다
+  victim.hp = 1;
+  em.__testHit(m, victim);
+  assert.equal(victim.alive, false, '보장이 없으면 그냥 쓰러진다');
+  assert.ok(victim.reviveT >= BALANCE.RECOVER.sec - 0.001, `인사 복구 대기가 걸린다 (${victim.reviveT})`);
+});

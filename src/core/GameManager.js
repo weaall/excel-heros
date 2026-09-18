@@ -32,6 +32,16 @@ import { SLOTS, SLOT_ORDER, itemPct, itemLabel, rollItem, itemBasePct } from '..
 import { sanitizeName } from './plausibility.js';
 import { migrate } from './state.js';
 
+/**
+ * 스킬 설명의 `{p}` 에 넣을 숫자. 체력 비율로 읽히는 스킬(회복·복귀·정화)은 **100을 넘겨 적지 않는다** —
+ * 코드가 최대 HP 에서 자르므로 '103.2%로 복귀'는 그냥 거짓말이다.
+ */
+const PERCENT_OF_HP = new Set(['heal', 'revive', 'cleanse']);
+function skillDescValue(skill, skillPower) {
+  const v = skill.power * skillPower;
+  return +(PERCENT_OF_HP.has(skill.type) ? Math.min(100, v) : v).toFixed(2);
+}
+
 export class GameManager extends Emitter {
   static HISTORY_STEP = 5; static HISTORY_LEN = 120; // 10 minutes of samples
   constructor({ state, save, rng = createRng(), now = Date.now() } = {}) {
@@ -433,7 +443,9 @@ export class GameManager extends Emitter {
       inParty: this.state.party.includes(id),
       skillUnlocked, skillPower: skillPower * (1 + eq.skill / 100), skillLv, skillCdMult: 1 - skillLv * BALANCE.SKILL_LEVEL.cooldownPerLevel,
       skillName: def.skill.name ?? SKILLS[def.skill.type].name,
-      skillDesc: SKILLS[def.skill.type].desc.replace('{p}', +(def.skill.power * skillPower).toFixed(2)),
+      // `replace('{p}', …)` 는 **첫 번째만** 바꾼다 — 인사 복구처럼 {p} 가 두 번 나오는 설명은
+      // 뒤쪽이 `{p}` 그대로 화면에 나왔다. 그리고 체력 복귀는 100%를 넘겨 적어 봐야 의미가 없다.
+      skillDesc: SKILLS[def.skill.type].desc.replaceAll('{p}', String(skillDescValue(def.skill, skillPower))),
       skillStarNote: starSkillNote(def.skill.type, star, BALANCE.SKILL_STAR), // ★가 더해 주는 2차 효과
       traitName: TRAITS[def.trait].name, traitDesc: TRAITS[def.trait].desc,
       skillUnlockHint: isMain ? `${['인턴', '사원'][BALANCE.MAIN_SKILL_TIER]} 승급 시 해금` : `★${BALANCE.SKILL_UNLOCK_STAR} 해금`,

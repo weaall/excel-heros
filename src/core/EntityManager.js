@@ -38,6 +38,7 @@ export class EntityManager {
     this.atkBuff = { mult: 1, until: 0 }; this.hasteBuff = { mult: 1, until: 0 }; this.barrier = { hp: 0, max: 0, until: 0 }; this.slow = { mult: 1, until: 0 }; // slow: boss debuff on party attack speed
     this.taunt = null; // { heroId, reduce, until } — 도발: every monster swings at this hero and it hurts less
     this.castLock = 0; // 스킬 순차 발동: 남은 잠금 시간(초). 한 번에 하나씩만 터지게 한다
+    this.reviveGuard = null; // 재고용 보장: 다음에 쓰러지는 한 명을 그 자리에서 일으킨다
     this.braced = false; // 수식 대응 성공 — 다음 특수 공격 한 번만 약해진다
     this.healerAura = 0; // 파티의 힐러가 주는 상시 회복 (rebuildParty 에서 계산)
     this.time = 0; this.dmgLog = []; this.rallyMult = 1; this.shake = 0;
@@ -212,6 +213,7 @@ export class EntityManager {
     if (this.barrier.until < this.time) this.barrier.hp = 0;
     if (this.slow.until < this.time) this.slow.mult = 1;
     if (this.taunt && this.taunt.until < this.time) this.taunt = null;
+    if (this.reviveGuard && this.reviveGuard.until < this.time) this.reviveGuard = null;
     if (this.castLock > 0) this.castLock = Math.max(0, this.castLock - dt);
     const speedMult = this.game.speedMult() * this.hasteBuff.mult * this.slow.mult * (stageModifier(this.game.combatStage())?.heroSpeed ?? 1);
 
@@ -602,6 +604,15 @@ export class EntityManager {
         else this.game.emit('sfx', 'kill');
         this.game.onMonsterKilled(target);
       } else {
+        // 재고용 보장이 걸려 있으면 그 자리에서 일어난다(한 번 쓰면 소모된다).
+        if (this.reviveGuard && this.reviveGuard.until >= this.time) {
+          const gp = this.reviveGuard.hpPct; this.reviveGuard = null;
+          target.alive = true; target.hp = Math.max(1, Math.round(target.maxHp * gp)); target.reviveT = 0;
+          this.fx('ring', { x: target.x, y: target.y, color: '#f1c40f', radius: 140, life: 0.7 });
+          this.floaters.push({ x: target.x, y: target.y - 60, text: '재고용!', color: '#f1c40f', t: 0, big: true });
+          this.game.log(`${target.def.name} 재고용 보장으로 즉시 복귀`, 'skill');
+          return dealt;
+        }
         // 인사 복구: 스스로 돌아오지만 **밀어붙일수록 오래 걸린다**(같은 전진 안에서 누적).
         const RC = BALANCE.RECOVER;
         target.downs = (target.downs ?? 0) + 1;
@@ -673,7 +684,7 @@ export class EntityManager {
         this.fx('ring', { x: h.x, y: h.y, color: '#8e44ad', radius: 460, life: 0.6 }); this.shake = Math.max(this.shake, 10);
         { const xs = monsters.map((m) => m.x); const x0 = xs.length ? Math.min(...xs) - 40 : h.x + 60, x1 = xs.length ? Math.max(...xs) + 40 : h.x + 400; this.fx('grid', { x: x0, y: h.y - 70, w: Math.max(120, x1 - x0), h: 96, life: 0.9, color: '#8e44ad' }); }
         for (const m of monsters) this.fx('stamp', { x: m.x, y: m.y - 34, life: 0.8, text: '반려', color: '#8e44ad' });
-        for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: -0.6, life: 0.3, big: true }); this.#heroHit(h, m, power * boost, true); if (m.alive) { const st = 2 + BALANCE.SKILL_STAR.stun * this.#starStep(h); m.stun = Math.max(m.stun, st); this.fx('stars', { x: m.x, y: m.y - 44, color: '#f1c40f', life: st }); } }
+        for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: -0.6, life: 0.3, big: true }); this.#heroHit(h, m, power * boost, true); if (m.alive) { const st = BALANCE.SKILL_STAR.ultStun + BALANCE.SKILL_STAR.stun * this.#starStep(h); m.stun = Math.max(m.stun, st); this.fx('stars', { x: m.x, y: m.y - 44, color: '#f1c40f', life: st }); } }
         break;
       case 'buff':
         this.atkBuff = { mult: Math.max(this.atkBuff.mult, 1 + (power * boost) / 100), until: this.time + this.#dur(h, 5) };
@@ -687,11 +698,13 @@ export class EntityManager {
           this.fx('sparkle', { x: a.x, y: a.y, color: '#a3e4d7', n: 8 });
         }
         if (this.slow.mult < 1) { this.slow = { mult: 1, until: 0 }; this.floaters.push({ x: h.x, y: h.y - 76, text: '둔화 해제', color: '#27ae60', t: 0 }); }
-        this.hasteBuff = { mult: Math.max(this.hasteBuff.mult, 1.2), until: this.time + SKILLS.cleanse.duration };
+        // 정화의 **회복은 거의 버려진다**(파티가 대체로 만피라 넘친다) — 위력을 2배로 올려도 벤치 값이
+        // 1도 안 움직였다(6-123). 이 스킬에 실제로 남는 건 둔화 해제와 이 가속이므로, 값은 여기서 준다.
+        this.hasteBuff = { mult: Math.max(this.hasteBuff.mult, 1.35), until: this.time + this.#dur(h, SKILLS.cleanse.duration) };
         this.fx('ring', { x: h.x, y: h.y, color: '#a3e4d7', radius: 300, life: 0.5 });
         break;
       }
-      case 'revive': { // 복직: 죽음이 영구해진 뒤로 유일한 복귀 수단이자 가장 값비싼 스킬
+      case 'revive': { // 복직: 대기를 건너뛰는 것에 더해, **누적된 대기 자체를 지운다**
         // 확정 1명 + 추가 인원마다 확률 굴림. 확률은 시전자의 ★로 오르고, 추가 인원에는 상한이 있다.
         const R = BALANCE.REVIVE;
         const star = Math.max(1, h.star ?? 1);
@@ -702,7 +715,10 @@ export class EntityManager {
           for (const down of fallen) {
             if (raised.length >= 1 + R.extraMax) break;              // 최대 인원
             if (raised.length >= 1 && Math.random() >= extraChance) continue; // 둘째부터는 확률
-            down.alive = true; down.reviveT = 0; down.hp = Math.max(1, Math.round(down.maxHp * (power * boost) / 100));
+            // `downs` 를 지우는 게 이 스킬의 진짜 값이다. 인사 복구 대기는 같은 전진 안에서 쓰러질 때마다
+            // 길어지는데(15 → 25 → 35 …), 복직은 그 기록까지 지워서 **다음 번 대기도 짧게 만든다.**
+            // 안 그러면 이 스킬이 사 주는 건 지금 이 15초뿐이고, 벤치에서 실제로 +2%였다(6-123).
+            down.alive = true; down.reviveT = 0; down.downs = 0; down.hp = Math.max(1, Math.round(down.maxHp * (power * boost) / 100));
             this.fx('ring', { x: down.x, y: down.y, color: '#f1c40f', radius: 120, life: 0.7 });
             this.fx('sparkle', { x: down.x, y: down.y - 20, color: '#ffe9a8', n: 16 });
             this.floaters.push({ x: down.x, y: down.y - 60, text: '복직!', color: '#f1c40f', t: 0, big: true });
@@ -710,8 +726,14 @@ export class EntityManager {
           }
           this.game.log(`${h.def.name}: ${raised.map((a) => a.def.name).join(', ')} 복직 처리 (${raised.length}명)`, 'skill');
         } else {
+          // **재고용 보장.** 쓰러진 사람이 없을 때 회복만 주면 거의 전부 넘쳐서 버려진다 — 벤치에서
+          // 이 스킬이 14종 중 꼴찌였던 이유다(6-123, +3.5). 대신 다음에 쓰러지는 한 명을 **그 자리에서**
+          // 일으키는 보장을 걸어 둔다. 늘 쓸모가 있고, 이름 그대로의 일이다.
           const weak = heroes.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-          if (weak) { const amt = Math.round(weak.maxHp * (power * boost) / 100); weak.hp = Math.min(weak.maxHp, weak.hp + amt); this.floaters.push({ x: weak.x, y: weak.y - 40, text: `+${amt}`, color: '#27ae60', t: 0 }); this.fx('sparkle', { x: weak.x, y: weak.y, color: '#ffe9a8', n: 10 }); }
+          if (weak) { const amt = Math.round(weak.maxHp * (power * boost) / 100 * 0.5); weak.hp = Math.min(weak.maxHp, weak.hp + amt); this.floaters.push({ x: weak.x, y: weak.y - 40, text: `+${amt}`, color: '#27ae60', t: 0 }); }
+          this.reviveGuard = { until: this.time + BALANCE.REVIVE.guardSec, hpPct: (power * boost) / 100 };
+          this.fx('ring', { x: h.x, y: h.y, color: '#f1c40f', radius: 300, life: 0.6 });
+          this.floaters.push({ x: h.x, y: h.y - 76, text: '재고용 보장', color: '#f1c40f', t: 0, big: true });
         }
         break;
       }
