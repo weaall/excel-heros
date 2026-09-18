@@ -10,6 +10,29 @@
 - **공통 프롬프트 꼬리**: `clean anime-style character illustration, bust-up portrait, soft cel shading, bright office lighting, crisp lineart, expressive eyes, modern Korean office worker, pastel spreadsheet-green accent, plain light background, centered, high detail, 1:1`
 - **네거티브**: `text, watermark, logo, extra fingers, blurry, low quality, dark, gore, weapon`
 
+## 헤일로 규칙 (여러 번 틀린 곳)
+
+헤일로는 **등급을 말하는 장치**다. 올라갈수록 더 멋있어야 하고, 그러면서도 주인공은 캐릭터여야 한다. 이 둘을 동시에 만족시키는 데 세 번 실패했다.
+
+1. **헤일로가 주인공이 됐다** (하린 · 창업자). 고리가 화면을 채워 캐릭터가 배경이 됐다. → NEG에 크기·위치 억제를 넣어 고쳤다: `huge halo, oversized halo, halo wider than shoulders, halo in front of the face, ring covering face`.
+2. **그 억제가 헤일로를 지웠다** (D급 다섯 장). D·C의 긍정 태그가 `thin **faint** halo, small halo` 였다. 약한 긍정 + 강한 억제 = 아예 안 나온다. → 긍정은 `thin but **clearly visible**` 로. **억제는 크기만 막고 존재는 막지 않는다** — `glowing ring as the main subject`, `halo focus` 처럼 존재를 누르는 태그는 뺐다.
+3. **다른 것이 헤일로 자리를 차지했다**. 루나의 `rings of holographic data rotating around her`, 노조위원장의 `golden light rays`, 비서실 총괄의 `speed lines`. 머리 위에 이미 고리·광선이 있으면 모델은 헤일로를 따로 그리지 않는다. 헤일로가 약한 게 아니라 **밀린 것**이다.
+   → **머리 위를 채우는 요소를 캐릭터 설명에 쓰지 않는다. 머리 위는 헤일로의 자리다.**
+
+사다리는 형용사가 아니라 **고리 수와 장식**으로 올린다(`HALO_BY_GRADE`). `thin → clean → radiant` 처럼 형용사만 바꾸면 S가 D보다 멋있다는 게 그림에서 드러나지 않는다.
+
+- D 고리 하나, 창백하게 · C 고리 하나 + 은은한 발광 · B 밝은 고리 + 얇은 외곽 고리
+- A 금색 고리 + 두 번째 얇은 고리 + 빛 알갱이 몇 개 · S 동심원 여러 겹 + 새겨진 문양 + 흘러넘치는 금빛
+
+## 자세 규칙
+
+전원이 카메라를 정면으로 맞닥뜨리면 스물네 장이 같은 증명사진처럼 보인다. 그래서:
+
+- **카메라 각도는 늘 준다** (`ANGLES`) — id 해시로 고르므로 같은 카드는 늘 같은 각도(재현성), 카드끼리는 다르다(다양성).
+- **몸 자세는 캐릭터 설명에 자세가 없을 때만** 준다 (`POSED` 정규식으로 판정). 둘 다 주면 모순된 지시가 되어 손이 세 개가 되거나 둘 다 버려진다 — 노조위원장이 `arms crossed` 와 `hand near the chin` 을 동시에 받았다.
+- 어느 자세든 **얼굴은 정면을 보고 완전히 보인다.** 이건 협상 대상이 아니다.
+- 설명이 얇으면(`dark hoodie, headphones, laptop` 셋) 모델이 빈칸을 자기 취향으로 채운다 — 매크로 엔지니어가 네온 사이버펑크 전신 포즈로 나왔다. **얇은 설명은 채워 준다.**
+
 ## 영웅별 프롬프트
 
 | id | 이름 | 등급/역할 | 프롬프트 |

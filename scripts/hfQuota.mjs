@@ -1,12 +1,20 @@
-// HF ZeroGPU 쿼터 점검: 토큰 풀마다 남은 초와 리셋 시각을 표로 뽑는다.
+// HF ZeroGPU 쿼터 점검 — **이 점검은 공짜가 아니다.**
 //
-// 왜 이런 방식인가: ZeroGPU는 쿼터가 모자라면 **GPU를 잡기 전에** 거절한다(`process_completed` 에 에러 메시지).
-// 그래서 한 장 요청해 보고 에러만 읽으면 쿼터를 한 톨도 쓰지 않는다. 반대로 쿼터가 남아 있으면 그 요청은
-// 실제로 90초를 쓰게 되므로, 그 경우에는 **곧바로 스트림을 끊고** 'available' 로만 기록한다.
-// (끊어도 Space 쪽에서 이미 시작한 작업은 돌 수 있다 — 그래서 --spend 없이는 풀당 한 번만 찌른다.)
+// ZeroGPU는 쿼터가 모자라면 GPU를 잡기 전에 거절한다(`process_completed` 의 에러 메시지). 그 경우에는
+// 한 톨도 쓰지 않고 남은 초와 리셋 시각을 알 수 있다. 문제는 반대쪽이다 — 쿼터가 **남아 있으면** 요청이
+// 실제로 실행되고, 스트림을 끊어도 Space 쪽 작업은 계속 돌아 그 풀의 90초를 태운다.
+//
+// 그래서 결과는 두 종류로만 말한다:
+//   · 소진        — 거절당했다. 공짜로 알아냈고 남은 초·리셋 시각이 정확하다.
+//   · 썼음(있었다) — 실행이 시작됐다. 쿼터가 있었다는 **과거형**이고, 확인하는 순간 90초를 썼다.
+// '사용 가능'이라고 쓰지 않는다. 실제로 14장 배치 직전에 이 점검이 6개 풀 전부 '사용 가능'이라고
+// 답했고, 바로 다음 요청에서 토큰 #1이 '90s requested vs. 88s left' 로 거절했다 — 점검이 태운 것이다.
+//
+// **배치 전에는 돌리지 마라.** genCardsHF 가 이미 풀을 돌리며 실제 에러를 읽는다. 이 스크립트는
+// '왜 전부 막혔나'를 사후에 확인할 때만 쓴다.
 //
 // 사용법:
-//   node scripts/hfQuota.mjs            # 토큰별 남은 쿼터 표
+//   node scripts/hfQuota.mjs            # 풀별 상태 (막힌 풀만 공짜로 알 수 있다)
 //   node scripts/hfQuota.mjs --json     # 기계가 읽을 형태
 import fs from 'node:fs';
 
@@ -74,12 +82,13 @@ async function probe(token) {
         if (m.msg === 'process_completed') {
           const err = String(m.output?.error ?? '');
           if (err) return { status: 'exhausted', detail: err, ...parseQuota(err) };
-          return { status: 'available', detail: '한 장을 실제로 생성했다(쿼터 있음)' };
+          return { status: 'spent', detail: '한 장을 끝까지 생성했다 — 이 확인이 90초를 썼다' };
         }
         // 실행이 시작됐다 = 쿼터가 있다. 여기서 끊어 90초를 통째로 쓰지 않게 한다.
         if (m.msg === 'process_starts' || m.msg === 'process_generating') {
           ctl.abort();
-          return { status: 'available', detail: '실행 시작됨 — 쿼터 있음(요청은 끊음)' };
+          // 끊어도 Space 쪽 작업은 계속 돈다 — 그래서 '있다'가 아니라 '있었고 지금 썼다'로 기록한다.
+          return { status: 'spent', detail: '실행 시작됨 — 쿼터가 있었고, 이 확인이 90초를 썼다' };
         }
         if (m.msg === 'close_stream') return { status: 'unknown', detail: 'stream closed' };
       }
@@ -99,7 +108,7 @@ for (const p of pools()) {
 
 if (asJson) { console.log(JSON.stringify(rows, null, 2)); process.exit(0); }
 
-const label = { available: '사용 가능', exhausted: '소진', error: '오류', unknown: '알 수 없음' };
+const label = { spent: '썼음(있었다)', exhausted: '소진', error: '오류', unknown: '알 수 없음' };
 console.log(`ZeroGPU 쿼터 (${SPACE}) · 이미지 1장 = 90초\n`);
 console.log('풀           상태        남은 초   리셋까지    리셋 시각');
 console.log('-'.repeat(60));
@@ -112,7 +121,11 @@ for (const r of rows) {
     String(hhmm(r.resetSec ?? null)).padStart(10),
   );
 }
-const ready = rows.filter((r) => r.status === 'available').length;
+const spent = rows.filter((r) => r.status === 'spent').length;
+const dead = rows.filter((r) => r.status === 'exhausted').length;
 const soonest = rows.filter((r) => r.resetSec != null).sort((a, b) => a.resetSec - b.resetSec)[0];
 console.log('-'.repeat(60));
-console.log(ready ? `지금 뽑을 수 있는 풀 ${ready}개` : soonest ? `전부 소진 — 가장 빨리 차는 풀: ${soonest.pool} (${soonest.resetIn} 뒤, ${hhmm(soonest.resetSec)})` : '전부 소진');
+if (spent) console.log(`쿼터가 있던 풀 ${spent}개 — 그리고 이 점검이 각각 90초를 썼다(약 ${spent * 90}초).`);
+if (dead) console.log(`소진된 풀 ${dead}개${soonest ? ` — 가장 빨리 차는 풀: ${soonest.pool} (${soonest.resetIn} 뒤, ${hhmm(soonest.resetSec)})` : ''}`);
+if (!spent && !dead) console.log('판정을 못 얻었다 — Space 혼잡일 수 있다. 상태를 좋은 소식으로 바꾸지 않는다.');
+console.log('배치를 돌릴 참이면 이 점검을 건너뛰어라 — genCardsHF 가 풀을 돌리며 실제 에러를 읽는다.');
