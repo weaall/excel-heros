@@ -120,6 +120,21 @@ export class EntityManager {
 
   #frontX() { const alive = this.heroes.filter((h) => h.alive); return alive.length ? Math.max(...alive.map((h) => h.x)) : FRONT_X; }
 
+  /**
+   * **사냥은 쉬는 상태다.** 도전 중이 아니면 웨이브 사이에 쓰러진 사원이 일어난다.
+   *
+   * 이게 없으면 소모전에 출구가 없다 — 승산이 낮아 안전 자동 진행이 멈춰 있고, 멈춰 있는 동안 사냥하다
+   * 또 쓰러지므로 파티는 영구히 이 빠진 채로 같은 단계를 무한히 돈다. 전멸조차 하지 않으니 후퇴도 없다.
+   * 관측: 4시간 중 마지막 90분을 117단계에서 쓰러짐 129회로 보냈다(6-95).
+   */
+  #restIfFarming() {
+    const g = this.game;
+    if (g.isChallenging?.() || g.overtime) return;
+    let up = 0;
+    for (const h of this.heroes) if (!h.alive) { h.alive = true; h.reviveT = 0; h.hp = h.maxHp; h.x = h.homeX; h.y = h.homeY; h.targetId = null; up++; }
+    if (up) g.log?.(`사냥 중 인사 복구 — ${up}명 복귀`, 'info');
+  }
+
   #spawnWave() {
     const stage = this.game.combatStage();
     this.wave++;
@@ -198,7 +213,7 @@ export class EntityManager {
       if (!this.traveling) { this.traveling = true; this.travelT = this.game.overtime ? BALANCE.OVERTIME.travel : TRAVEL_TIME; }
       this.travelT -= dt; this.scroll += SCROLL_SPEED * dt;
       for (const h of heroes) { h.anim = 'walk'; h.animT += dt; }
-      if (this.travelT <= 0) { this.traveling = false; this.#spawnWave(); }
+      if (this.travelT <= 0) { this.traveling = false; this.#restIfFarming(); this.#spawnWave(); }
     } else if (this.traveling) { this.traveling = false; }
     if (this.boss) {
       // the clock only runs once the boss has reached the line — walking in must not eat into the time limit

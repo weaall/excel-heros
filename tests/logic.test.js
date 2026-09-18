@@ -143,3 +143,26 @@ test('승산은 지금 싸울 파티로 계산한다 — 쓰러진 사원과 깎
   assert.ok(down.dps < full.dps, '쓰러진 사원의 화력은 빠진다');
   assert.ok(g.challengeForecast(12).prob <= hurt.prob, '한 명 빠지면 승산이 더 낮아진다');
 });
+
+test('벽 판정은 재정비한 파티로 한다 — 이가 빠진 건 벽이 아니라 상처다', () => {
+  const g = new GameManager({ save: memSave() });
+  for (const role of ['tank', 'healer', 'ranged', 'melee']) {
+    const d = HEROES.find((h) => h.role === role && h.id !== MAIN_ID);
+    Object.assign(g.state.heroes[d.id], { owned: true, star: 3, level: 60, shards: 0, enhance: 0 });
+    g.state.party.push(d.id);
+  }
+  g.entities.rebuildParty();
+  const healthy = g.challengeForecast(8);
+  assert.ok(healthy.prob >= BALANCE.SAFE_ADVANCE.min, '멀쩡한 파티는 8단계를 넘을 수 있다');
+
+  // 절반이 쓰러지고 나머지도 피가 빠진 상태
+  g.entities.heroes.forEach((h, i) => { if (i % 2) h.alive = false; else h.hp = 1; });
+  assert.ok(g.challengeForecast(8).prob < healthy.prob, '지금 승산은 떨어진다 — 이 전투를 시작할지의 답');
+  assert.equal(
+    g.challengeForecast(8, { regrouped: true }).prob, healthy.prob,
+    '재정비 승산은 그대로다 — 여기가 벽인지의 답은 상처와 무관하다',
+  );
+  const rg = g.fightingParty({ regrouped: true });
+  assert.equal(rg.count, g.state.party.length, '재정비하면 전원이 돌아온다');
+  assert.ok(rg.hp > g.fightingParty().hp, '재정비하면 체력도 만피');
+});

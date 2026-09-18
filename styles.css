@@ -863,3 +863,9 @@ body.stealth .tutorial { display: none; }
 .manual-table td.mk { width: 150px; font-weight: 700; color: #1b5e3a; vertical-align: top; white-space: normal; background: #f2f8f4; }
 .manual-table td { color: #444; line-height: 1.5; }
 .dialog.wide { width: min(760px, 92vw); }
+
+/* 리본의 대화상자 버튼 — 삽입 탭 맨 앞에서 '여기서 시작한다'가 보여야 한다 */
+.rb-btn.big { border-color: #9cc5a8; background: linear-gradient(#f4fbf6, #e6f4ec); font-weight: 700; }
+.rb-btn.big:hover:not(:disabled) { background: linear-gradient(#eef9f2, #d9efe2); }
+.rb-btn.big .rb-icon { color: var(--xl-green); }
+.import-dlg .detail-actions { margin-top: 10px; }

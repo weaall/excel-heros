@@ -69,6 +69,7 @@ function run(seed, mutate) {
     if (g.state.maxCleared > peak) peak = g.state.maxCleared;
     if (g.braceFormula) { const f = g.braceInfo(); g.submitBraceFormula(f.a + f.b); } // 항상 맞힌다 (변인 고정)
     if (act >= 30) { act = 0;
+      if (!g.state.settings.autoAdvance) g.setAutoAdvance(true); // 전멸하면 게임이 자동 진행을 끈다 — 사람은 다시 켠다 (상태를 직접 건드리면 도전이 다시 시작되지 않는다)
       let n = 0; while (g.state.gems >= 900 && n++ < 30) { if (!g.pull(10)) break; }
       for (const id of Object.keys(g.state.heroes)) if (g.heroView(id).canPromote) g.promote(id);
       const mp = g.mainPromotionInfo(); if (mp && !mp.maxed && mp.ok && mp.options?.length) g.promoteMain(mp.options[0].id);

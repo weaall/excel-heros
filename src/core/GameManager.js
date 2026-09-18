@@ -162,8 +162,10 @@ export class GameManager extends Emitter {
   prestigeAdvice() {
     const info = this.prestigeInfo();
     if (!info.eligible) return null;
-    const fc = this.challengeForecast(this.state.stage + (this.isChallenging() ? 0 : 1));
-    const stalled = this.waitingAdvance || fc.prob < BALANCE.SAFE_ADVANCE.min;
+    // 벽 판정은 **재정비한 파티**로 한다. 지금 두 명이 쓰러져 있다는 건 벽이 아니라 상처다 —
+    // 그걸 벽으로 읽으면 후퇴 한 번으로 넘을 단계에서 회사 이전을 권하게 된다(측정: 6-95).
+    const fc = this.challengeForecast(this.state.stage + (this.isChallenging() ? 0 : 1), { regrouped: true });
+    const stalled = fc.prob < BALANCE.SAFE_ADVANCE.min;
     if (!stalled) return null;
     return { ...info, stalled: true, text: `다음 단계 승산 ${Math.round(fc.prob * 100)}% — 지금 회사를 이전하면 지분 +${info.gain} (파티 ATK·골드 +${Math.round(info.gain * info.perShare * 100)}%)을 영구히 얻고, 다시 올라오는 속도는 처음보다 훨씬 빠릅니다.` };
   }
@@ -673,11 +675,13 @@ export class GameManager extends Emitter {
    * 승산을 최대 체력으로 계산하면 이가 빠진 파티에게도 "유리"라고 답하고, 그러면 안전 자동 진행이
    * 멈춰야 할 때 멈추지 않는다 — 소모전 규칙이 들어온 뒤 실제로 그랬다(6-94).
    * 전투가 시작되기 전(엔티티가 없을 때)에는 최대 체력으로 답한다 — 그때는 전원이 만피로 출발한다.
+   * `regrouped: true` 는 **재정비한 뒤의 파티**를 묻는 것이다. '여기가 벽인가'는 지금 이가 빠졌는지가
+   * 아니라 전원이 멀쩡해도 못 넘느냐의 문제이므로, 회사 이전 권유는 이쪽을 본다.
    */
-  fightingParty() {
+  fightingParty({ regrouped = false } = {}) {
     const ents = this.entities?.heroes ?? [];
     const speed = this.speedMult();
-    if (!ents.length) {
+    if (regrouped || !ents.length) {
       return {
         count: this.state.party.length,
         hp: this.state.party.reduce((a, id) => a + this.heroView(id).hp, 0),
@@ -1015,8 +1019,8 @@ export class GameManager extends Emitter {
    * 승산: how the party stacks up against a stage. ratio = (partyDPS / enemyHP) / (enemyDPS / partyHP);
    * calibrated against headless runs — normal stages are won from ratio ≈ 7-10, boss stages from ≈ 10-15.
    */
-  challengeForecast(stage = this.nextStage()) {
-    const live = this.fightingParty();
+  challengeForecast(stage = this.nextStage(), opts) {
+    const live = this.fightingParty(opts);
     const dps = Math.max(1, live.dps);
     const hp = Math.max(1, live.hp);
     const mod = stageModifier(stage); const boss = isBossStage(stage); const bDef = bossForStage(stage);

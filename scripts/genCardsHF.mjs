@@ -16,14 +16,50 @@ import { PROFILES } from '../src/data/profiles.js';
 const SPACE = process.env.SPACE ?? 'asahina2k-animagine-xl-4-0';
 const BASE = `https://${SPACE}.hf.space`;
 /** 후광은 등급을 말한다 — 도트의 HALO_TIER(D/C 0 · B 1 · A 2 · S 3)와 같은 사다리. 단 항상 '머리 위의 고리'다. */
+// 낮은 등급도 **분명히 보여야 한다.** 'faint / small' 만 쓰면 NEG 의 크기 억제 태그가 이겨서 고리가
+// 아예 사라진다 — D급 다섯 장이 그렇게 날아갔다(6-96). 작게 만드는 건 'thin'·'small' 로 충분하고,
+// 존재는 'clearly visible' 로 못 박는다.
+//
+// 그리고 사다리가 **눈에 보여야 한다.** 형용사만 바꾸면(thin → clean → radiant) S가 D보다 멋있다는 게
+// 그림에서 드러나지 않는다. 그래서 등급마다 **고리 수와 장식**이 달라진다. 크기 제약은 그대로 —
+// 얼굴을 덮지 않고 어깨보다 넓지 않다(6-84).
 const HALO_BY_GRADE = {
-  D: 'a thin faint halo ring floating above the head, small halo',
-  C: 'a thin halo ring floating above the head, small halo',
-  B: 'a clean glowing halo ring floating above the head',
-  A: 'a radiant golden halo ring floating above the head with a soft inner glow',
-  S: 'a glowing golden double halo ring floating above the head',
+  D: 'a single thin but clearly visible pale glowing halo ring floating above the head, small halo',
+  C: 'a single clearly visible glowing halo ring floating above the head with a faint soft glow, small halo',
+  B: 'a bright glowing halo ring floating above the head with a soft inner glow and a thin outer ring',
+  A: 'a radiant golden halo ring floating above the head with a soft inner glow, a thin second ring around it and a few floating light motes',
+  S: 'an ornate glowing golden halo above the head made of concentric rings with delicate engraved glyphs, warm light spilling from it and golden light particles drifting around it',
 };
 const haloTag = (grade) => HALO_BY_GRADE[grade] ?? HALO_BY_GRADE.C;
+
+/**
+ * 자세. 전원이 카메라를 정면으로 맞닥뜨리고 있으면 스물네 장이 같은 사진처럼 보인다.
+ * id 해시로 고르므로 **같은 카드는 늘 같은 자세**(재현성)이고 카드끼리는 다르다(다양성).
+ * 얼굴 규칙은 건드리지 않는다 — 어느 자세든 얼굴은 정면을 보고 완전히 보인다.
+ */
+const ANGLES = [
+  'three quarter view, shoulders angled away, head turned back toward the viewer',
+  'three quarter view from the left, torso rotated, chin slightly raised',
+  'three quarter view from the right, one shoulder closer to the viewer, head tilted gently',
+  'slightly low angle three quarter view, shoulders squared away from the camera',
+];
+/** 몸 자세 — 캐릭터 설명에 이미 자세가 있으면 주지 않는다(손이 세 개가 된다). */
+const BODY_POSES = [
+  'one hand resting on the hip, relaxed confident stance',
+  'arms folded loosely, leaning back a little',
+  'one hand raised near the collar adjusting a lanyard, other arm relaxed',
+  'hands clasped together in front, head tilted gently',
+  'hand near the chin in thought, elbow bent',
+  'one hand tucked into a pocket, other arm hanging relaxed',
+];
+const hash = (id) => { let h = 0; for (let i = 0; i < String(id).length; i++) h = (h * 31 + String(id).charCodeAt(i)) | 0; return Math.abs(h); };
+/** 이미 자세가 박힌 설명인지. 겹치면 몸 자세는 생략하고 각도만 준다. */
+const POSED = /\b(arms? crossed|arms? folded|hands? up|holding|hand (on|resting|tucked)|in (one )?hand|across the chest|leaning|pointing|clasp|salute|raised|fist)\b/i;
+const poseTag = (id, desc) => {
+  const h = hash(id);
+  const angle = ANGLES[h % ANGLES.length];
+  return POSED.test(desc) ? angle : `${BODY_POSES[(h >> 3) % BODY_POSES.length]}, ${angle}`;
+};
 const STYLE_TAGS = 'blue archive style, centered composition, character centered in frame, flat color, cel shading, thin clean lineart, consistent line weight, anime coloring, vivid pastel colors, soft blurred background, muted simple background, depth of field, character focus';
 /** Backgrounds: by character (department flavour), else by grade. Kept bright and readable behind a bust/cowboy shot. */
 const BG_BY_ID = {
@@ -58,7 +94,7 @@ const HALO_SCENES = new Set(['halo', 'awaken', 'roster']); // the ring only exis
 export const scenePrompt = (id) => `${SCENES[id] ?? id}, ${HALO_SCENES.has(id) ? 'halo, ' : ''}${SCENE_STYLE}`;
 export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo above head, glowing ring above head, ${SCENE_NEG}`);
 
-const NEG = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, glowing ring as the main subject, halo focus, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, close-up, legs, knees, feet, shoes, standing full figure, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, busy background, cluttered background, high contrast background, nsfw';
+const NEG = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, halo cut off by the frame, close-up, legs, knees, feet, shoes, standing full figure, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw';
 /** 낮은 등급에 연출이 붙지 않게 — 긍정 프롬프트가 아니라 네거티브로 막아야 구도가 살아남는다. */
 const PLAIN_NEG = 'glowing aura, magic effects, light particles, sparkles, gold trim, dramatic rim light, neon lights, energy glow, floating holograms';
 export const negFor = (grade) => (grade === 'D' || grade === 'C' ? `${PLAIN_NEG}, ${NEG}` : NEG);
@@ -71,13 +107,13 @@ const OUTFIT_BY_ID = {
   parttime: 'reception uniform, vest, ribbon tie', barista: 'striped shirt, brown barista apron, rolled sleeves, hair tied', contract: 'oversized beige cardigan over a blouse',
   hr_jung: 'teal blazer over a white blouse, earrings', acct_lead: 'black turtleneck, high-waist trousers, glasses', welfare: 'pastel knit sweater, scarf', coo: 'elegant tailored navy pantsuit with gold buttons and a thin gold chain, silk blouse, sleek side-swept bob, sharp confident smile, holding a slim tablet, gold accents, light particles, sparkles, beautiful detailed face',
   ceo: 'white long coat over black dress, gold accents, small sunglasses, pale skin, brightly lit face, confident smile', helpdesk: 'hoodie over a collared shirt, headset around the neck', cleaner: 'work jumpsuit, headscarf, rubber gloves', legal_yoon: 'black long coat, white collar, thin glasses',
-  pm_lead: 'crisp denim jacket over a white blouse, neat bob, lanyard, holding a fanned stack of planning documents, confident bright smile, sticky notes floating around her', design_lead: 'oversized artist smock over a striped tee, curly pink hair under a beret, holding a glowing drawing tablet, bright cheerful smile, colorful paint splashes and light particles', cmo: 'stylish scarlet blazer over white top, long wavy hair, sunglasses pushed up on head, statement gold earrings, playful wink, confetti and bokeh light particles, sparkles, beautiful detailed face',
+  pm_lead: 'crisp denim jacket over a white blouse, neat bob, lanyard, holding a fanned stack of planning documents, confident bright smile, sticky notes floating around her', design_lead: 'oversized artist smock over a striped tee, curly pink hair under a beret, holding a drawing tablet and a stylus, bright cheerful smile, a few paint smudges on the smock', cmo: 'stylish scarlet blazer over white top, long wavy hair, sunglasses pushed up on head, statement gold earrings, playful wink, confetti and bokeh light particles, sparkles, beautiful detailed face',
   intern_seo: 'oversized cardigan, lanyard, holding a tablet', pr_yoo: 'bomber jacket over a top, press badge', nurse_han: 'white nurse uniform, nurse cap, clipboard', lab_park: 'white lab coat over sweater, glasses, laptop',
-  intern_min: 'pastel pink cardigan over white blouse, twin tails with ribbons, notebook hugged to chest, bright cheerful smile', security_yang: 'navy security uniform, black ponytail, radio on shoulder, serious but kind eyes', mail_cho: 'blue postal jacket, backwards cap, mail bag, running pose, grin', qa_lee: 'dark purple hoodie, navy bob, round glasses, laptop covered in stickers, deadpan', reception_go: 'coral blazer, long brown hair, headset, holding a microphone, warm smile', trainer_seok: 'orange coach vest over white shirt, whistle, clipboard, energetic', translator_ji: 'beige trench coat, long silver-blue hair, book, elegant', secretary_yun: 'charcoal pencil suit, black hair bun, gold earrings, leather planner, composed', logistics_bae: 'grey work jacket, orange gloves, stacked boxes, sturdy, friendly', cdo: 'black suit with cyan accents and a gold pin, long black hair with a bright blue streak tucked behind her ear, bright cyan eyes, calm confident smile, one hand resting on a slim tablet, a few small holographic charts faint and far behind her', cco: 'coral suit, pink bob, headset phone, radiant smile, flowers', chief_of_staff: 'white and gold executive suit, platinum long ponytail, stamp in hand, sharp confident smile, speed lines',
-  cso: 'white and navy executive suit dress, lavender long wavy hair, star earrings, holographic tablet, serene confident smile', ai_lead: 'white and gold lab coat over a mint blouse, very long mint hair, round glasses, rings of holographic data rotating around her, glowing mint code streams, serene commanding presence', union_chief: 'crimson and gold leader coat with a white armband, blond spiked hair, one fist raised high, a long banner streaming behind him, golden light rays, roaring confident grin', hacker: 'long black techwear coat open over a hooded top, glowing cyan circuit lines running through the fabric, neon cyan headset, short black bob with a bright cyan streak, floating holographic code panels orbiting her, confident smirk, dramatic rim light',
+  intern_min: 'pastel pink cardigan over white blouse, twin tails with ribbons, notebook hugged to chest, bright cheerful smile', security_yang: 'navy security uniform, black ponytail, radio on shoulder, serious but kind eyes', mail_cho: 'blue postal jacket over a grey tee, backwards cap, a mail bag strap across the chest, a bundle of envelopes in one hand, bright grin', qa_lee: 'dark purple hoodie, navy bob, round glasses, laptop covered in stickers, deadpan', reception_go: 'coral blazer, long brown hair, headset, holding a microphone, warm smile', trainer_seok: 'orange coach vest over white shirt, whistle, clipboard, energetic', translator_ji: 'beige trench coat, long silver-blue hair, book, elegant', secretary_yun: 'charcoal pencil suit, black hair bun, gold earrings, leather planner, composed', logistics_bae: 'grey work jacket, orange gloves, stacked boxes, sturdy, friendly', cdo: 'black suit with cyan accents and a gold pin, long black hair with a bright blue streak tucked behind her ear, bright cyan eyes, calm confident smile, one hand resting on a slim tablet, a few small holographic charts faint and far behind her', cco: 'coral suit, pink bob, headset phone, radiant smile, flowers', chief_of_staff: 'white and gold executive suit with a thin gold chain, platinum long ponytail, an approval stamp in one hand, sharp confident smile',
+  cso: 'white and navy executive suit dress, lavender long wavy hair, star earrings, holographic tablet, serene confident smile', ai_lead: 'white and gold lab coat over a mint blouse, very long mint hair, round glasses, a slim holographic panel held at her side, serene commanding presence', union_chief: 'crimson and gold leader coat with a white armband over a dark shirt, blond spiked hair, a union pin on the lapel, broad confident grin', hacker: 'long black techwear coat open over a hooded top, glowing cyan circuit lines running through the fabric, neon cyan headset, short black bob with a bright cyan streak, floating holographic code panels orbiting her, confident smirk, dramatic rim light',
   chro: 'elegant mauve suit dress with pearl earrings and a gold brooch, long wavy hair, warm reassuring smile, one hand resting lightly over her heart with fingers together, soft petals drifting, warm rim light', chairwoman: 'black formal gown-style suit, silver hair, small crown, cane',
   staff_park: 'white shirt sleeves rolled, loosened tie, lanyard', guard: 'navy security uniform, cap, radio', courier: 'cheerful young man in a delivery worker jacket with an orange collar, baseball cap, name tag, hands on the strap of a shoulder bag', vlookup: 'vest over shirt, glasses, pen',
-  pivot: 'suspenders, shirt, bald, beard', macro: 'dark hoodie, headphones, laptop', audit_han: 'trench coat, sunglasses, magnifying glass', dev_lead: 'flannel shirt, headset, coffee cup', ga_lead: 'grey work vest, gloves, boxes',
+  pivot: 'suspenders, shirt, bald, beard', macro: 'charcoal zip hoodie over a plain tee, headphones around the neck, a laptop tucked under one arm, messy black hair, tired but pleased half smile', audit_han: 'trench coat, sunglasses, magnifying glass', dev_lead: 'flannel shirt, headset, coffee cup', ga_lead: 'grey work vest, gloves, boxes',
   cro: 'charcoal double-breasted suit with a gold pin, dark hair in a neat bun, thin glasses, calm unshakeable gaze, faint red warning glyphs deflected around her, protective aura',
   cpo: 'teal shirt with rolled sleeves, headset around neck, short brown hair, holding a tablet showing a product roadmap, floating connected nodes of light, focused smile',
   ir_lead: 'deep purple three-piece suit, swept black hair, gold tie pin, holding a leather ledger, floating golden charts rising behind him, composed confident smile',
@@ -111,7 +147,8 @@ export function describe(def, profileId, outfitOverride = null) {
 const SKIN_BG = { casual: 'cafe window close behind him, warm evening lights, bokeh', formal: 'warm party lights close behind him, soft golden bokeh' };
 export function prompt(def, profileId, skin = null) {
   const bg = skin ? SKIN_BG[skin.id] ?? BG_BY_GRADE[def.grade] : BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
-  return `${describe(def, profileId, skin?.prompt ?? null)}, looking at viewer, face fully visible, eyes visible, whole head in frame with space above the head, medium shot, upper body, waist up, face focus, soft even front lighting, bright face, ${haloTag(def.grade)}, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
+  const desc = describe(def, profileId, skin?.prompt ?? null);
+  return `${desc}, ${poseTag(def.id, desc)}, looking at viewer, face fully visible, eyes visible, whole head in frame with clear empty space above the hair and above the halo, medium shot, upper body, waist up, face focus, soft even front lighting, bright face, ${haloTag(def.grade)}, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
 }
 
 // Optional Hugging Face token (HF_TOKEN env or a .hf_token file next to package.json, git-ignored): a logged-in

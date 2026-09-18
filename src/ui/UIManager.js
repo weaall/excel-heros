@@ -122,6 +122,7 @@ export class UIManager {
     $('#qat-undo').addEventListener('click', () => this.toast('실행 취소할 작업이 없습니다'));
     $('#qat-redo').addEventListener('click', () => this.toast('다시 실행할 작업이 없습니다'));
     // ribbon panels
+    $('#qa-import').addEventListener('click', () => this.#openImportDialog());
     $('#qa-pull1').addEventListener('click', () => { this.switchSheet('gacha'); this.#pull(1); });
     $('#qa-pull10').addEventListener('click', () => { this.switchSheet('gacha'); this.#pull(10); });
     $('#qa-auto-party').addEventListener('click', () => {
@@ -863,7 +864,19 @@ export class UIManager {
       e.owned ? sb(g.isFavorite(id) ? '♥' : '♡', () => g.toggleFavorite(id), g.isFavorite(id) ? 'fav on' : 'fav', false, '즐겨찾기') : null);
     // --- stat table
     const table = el('table', { class: 'dt-table' });
-    if (!e.owned) table.append(row('상태', '미보유', null, '삽입 › 데이터 가져오기에서 획득'));
+    if (!e.owned) {
+      // 미보유 카드도 판단 재료는 줘야 한다 — '쫓을 가치가 있나'에 답하는 줄들
+      const pick = Object.values(g.pickup()).includes(id);
+      const pity = { a: BALANCE.PITY_A - s.pity.sinceA, s: BALANCE.PITY_S - s.pity.sinceS };
+      table.append(row('상태', pick ? '미보유 · 오늘의 픽업' : '미보유', null, '삽입 › 데이터 가져오기에서 영입'));
+      table.append(row('★1 전투력', fmt(v.power), null, '보유하면 레벨·★·강화로 올라갑니다 (ATK×2 + HP÷10)'));
+      table.append(row('★1 ATK', fmt(v.atk)));
+      table.append(row('★1 HP', fmt(v.hp)));
+      table.append(row('공격 속도', `${v.interval}s`));
+      table.append(row('영입 확률', `${v.def.grade}급 ${(v.grade.rate * 100).toFixed(v.grade.rate < 0.01 ? 1 : 0)}%`, null,
+        `${pick ? '픽업 중이라 같은 등급 안에서 더 잘 나옵니다. ' : ''}모집 포인트로 교환하는 천장도 있습니다`));
+      table.append(row('천장까지', `A 이상 ${pity.a}회 · S ${pity.s}회`, null, '뽑을수록 줄어듭니다 — 모집 포인트 교환과는 별개입니다'));
+    }
     else {
       table.append(row('레벨', `Lv ${e.level} / ${v.levelCap}`, el('div', { class: 'ctl-group' },
         sb('-10', () => { if (!g.downgradeHero(id, 10)) this.toast('레벨 1입니다'); }, '', e.level <= 1, `레벨 -10 · 골드 환급`),
@@ -1074,6 +1087,33 @@ export class UIManager {
   }
 
   // ------------------------------------------------------------- gacha --
+  /**
+   * 삽입 › 외부 데이터 가져오기… — **자리를 옮기지 않는** 영입 대화상자.
+   * 시트를 바꾸지 않으므로 전투를 보던 중에도 쓸 수 있다. 결과는 기존 공개 연출 모달로 넘어간다.
+   */
+  #openImportDialog() {
+    const g = this.game, s = g.state;
+    const ids = g.pickup();
+    const body = el('div', { class: 'import-dlg' });
+    body.append(el('table', { class: 'xl-table compact', html: `<tbody>
+      <tr><th>보유 보석</th><td class="num">${fmt(s.gems)}</td></tr>
+      <tr><th>A 이상 확정까지</th><td class="num">${BALANCE.PITY_A - s.pity.sinceA}회</td></tr>
+      <tr><th>S 확정까지</th><td class="num">${BALANCE.PITY_S - s.pity.sinceS}회</td></tr>
+      <tr><th>모집 포인트</th><td class="num">${fmt(g.recruitPoints())}</td></tr>
+      <tr><th>오늘의 픽업</th><td>${Object.entries(ids).map(([gr, id]) => `${gr}급 ${g.heroView(id).def.name}`).join(' · ')}</td></tr>
+      <tr><th>픽업 기간</th><td>${g.pickupDaysLeft()}일 남음 · 3일마다 교체</td></tr>
+    </tbody>` }));
+    const row = el('div', { class: 'detail-actions' });
+    const one = g.pullCost(1), ten = g.pullCost(10);
+    row.append(
+      btn(`1행 가져오기 (보석 ${fmt(one)})`, () => this.#pull(1), '', s.gems < one),
+      btn(`10행 가져오기 (보석 ${fmt(ten)})`, () => this.#pull(10), 'primary', s.gems < ten),
+      btn('가져오기 시트 열기', () => { this.closeModal(); this.switchSheet('gacha'); }),
+    );
+    body.append(row);
+    body.append(el('span', { class: 'muted small' }, '10행은 첫 회차에 S가 확정입니다. 모집 포인트 교환은 가져오기 시트에서 합니다.'));
+    this.openModal('외부 데이터 가져오기', body);
+  }
   #pull(n) {
     const res = this.game.pull(n);
     if (!res) return;
