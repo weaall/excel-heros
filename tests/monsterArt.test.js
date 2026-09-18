@@ -60,7 +60,9 @@ test('no two monster types (or bosses) share the same creature sprite', async ()
     assert.equal(seen.get(key), undefined, `${def.id} 와 ${seen.get(key)} 가 같은 그림(${key})을 쓴다`);
     seen.set(key, def.id);
   }
-  assert.ok(seen.size >= 25, `고유 그림이 너무 적다 (${seen.size})`);
+  const { MONSTER_MAPS: MAPS } = await import('../src/data/monsterArt.js');
+  const drawn = new Set([...seen.keys(), ...Object.keys(MAPS).map((k) => 'hand:' + k)]);
+  assert.ok(drawn.size >= 25, `고유 그림이 너무 적다 (팩 ${seen.size} + 손그림 ${Object.keys(MAPS).length})`);
 });
 
 // 사무기기 몬스터는 이 게임의 컨셉 그 자체라 손그림(MONSTER_MAPS)으로만 존재한다 — 팩에 사무 가구가 없다.

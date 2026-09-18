@@ -70,8 +70,7 @@ const BIG = { big_zombie: [334, 34], ogre: [384, 32], big_demon: [428, 36] };
 export const MONSTER_MAP = {
   circ: 'slug', merged: 'necromancer', ref: 'imp', virus: 'chort', ghost: 'skelet', sheet: 'wogol', chart: 'muddy', hourglass: 'zombie',
   lock: 'hooded', bug: 'goblin', cloud: 'ice_zombie', cursor: 'pumpkin',
-  monkey: { tiny: 21 }, bull: { tiny: 122, big: true }, mushroom: { tiny: 14 }, eyeball: { tiny: 5 }, hand: { tiny: 6 }, golem: { tiny: 47, big: true }, flame: { tiny: 45 },
-  orb: { tiny: 89 }, rabbit: { tiny: 177 }, chicken: { tiny: 150 }, cat: { tiny: 157 }, rat: { tiny: 92 }, snake: { tiny: 41 }, robot: { tiny: 80, big: true },
+  monkey: { tiny: 21 }, bull: { tiny: 122, big: true },
   boss: 'big_demon', boss_zombie: 'big_zombie', boss_ogre: 'ogre',
   // Tiny Creatures 를 보스 배율로 — 팩의 큰 생물이 셋뿐이라 보스가 3종에 묶여 있었다
   boss_audit: { tiny: 148, boss: true }, boss_target: { tiny: 165, boss: true }, boss_approval: { tiny: 158, boss: true },
