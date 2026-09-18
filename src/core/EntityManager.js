@@ -278,7 +278,11 @@ export class EntityManager {
       if (!target) { if (h.anim !== 'attack') h.anim = 'idle'; continue; }
       if (h.skillUnlocked && h.skillCd <= 0 && this.castLock <= 0) { // 순서대로: 앞 스킬 연출이 끝난 뒤에 다음 스킬
         const type = h.skill.type;
-        const worth = type === 'heal' ? heroes.some((a) => a.hp < a.maxHp * 0.75)
+        // 웰니스 데이(heal)는 6-123 벤치에서 **30분에 0~7회**만 터졌다. 조건이 '누가 75% 아래'인데
+        // 상시 회복(기본 재생 + 힐러 오라 + 힐러의 능동 치유)이 그 아래로 안 내려가게 붙잡는다.
+        // 게다가 ★ 보너스가 "넘친 회복량이 보호막이 된다"인데 — **만피일 때 못 쓰게 막아 놔서 그 보너스는
+        // 영영 발동하지 않았다.** 문턱을 올리고, ★가 붙었으면 보호막이 없을 때도 쓴다.
+        const worth = type === 'heal' ? (heroes.some((a) => a.hp < a.maxHp * 0.9) || (this.#starStep(h) > 0 && this.barrier.hp <= 0))
           : type === 'buff' || type === 'haste' ? (monsters.length >= 2 || !!this.boss)
           : type === 'barrier' ? (this.barrier.hp <= 0 && (heroes.some((a) => a.hp < a.maxHp * 0.9) || monsters.length >= 3 || !!this.boss))
           : type === 'strike' || type === 'execute' ? true : monsters.some((m) => m.arrived) || !!this.boss;
