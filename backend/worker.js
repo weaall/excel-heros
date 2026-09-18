@@ -25,7 +25,11 @@ export const SESSION_DAYS = 30;
 /** ALLOW_ORIGIN may list several origins (comma-separated); echo the caller's origin when it is on the list, else the first. */
 const pickOrigin = (env, req) => { const list = String(env.ALLOW_ORIGIN ?? '*').split(',').map((s) => s.trim()).filter(Boolean); if (list.includes('*')) return '*'; const o = req.headers.get('origin'); return o && list.includes(o) ? o : list[0]; };
 const json = (body, status = 200, origin = '*') => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', ...cors(origin) } });
-const cors = (origin) => ({ 'access-control-allow-origin': origin, 'access-control-allow-methods': 'GET,PUT,POST,OPTIONS', 'access-control-allow-headers': 'content-type,authorization', 'access-control-max-age': '86400' });
+// 라우터가 다루는 메서드는 **전부** 여기에 있어야 한다. 빠지면 브라우저가 preflight 에서 막아
+// 요청을 아예 보내지 않고, 서버 로그에는 아무것도 남지 않는다 — DELETE 가 빠져 있어 완전 초기화가
+// 서버 기록을 못 지웠다(6-99). `tests/cloud.test.js` 가 이 목록과 라우터를 비교한다.
+export const CORS_METHODS = 'GET,PUT,POST,DELETE,OPTIONS';
+const cors = (origin) => ({ 'access-control-allow-origin': origin, 'access-control-allow-methods': CORS_METHODS, 'access-control-allow-headers': 'content-type,authorization', 'access-control-max-age': '600' });
 const randomToken = () => { const a = new Uint8Array(32); crypto.getRandomValues(a); return [...a].map((b) => b.toString(16).padStart(2, '0')).join(''); };
 const toHex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 /** SHA-256 of a session token. The table stores this; the client keeps the token itself. */
@@ -128,6 +132,18 @@ export default {
       //
       // 자기 행만 지우고, 지우는 건 언제나 손해다(순위표에서 내려간다) — 조작 점수를 씻는 통로가
       // 아니라 버리는 통로다.
+      // 초기화는 **POST /v1/save/reset** 이 정규 경로다. DELETE 도 받지만, 브라우저 preflight 캐시가
+      // URL 별이라 한 번 거부된 (/v1/save, DELETE) 는 max-age 동안 다시 묻지 않는다 — 그 캐시에 갇히지
+      // 않도록 클라이언트는 새 경로로 부른다(6-99).
+      if (url.pathname === '/v1/save/reset' && req.method === 'POST') {
+        const a = await auth(req, env, origin); if (a instanceof Response) return a;
+        const now = Date.now();
+        if (!rateLimit(a.id, now, Number(env.SAVE_MIN_GAP_MS ?? 20000))) return json({ error: 'too many requests; try again in a moment' }, 429, origin);
+        await env.DB.prepare('DELETE FROM saves WHERE id = ?').bind(a.id).run();
+        await env.DB.prepare('DELETE FROM board WHERE id = ?').bind(a.id).run();
+        return json({ ok: true, reset: true }, 200, origin);
+      }
+
       if (url.pathname === '/v1/save' && req.method === 'DELETE') {
         const a = await auth(req, env, origin); if (a instanceof Response) return a;
         const now = Date.now();

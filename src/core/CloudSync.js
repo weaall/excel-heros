@@ -70,7 +70,9 @@ export class CloudSync {
     if (!this.enabled()) { this.status = this.auth.loggedIn() ? 'idle' : 'off'; this.lastError = null; this.game.emit('cloud', this); return { ok: true, skipped: true }; }
     this.status = 'saving'; this.game.emit('cloud', this);
     try {
-      await this.#call('/v1/save', { method: 'DELETE' });
+      // POST 로 부른다. DELETE 는 처음에 CORS 허용 목록에서 빠져 있었고, 브라우저는 그 거부를
+      // max-age 동안 캐시해 다시 묻지 않는다 — 서버를 고쳐도 사용자는 계속 막힌다(6-99).
+      await this.#call('/v1/save/reset', { method: 'POST', body: '{}' });
       this.status = 'ok'; this.lastError = null; this.game.emit('cloud', this); return { ok: true };
     } catch (e) {
       // 404 = 지울 게 없다 = 이미 원하는 상태다

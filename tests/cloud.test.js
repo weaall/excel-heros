@@ -5,7 +5,8 @@ import { GameManager } from '../src/core/GameManager.js';
 import { checkSave, checkDelta, goldInLevels, boardEntry, boardScore, sanitizeName, maxPlausibleDps } from '../src/core/plausibility.js';
 import { CloudSync } from '../src/core/CloudSync.js';
 import { Auth } from '../src/core/Auth.js';
-import worker, { verifyGoogleToken, hashToken } from '../backend/worker.js';
+import worker, { verifyGoogleToken, hashToken, CORS_METHODS } from '../backend/worker.js';
+import { readFileSync } from 'node:fs';
 import { upgradeCost, prestigeShares } from '../src/config/balance.js';
 
 const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
@@ -294,7 +295,7 @@ test('완전 초기화: 서버 기록을 지워야 초기화 뒤에도 저장이
   assert.match((await blocked.json()).check.reasons.join(','), /rolled back|backwards/);
 
   // 서버 기록을 지우면 통과한다
-  const del = await worker.fetch(req('/v1/save', { method: 'DELETE' }, token), env);
+  const del = await worker.fetch(req('/v1/save/reset', { method: 'POST', body: '{}' }, token), env);
   assert.equal(del.status, 200); assert.equal((await del.json()).reset, true);
   assert.equal((await worker.fetch(req('/v1/save', { method: 'GET' }, token), env)).status, 404, '저장본이 사라졌다');
   const board = await (await worker.fetch(req('/v1/board'), env)).json();
@@ -302,7 +303,8 @@ test('완전 초기화: 서버 기록을 지워야 초기화 뒤에도 저장이
   assert.equal((await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save: fresh }) }, token), env)).status, 200, '초기화 뒤 저장이 된다');
 
   // 로그인 없이는 거부
-  assert.equal((await worker.fetch(req('/v1/save', { method: 'DELETE' }), env)).status, 401, '남의 기록은 못 지운다');
+  assert.equal((await worker.fetch(req('/v1/save/reset', { method: 'POST', body: '{}' }), env)).status, 401, '남의 기록은 못 지운다');
+  assert.equal((await worker.fetch(req('/v1/save', { method: 'DELETE' }), env)).status, 401, 'DELETE 별칭도 로그인을 요구한다');
 });
 
 test('CloudSync.resetServer: DELETE 를 보내고, 로그인 전이면 건너뛰고, 실패를 숨기지 않는다', async () => {
@@ -328,11 +330,26 @@ test('CloudSync.resetServer: DELETE 를 보내고, 로그인 전이면 건너뛰
   cloud.dirty = true;
   const r = await cloud.resetServer();
   assert.deepEqual(r, { ok: true });
-  assert.deepEqual(calls, ['DELETE /v1/save']);
+  assert.deepEqual(calls, ['POST /v1/save/reset'], 'CORS preflight 캐시를 피하려고 POST 새 경로를 쓴다');
   assert.equal(cloud.dirty, false, '초기화 직후에 옛 저장본이 올라가지 않는다');
 
   // 실패는 숨기지 않는다
   mode = 'fail';
   const bad = await cloud.resetServer();
   assert.equal(bad.ok, false); assert.match(cloud.lastError, /서버 기록 초기화 실패/);
+});
+
+test('CORS: 라우터가 다루는 메서드가 허용 목록에 전부 있다 (빠지면 브라우저가 preflight 에서 막는다)', async () => {
+  const src = readFileSync(new URL('../backend/worker.js', import.meta.url), 'utf8');
+  const routed = new Set([...src.matchAll(/req\.method === '([A-Z]+)'/g)].map((m) => m[1]));
+  assert.ok(routed.size >= 4, `라우터에서 메서드를 찾지 못했다 (${[...routed]})`);
+  const allowed = new Set(CORS_METHODS.split(','));
+  for (const m of routed) assert.ok(allowed.has(m), `${m} 이(가) access-control-allow-methods 에 없다 — 브라우저는 이 요청을 보내지 않는다`);
+
+  // preflight 응답에도 실제로 실려 나가는지 (헤더를 만드는 경로가 하나뿐임을 확인)
+  const env = { DB: fakeDB(), ALLOW_ORIGIN: '*', GOOGLE_CLIENT_ID: CLIENT_ID };
+  const pre = await worker.fetch(new Request('https://x/v1/save', { method: 'OPTIONS', headers: { origin: 'https://excel-heros.qugo.kr' } }), env);
+  assert.equal(pre.status, 204);
+  const sent = pre.headers.get('access-control-allow-methods') ?? '';
+  for (const m of routed) assert.ok(sent.split(',').includes(m), `preflight 응답에 ${m} 이 없다`);
 });

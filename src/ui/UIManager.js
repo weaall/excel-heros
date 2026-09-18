@@ -164,19 +164,13 @@ export class UIManager {
       });
     });
     {
-      const input = $('#code-input'), msg = $('#code-msg');
-      const redeem = async () => {
-        const btn = $('#code-redeem'); btn.disabled = true;
-        const r = await this.game.redeemCodeAsync(input.value);
-        btn.disabled = false;
-        if (!r.ok) { msg.textContent = r.reason; msg.className = 'muted small bad'; return; }
-        const parts = [r.gems && `보석 +${r.gems}`, r.cards && `강화 카드 +${r.cards}`, r.gold && `골드 +${fmt(r.gold)}`].filter(Boolean).join(' · ');
-        msg.textContent = `${r.label}: ${parts}`; msg.className = 'muted small ok';
-        input.value = ''; this.toast(`코드 사용 — ${parts}`);
-      };
-      $('#code-redeem')?.addEventListener('click', redeem);
+      // 시트의 입력란. 대화상자와 **같은** 등록 함수를 쓴다 — 두 입구가 갈라지면 한쪽만 고쳐진다.
+      const input = $('#code-input'), msg = $('#code-msg'), go = $('#code-redeem');
+      const redeem = () => this.#redeemCode(input, msg, go);
+      go?.addEventListener('click', redeem);
       input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeem(); });
     }
+    $('#qa-code')?.addEventListener('click', () => this.#openCodeDialog());
     $('#tut-hide')?.addEventListener('click', () => this.game.hideTutorial(true));
     $('#qa-manual')?.addEventListener('click', () => this.showManual());
     // 수식 대응: Enter 로 제출. 입력 칸이 자동으로 포커스를 받으므로 손을 옮길 필요가 없다.
@@ -1100,6 +1094,42 @@ export class UIManager {
   }
 
   // ------------------------------------------------------------- gacha --
+  /**
+   * 코드 등록 한 곳. 시트의 입력란과 대화상자가 이 함수를 공유한다.
+   * @param {HTMLInputElement} input 코드 입력란
+   * @param {HTMLElement} msg 결과를 쓸 자리
+   * @param {HTMLButtonElement|null} go 누른 버튼 (있으면 처리 중 비활성화)
+   */
+  async #redeemCode(input, msg, go = null) {
+    if (go) go.disabled = true;
+    const r = await this.game.redeemCodeAsync(input.value);
+    if (go) go.disabled = false;
+    if (!r.ok) { msg.textContent = r.reason; msg.className = 'code-msg bad'; input.select?.(); return false; }
+    const parts = [r.gems && `보석 +${r.gems}`, r.cards && `강화 카드 +${r.cards}`, r.gold && `골드 +${fmt(r.gold)}`].filter(Boolean).join(' · ');
+    msg.textContent = `${r.label}: ${parts}`; msg.className = 'code-msg ok';
+    input.value = ''; this.toast(`코드 사용 — ${parts}`);
+    return true;
+  }
+
+  /**
+   * 삽입 › 보석 코드 등록… — 시트를 찾아 들어가지 않고 등록한다.
+   * 코드 입력란이 가져오기 시트 한가운데 끼여 있어 "어디서 하는지 모르겠다"는 말이 나왔던 자리다.
+   */
+  #openCodeDialog() {
+    const input = el('input', { type: 'text', maxlength: '32', placeholder: '예: helloheros', autocomplete: 'off', spellcheck: 'false', class: 'code-dlg-input' });
+    const msg = el('div', { class: 'code-msg' }, '코드 하나당 계정에 한 번만 사용할 수 있습니다.');
+    const go = btn('등록', () => this.#redeemCode(input, msg, go), 'primary');
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.#redeemCode(input, msg, go); });
+    const body = el('div', { class: 'code-dlg' },
+      el('label', { for: '' }, '코드'),
+      el('div', { class: 'code-dlg-row' }, input, go),
+      msg,
+      el('span', { class: 'muted small' }, '보석 · 강화 카드 · 골드가 코드에 따라 지급됩니다. 로그인하면 계정 기준으로, 아니면 이 브라우저 기준으로 한 번만 쓸 수 있습니다.'),
+    );
+    this.openModal('보석 코드 등록', body);
+    setTimeout(() => input.focus(), 0);
+  }
+
   /**
    * 삽입 › 외부 데이터 가져오기… — **자리를 옮기지 않는** 영입 대화상자.
    * 시트를 바꾸지 않으므로 전투를 보던 중에도 쓸 수 있다. 결과는 기존 공개 연출 모달로 넘어간다.

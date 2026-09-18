@@ -879,3 +879,12 @@ body.stealth .tutorial { display: none; }
 /* 툴팁으로 접힌 설명이 있는 행 — 마우스를 올리면 나온다는 표시 */
 .dt-table tr.has-tip th { cursor: help; }
 .dt-table tr.has-tip th::after { content: 'ⓘ'; margin-left: 4px; color: #7fae8f; font-size: 10px; font-weight: 400; }
+
+/* 보석 코드 대화상자 (삽입 › 보석 코드 등록…) */
+.code-dlg label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.code-dlg-row { display: flex; gap: 6px; align-items: center; }
+.code-dlg-input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--line-dark); font: inherit; font-size: 13px; }
+.code-dlg-input:focus { outline: 2px solid var(--xl-green); outline-offset: -2px; }
+.code-msg { font-size: 12px; color: var(--muted); margin: 8px 0 6px; }
+.code-msg.ok { color: #1e7a45; font-weight: 600; }
+.code-msg.bad { color: #b03a2e; font-weight: 600; }
