@@ -24,7 +24,8 @@ export const DOLLS = {
   contract:   { hair: 'bob', hairColor: '#dcdcdc', skin: 'fair', outfit: 'suit', top: '#9aa0a6', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#9aa0a6', acc: ['badge'], halo: '#ffd6e0' },
   vlookup:    { hair: 'short', hairColor: '#1f2f5f', skin: 'light', outfit: 'suit', top: '#26b8b0', shirt: '#1f2a44', bottom: 'pants', bottomColor: '#2c3e50', acc: ['glasses', 'lanyard:#ff7eb6'], halo: '#c9e8ff' },
   pivot:      { hair: 'bald', hairColor: '#4a3b2a', skin: 'light', outfit: 'shirt', top: '#9fd8ff', shirt: '#9fd8ff', bottom: 'pants', bottomColor: '#2f3a4a', acc: ['beard', 'tie:#111111', 'suspenders'], halo: '#ffffff' },
-  macro:      { hair: 'spiky', hairColor: '#151515', skin: 'light', outfit: 'hoodie', top: '#33cfe0', shirt: '#e6ff4d', bottom: 'pants', bottomColor: '#2a2a3a', acc: ['headphones:#2ad4e0'], halo: '#8be9ff' },
+  // artHair:false — 검은 머리가 헤드폰·역광에 섞여 회색(#817e8d)으로 뽑힌다
+  macro:      { hair: 'spiky', hairColor: '#151515', artHair: false, skin: 'light', outfit: 'hoodie', top: '#33cfe0', shirt: '#e6ff4d', bottom: 'pants', bottomColor: '#2a2a3a', acc: ['headphones:#2ad4e0'], halo: '#8be9ff' },
   hr_jung:    { hair: 'long', hairColor: '#6b4a2f', skin: 'fair', outfit: 'suit', top: '#3cb389', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#3cb389', acc: ['badge'], halo: '#fff3b0' },
   audit_han:  { hair: 'short', hairColor: '#1a1a1a', skin: 'light', outfit: 'suit', top: '#2fb08a', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#2c3e50', acc: ['sunglasses', 'tie:#f5c542'], halo: '#e8f0ff' },
   acct_lead:  { hair: 'bun', hairColor: '#1c1c1c', skin: 'fair', outfit: 'suit', top: '#26a69a', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#2c3e50', acc: ['glasses', 'badge'], halo: '#c8fff0' },
@@ -42,7 +43,8 @@ export const DOLLS = {
   sales_kang: { hair: 'short', hairColor: '#111111', skin: 'light', outfit: 'suit', top: '#8e3b2f', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#5a2a22', acc: ['tie:#c0392b'], halo: '#ffd9c2' },
   legal_yoon: { hair: 'long', hairColor: '#1f2a5c', skin: 'fair', outfit: 'suit', top: '#dbe7f7', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#1f2a44', acc: ['glasses'], halo: '#e6f0ff' },
   pm_lead:    { hair: 'bob', hairColor: '#2f6fd6', skin: 'fair', outfit: 'shirt', top: '#f4f4f4', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#3a4a6a', acc: ['lanyard:#3b5bd6', 'badge'], halo: '#ffffff' }, // art: blue bob, white blouse, lanyard
-  design_lead:{ hair: 'curly', hairColor: '#f2789f', skin: 'fair', outfit: 'shirt', top: '#f5b8c8', shirt: '#f5b8c8', bottom: 'skirt', bottomColor: '#5b9bd5', acc: ['cap:#5b9bd5'], halo: '#ffd1ec' }, // art: pink curls under a blue beret, striped pastel tee
+  // artHair:false — 꽃 베레모와 무지개 헤일로가 머리 위를 덮어 옅은 파랑(#afecf7)으로 뽑힌다
+  design_lead:{ hair: 'curly', hairColor: '#f2789f', artHair: false, skin: 'fair', outfit: 'shirt', top: '#f5b8c8', shirt: '#f5b8c8', bottom: 'skirt', bottomColor: '#5b9bd5', acc: ['cap:#5b9bd5'], halo: '#ffd1ec' }, // art: pink curls under a blue beret, striped pastel tee
   cmo:        { hair: 'long', hairColor: '#d94f3a', skin: 'fair', outfit: 'suit', top: '#1f2a3a', shirt: '#2a3a5a', bottom: 'pants', bottomColor: '#1f2a3a', acc: ['sunglasses'], halo: '#ff9f8a' },
   // artHair:false — 은발이 그늘진 쪽(#937aa6)으로 뽑힌다
   founder:    { hair: 'long', hairColor: '#e8eaf0', artHair: false, skin: 'fair', outfit: 'coat', top: '#2a3050', shirt: '#161a2c', bottom: 'pants', bottomColor: '#1e2236', acc: ['glasses', 'trim:#d4a017'], halo: '#d4a017' },

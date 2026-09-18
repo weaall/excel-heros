@@ -2,14 +2,13 @@
 // colours of each character's illustration, so battle sprites are recoloured to match the card art.
 export const ART_PALETTES = {
   "staff_park": {
-    "H": "#3d3235",
-    "B": "#bac5d3",
-    "W": "#1c3964"
+    "H": "#5e4f52",
+    "B": "#bbc5d6",
+    "W": "#bbc6d7"
   },
   "parttime": {
-    "H": "#745144",
-    "B": "#363e3c",
-    "W": "#717a7c"
+    "B": "#30323a",
+    "W": "#30323b"
   },
   "guard": {
     "H": "#d1e4ed",
@@ -22,9 +21,9 @@ export const ART_PALETTES = {
     "W": "#f9d7c2"
   },
   "courier": {
-    "H": "#a7a3a1",
-    "B": "#f9b880",
-    "W": "#cc9388"
+    "H": "#b67550",
+    "B": "#8ba0a7",
+    "W": "#849aa2"
   },
   "contract": {
     "B": "#958a82",
@@ -40,8 +39,9 @@ export const ART_PALETTES = {
     "W": "#caccd0"
   },
   "macro": {
-    "B": "#0bf8ef",
-    "W": "#0af8ef"
+    "H": "#817e8d",
+    "B": "#546787",
+    "W": "#57698a"
   },
   "hr_jung": {
     "H": "#806361",
@@ -88,8 +88,8 @@ export const ART_PALETTES = {
     "W": "#f8dfbf"
   },
   "ceo": {
-    "B": "#282d3d",
-    "W": "#7c6b76"
+    "B": "#d5bbba",
+    "W": "#cfb6b5"
   },
   "chairman": {
     "B": "#1b4257"
@@ -119,8 +119,9 @@ export const ART_PALETTES = {
     "W": "#cdd7e2"
   },
   "design_lead": {
-    "B": "#e49ea1",
-    "W": "#f5cecc"
+    "H": "#afecf7",
+    "B": "#e3aeab",
+    "W": "#e7b9b6"
   },
   "cmo": {
     "H": "#f6918a",
@@ -128,14 +129,13 @@ export const ART_PALETTES = {
     "W": "#e3b6b3"
   },
   "founder": {
-    "H": "#937aa6",
-    "B": "#6f7087",
-    "W": "#735b4d"
+    "H": "#9696a8",
+    "B": "#533d20",
+    "W": "#896536"
   },
   "intern_seo": {
-    "H": "#5d4e4e",
-    "B": "#c3bdb6",
-    "W": "#c2bcb5"
+    "B": "#d3ced5",
+    "W": "#3f343b"
   },
   "pr_yoo": {
     "H": "#be3646",
@@ -153,9 +153,8 @@ export const ART_PALETTES = {
     "W": "#9aced8"
   },
   "chro": {
-    "H": "#3f5170",
-    "B": "#f7cee0",
-    "W": "#fcf2e4"
+    "B": "#9e8a7d",
+    "W": "#6d5d53"
   },
   "cso": {
     "H": "#5f6190",
@@ -163,13 +162,12 @@ export const ART_PALETTES = {
     "W": "#cc9bb5"
   },
   "ai_lead": {
-    "H": "#c9f0df",
-    "B": "#376c7c",
-    "W": "#d0aeb0"
+    "B": "#36888c",
+    "W": "#1f2835"
   },
   "union_chief": {
-    "B": "#4f6c81",
-    "W": "#aabbd4"
+    "B": "#8d5532",
+    "W": "#975632"
   },
   "hacker": {
     "H": "#847aba",
@@ -187,9 +185,7 @@ export const ART_PALETTES = {
     "W": "#a35748"
   },
   "mail_cho": {
-    "H": "#857c72",
-    "B": "#234a6d",
-    "W": "#244b6f"
+    "B": "#2f4c63"
   },
   "qa_lee": {
     "H": "#43538d",
@@ -245,17 +241,17 @@ export const ART_PALETTES = {
     "W": "#945f5d"
   },
   "cdo": {
-    "B": "#282d43",
-    "W": "#fdf3f0"
+    "B": "#2f3546",
+    "W": "#fdeae5"
   },
   "cco": {
     "B": "#e2adab",
     "W": "#b77873"
   },
   "chief_of_staff": {
-    "H": "#f3e1aa",
-    "B": "#3b3e49",
-    "W": "#fdfee0"
+    "H": "#f5cb94",
+    "B": "#fdebae",
+    "W": "#fde9a7"
   },
   "chairwoman": {
     "B": "#4b6693",
