@@ -288,6 +288,8 @@ export class Renderer {
     ctx.drawImage(img, sx, sy);
     if (h.flash > 0) { ctx.globalAlpha = Math.min(1, h.flash / 0.12) * 0.5; ctx.drawImage(flashSprite(img), sx, sy); ctx.globalAlpha = 1; }
     this.#hpBar(h.x, h.y + 6, h.hp / h.maxHp, '#27ae60', 40);
+    // 스킬 게이지: 체력 바 바로 아래 한 줄. 주기는 캐릭터마다 다르므로 **차는 속도**가 곧 그 캐릭터의 성격이다.
+    if (h.skillUnlocked) this.#skillGauge(h.x, h.y + 13, h.skillCd <= 0 ? 1 : 1 - h.skillCd / Math.max(0.001, h.skillCdMax ?? 5), 40);
     ctx.fillStyle = '#ecf0f1'; ctx.font = 'bold 10px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(`Lv${h.level}`, h.x, h.y + 12);
   }
@@ -442,6 +444,23 @@ export class Renderer {
     ctx.fillStyle = '#4a4a4a'; ctx.fillRect(x - w / 2, y, w, h);
     ctx.fillStyle = ratio > 0.5 ? color : ratio > 0.25 ? '#f39c12' : '#c0392b';
     ctx.fillRect(x - w / 2, y, Math.max(0, w * Math.min(1, ratio)), h);
+  }
+
+  /**
+   * 스킬 게이지 — 체력 바보다 얇게(3px), 다 차면 밝게 빛나 '지금 쓴다'가 보이게.
+   * 체력과 같은 두께로 그리면 둘이 헷갈린다. 색도 스킬 연출의 보라 계열로 묶는다.
+   */
+  #skillGauge(x, y, ratio, w = 40) {
+    const { ctx } = this; const h = 3; const r = Math.max(0, Math.min(1, ratio)); const full = r >= 1;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(x - w / 2 - 1, y - 1, w + 2, h + 2);
+    ctx.fillStyle = '#3a3550'; ctx.fillRect(x - w / 2, y, w, h);
+    if (full) { // 가득 차면 맥동 — 눈이 가야 하는 순간이다
+      const pulse = 0.65 + 0.35 * Math.sin(this.t * 6);
+      ctx.fillStyle = `rgba(241, 196, 15, ${pulse.toFixed(3)})`;
+      ctx.fillRect(x - w / 2, y, w, h);
+    } else {
+      ctx.fillStyle = '#8e6bd0'; ctx.fillRect(x - w / 2, y, w * r, h);
+    }
   }
 
   #drawProjectiles(em) {

@@ -1,3 +1,4 @@
+import { MONSTER_MAPS } from './monsterArt.js';
 // Monsters are spreadsheet errors. Each Phase (10 stages) draws from a pool of 3 shapes
 // in that phase's colour palette, so stages get new looks as the player progresses.
 // From stage 5 on, elite variants (crown, 2.5x HP) start to appear.
@@ -38,18 +39,41 @@ export const MONSTER_TYPES = [
   { id: 'robot',     shape: 'cube',      name: '고장난 프린터',   face: { eyes: 'dot',    mouth: 'flat' }, ranged: 'bar' },
 ];
 
+// 변종 팔레트. `name` 은 **색을 말하는** 이름이고 `alt` 는 색을 말하지 않는 이름이다.
+// 팔레트가 스프라이트에서 거의 안 보이는 몬스터(발표 자료 6%, 손상된 시트 15% …)에 색 이름을 붙이면
+// "붉은 발표 자료" 가 하얗게 나온다 — 그런 몬스터는 `alt` 를 쓴다. 판정은 아래 `showsPalette()`.
 export const PALETTES = [
-  { name: '붉은',  M: '#e74c3c', D: '#a93226', E: '#ffffff' },
-  { name: '파란',  M: '#3498db', D: '#1f618d', E: '#ffffff' },
-  { name: '회색',  M: '#95a5a6', D: '#5d6d7e', E: '#2c3e50' },
-  { name: '주황',  M: '#f39c12', D: '#b9770e', E: '#ffffff' },
-  { name: '보라',  M: '#9b59b6', D: '#6c3483', E: '#f1c40f' },
-  { name: '검은',  M: '#34495e', D: '#1b2631', E: '#e74c3c' },
-  { name: '초록',  M: '#2ecc71', D: '#1e8449', E: '#ffffff' },
-  { name: '금빛',  M: '#f1c40f', D: '#b7950b', E: '#2c3e50' },
-  { name: '분홍',  M: '#fd79a8', D: '#c2185b', E: '#ffffff' },
-  { name: '청록',  M: '#1abc9c', D: '#117a65', E: '#ffffff' },
+  { name: '붉은',  alt: '과열된',   M: '#e74c3c', D: '#a93226', E: '#ffffff' },
+  { name: '파란',  alt: '먹통된',   M: '#3498db', D: '#1f618d', E: '#ffffff' },
+  { name: '회색',  alt: '낡은',     M: '#95a5a6', D: '#5d6d7e', E: '#2c3e50' },
+  { name: '주황',  alt: '삐걱대는', M: '#f39c12', D: '#b9770e', E: '#ffffff' },
+  { name: '보라',  alt: '수상한',   M: '#9b59b6', D: '#6c3483', E: '#f1c40f' },
+  { name: '검은',  alt: '그을린',   M: '#34495e', D: '#1b2631', E: '#e74c3c' },
+  { name: '초록',  alt: '곰팡이 핀', M: '#2ecc71', D: '#1e8449', E: '#ffffff' },
+  { name: '금빛',  alt: '반짝이는', M: '#f1c40f', D: '#b7950b', E: '#2c3e50' },
+  { name: '분홍',  alt: '구겨진',   M: '#fd79a8', D: '#c2185b', E: '#ffffff' },
+  { name: '청록',  alt: '눅눅한',   M: '#1abc9c', D: '#117a65', E: '#ffffff' },
 ];
+
+/**
+ * 이 몬스터의 도트에서 **팔레트가 칠하는 비율**. `M`(몸통) · `D`(그림자) · `l`(밝은 면)만 팔레트가
+ * 정하고, `E`(테두리) · `L`(흰색) · `Y`(포인트) 같은 글자는 고정색이다.
+ * 맵에서 직접 세므로 도트를 고치면 분류도 따라온다 — 손으로 목록을 관리하면 반드시 어긋난다.
+ */
+const PALETTE_CHARS = new Set(['M', 'D', 'l']);
+const shareCache = new Map();
+export function paletteShare(typeId) {
+  if (shareCache.has(typeId)) return shareCache.get(typeId);
+  const map = MONSTER_MAPS[typeId];
+  let share = 1;
+  if (map) {
+    const chars = map.join('').split('').filter((c) => c !== '.');
+    share = chars.length ? chars.filter((c) => PALETTE_CHARS.has(c)).length / chars.length : 1;
+  }
+  shareCache.set(typeId, share); return share;
+}
+/** 색 이름을 붙여도 거짓말이 되지 않는가. 경계 35%는 측정값에서 왔다(위 33% 뱀 ↔ 40% 손 사이). */
+export const showsPalette = (typeId) => paletteShare(typeId) >= 0.35;
 
 const BOSS_PALETTE = { M: '#c0392b', D: '#7b241c', E: '#f9e79f', L: '#ffffff', K: '#ff9f9f' };
 /** Bosses rotate by phase. pattern: fire = 35% fireball at a random hero. specials fire on every Nth attack (the '!' telegraph
@@ -83,7 +107,9 @@ export function stagePool(stage) {
   return [0, 1, 2].map((k) => {
     const t = MONSTER_TYPES[(start + k) % MONSTER_TYPES.length];
     // hue: the three types of a wave sit 120° apart so they read as different creatures at a glance; the phase adds a smaller shift
-    return { ...t, id: `${t.id}:${phase % PALETTES.length}`, name: `${pal.name} ${t.name}`, palette: { M: pal.M, D: pal.D, E: pal.E }, hue: ((phase % PALETTES.length) * 36 + k * 120) % 360 };
+    // 색 이름은 팔레트가 실제로 보이는 몬스터에만. 아니면 색을 말하지 않는 변종 이름을 쓴다.
+    const variant = showsPalette(t.id) ? pal.name : pal.alt;
+    return { ...t, id: `${t.id}:${phase % PALETTES.length}`, name: `${variant} ${t.name}`, palette: { M: pal.M, D: pal.D, E: pal.E }, hue: ((phase % PALETTES.length) * 36 + k * 120) % 360 };
   });
 }
 

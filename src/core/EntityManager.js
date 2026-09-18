@@ -71,7 +71,7 @@ export class EntityManager {
       id: nextId++, kind: 'hero', heroId: def.heroId, def, role: def.role, trait: def.trait,
       x: 0, y: 0, homeX: 0, homeY: 0, hp: 1, maxHp: 1, atk: 1, interval: 1, cd: Math.random() * 0.5,
       range: 0, alive: true, reviveT: 0, targetId: null,
-      anim: 'idle', animT: 0, skillCd: 2 + Math.random() * 3, star: 1, level: 1, shake: 0, flash: 0, dashTo: 0,
+      anim: 'idle', animT: 0, skillCd: 2 + Math.random() * 3, skillCdMax: 5, star: 1, level: 1, shake: 0, flash: 0, dashTo: 0,
     };
   }
 
@@ -87,6 +87,8 @@ export class EntityManager {
       e.range = (e.role === 'tank' ? TANK_REACH : e.role === 'melee' ? MELEE_REACH : v.range) * GRID.cellW;
       e.star = v.entry.star; e.level = v.entry.level;
       e.skill = v.def.skill; e.skillUnlocked = v.skillUnlocked; e.skillPower = v.skillPower; e.skillName = v.skillName; e.skillCdMult = v.skillCdMult ?? 1;
+      // 게이지가 첫 발동 전에도 진짜 주기로 차게 한다 — 초기값(5초)을 쓰면 14초짜리 스킬이 5초짜리로 보인다
+      e.skillCdMax = (SKILLS[v.def.skill?.type]?.cooldown ?? v.def.skill?.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0)) * e.skillCdMult;
     }
     // 힐러 상시 오라: 파티의 힐러마다 전원이 초당 조금씩 회복한다. ★로 커지므로 **★을 채운 뒤에** 계산한다.
     { const P = BALANCE.ROLE_PASSIVE.healer;
@@ -265,8 +267,10 @@ export class EntityManager {
         if (worth) {
           const skillTarget = type === 'strike' ? (monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? monsters.slice().sort((a, b) => b.hp - a.hp)[0] ?? target)
             : type === 'execute' ? (monsters.find((m) => m.isBoss && m.hp < m.maxHp * 0.3) ?? monsters.filter((m) => m.alive && m.hp < m.maxHp * 0.3).sort((a, b) => b.maxHp - a.maxHp)[0] ?? monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? target) : target;
-          this.castSkill(h, skillTarget, monsters, heroes); h.skillCd = (SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0)) * (h.skillCdMult ?? 1);
-        } else h.skillCd = 0.5; // re-check soon instead of wasting the cast
+          this.castSkill(h, skillTarget, monsters, heroes);
+          // 게이지가 얼마나 찼는지 그리려면 **시작값**이 있어야 한다. `skillCd` 는 줄기만 해서 비율을 못 낸다.
+          h.skillCd = h.skillCdMax = (SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0)) * (h.skillCdMult ?? 1);
+        } else h.skillCd = 0.5; // re-check soon instead of wasting the cast (게이지는 건드리지 않는다 — 찬 채로 대기)
       }
 
       const dist = target.x - h.x;

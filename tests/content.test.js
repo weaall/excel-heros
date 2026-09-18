@@ -124,3 +124,44 @@ test('헤일로는 등급을 말한다: 등급이 오를수록 고리가 커진�
   assert.ok(S > A, 'S는 양옆 스파크까지');
   assert.ok(S - D >= 6, `등급 차이가 눈에 보일 만큼 (차이 ${S - D}px)`);
 });
+
+test('몬스터 변종 이름: 팔레트가 보이는 도트만 색 이름을 쓴다', async () => {
+  const { MONSTER_TYPES, PALETTES, paletteShare, showsPalette, stagePool } = await import('../src/data/monsters.js');
+  const { MONSTER_MAPS } = await import('../src/data/monsterArt.js');
+  const COLOR_WORDS = PALETTES.map((p) => p.name);
+
+  // 모든 팔레트에 색 이름과 대체 이름이 하나씩 있고, 서로 겹치지 않는다
+  for (const p of PALETTES) {
+    assert.ok(p.name && p.alt, `${p.name}: 색 이름과 대체 이름이 둘 다 필요하다`);
+    assert.ok(!COLOR_WORDS.includes(p.alt), `${p.alt} 는 색 이름이면 안 된다 — 대체 이름의 존재 이유가 사라진다`);
+  }
+
+  // 손그림이 있는 몬스터는 팔레트 비율이 계산된다
+  for (const t of MONSTER_TYPES) {
+    if (!MONSTER_MAPS[t.id]) continue;
+    const share = paletteShare(t.id);
+    assert.ok(share >= 0 && share <= 1, `${t.id} 비율이 0~1`);
+    assert.equal(showsPalette(t.id), share >= 0.35, `${t.id} 판정은 비율에서 나온다`);
+  }
+
+  // **핵심**: 색 이름이 붙은 몬스터는 팔레트가 실제로 보여야 한다 (거짓말 금지)
+  for (let stage = 1; stage <= 120; stage++) {
+    for (const def of stagePool(stage)) {
+      const base = String(def.id).split(':')[0];
+      const prefix = def.name.split(' ')[0];
+      if (COLOR_WORDS.includes(prefix)) {
+        assert.ok(showsPalette(base), `${def.name}: 색 이름인데 도트의 팔레트 비율이 ${Math.round(paletteShare(base) * 100)}% 뿐이다`);
+      }
+    }
+  }
+
+  // 팔레트가 거의 없는 몬스터에는 색 이름이 절대 안 붙는다
+  const pale = MONSTER_TYPES.filter((t) => MONSTER_MAPS[t.id] && !showsPalette(t.id)).map((t) => t.id);
+  assert.ok(pale.length, '색이 거의 안 보이는 몬스터가 실제로 있다 (발표 자료 등)');
+  for (let stage = 1; stage <= 120; stage++) {
+    for (const def of stagePool(stage)) {
+      if (!pale.includes(String(def.id).split(':')[0])) continue;
+      assert.ok(!COLOR_WORDS.includes(def.name.split(' ')[0]), `${def.name} 에 색 이름이 붙었다`);
+    }
+  }
+});
