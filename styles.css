@@ -837,3 +837,14 @@ body.stealth .tutorial { display: none; }
 .brace-bar .bb-timer { position: absolute; left: 0; bottom: 0; height: 2px; background: #c0392b; transition: width .1s linear; }
 .brace-bar.ok { background: #e8f7ee; } .brace-bar.ok input { border-color: #1b5e3a; }
 .brace-bar.miss { background: #fdeceb; } .brace-bar.miss input { border-color: #c0392b; }
+
+/* 코드 등록: '있다'와 '보인다'는 다르다 — 엑셀 양식처럼 테두리와 제목을 준다 */
+.code-box { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 10px 8px; padding: 8px 10px;
+  background: #fffbe8; border: 1px solid #e0c85a; }
+.code-box .code-title { width: 100%; color: #6b5700; font-size: 12.5px; }
+.code-box label { color: #6b5700; font-size: 12px; }
+.code-box input { width: 190px; }
+.code-box .small { width: 100%; }
+/* 되돌릴 수 없는 동작은 눈에 띄되, 실수로 누르지 않게 설명이 먼저 온다 */
+.danger-box { border: 1px solid #e6a9a2; background: #fdeceb; padding: 8px 10px; }
+.danger-box p { margin: 0 0 6px; color: #922b21; }

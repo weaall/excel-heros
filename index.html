@@ -220,15 +220,16 @@
               <div class="pickup-cards" id="pickup-cards"></div>
               <div class="pickup-foot muted small">해당 등급이 나오면 50%는 픽업 카드 · 모집 포인트 <b>150</b>(S) / <b>60</b>(A)으로 픽업 카드와 직접 교환 가능</div>
             </div>
+          <div class="code-box">
+            <b class="code-title">🎁 보석 코드 등록</b>
+            <label for="code-input">코드</label>
+            <input id="code-input" type="text" maxlength="32" placeholder="예: helloheros" autocomplete="off" spellcheck="false">
+            <button id="code-redeem" class="xl-btn primary">등록</button>
+            <span class="muted small" id="code-msg">코드 하나당 계정에 한 번만 사용할 수 있습니다.</span>
+          </div>
           <div class="gacha-actions">
             <button id="pull1" class="xl-btn big">1행 가져오기<small>보석 100</small></button>
             <button id="pull10" class="xl-btn big primary">10행 가져오기<small>보석 900</small></button>
-          </div>
-          <div class="code-box">
-            <label for="code-input">보석 코드</label>
-            <input id="code-input" type="text" maxlength="32" placeholder="코드를 입력하세요" autocomplete="off" spellcheck="false">
-            <button id="code-redeem" class="xl-btn">사용</button>
-            <span class="muted small" id="code-msg"></span>
           </div>
         </div>
         <div class="gacha-layout">
@@ -457,6 +458,11 @@
               <h3 class="section-title">특성 목록</h3>
               <table class="xl-table compact"><tbody id="trait-list"></tbody></table>
             </div>
+          </div>
+          <h3 class="section-title">처음부터 다시 시작</h3>
+          <div class="settings danger-box">
+            <p class="muted small">보유 영웅 · 보석 · 강화 카드 · 업적 · 직급 · 지분까지 <b>모두 사라지고</b>, 오프닝과 신입 사원 교육을 처음부터 다시 보게 됩니다. 되돌릴 수 없습니다.</p>
+            <div class="settings-actions"><button id="btn-reset2" class="xl-btn danger">통합 문서 삭제 (완전 초기화)</button></div>
           </div>
           <h3 class="section-title">계정 · 클라우드 저장 <span class="muted">(Google 로그인 · 순위표)</span></h3>
           <div class="cloud-box">

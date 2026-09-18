@@ -251,7 +251,7 @@ export class UIManager {
     });
     // 완전 초기화는 저장을 비우는 게 아니라 **처음부터 다시 하는 것**이다. 그래서 오프닝을 다시 틀고
     // 신입 사원 교육 목록도 1번 항목부터 되살린다. 그러지 않으면 저장만 비워진 채 게임 한가운데에 서 있게 된다.
-    $('#btn-reset').addEventListener('click', () => {
+    for (const id of ['#btn-reset', '#btn-reset2']) $(id)?.addEventListener('click', () => {
       const msg = '이 통합 문서를 삭제하고 처음부터 시작할까요?\n\n'
         + '보유 영웅·보석·강화 카드·업적·직급·지분까지 모두 사라지고, 오프닝과 신입 사원 교육을 처음부터 다시 보게 됩니다.\n'
         + '되돌릴 수 없습니다.';
