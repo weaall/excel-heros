@@ -25,8 +25,6 @@ const HERO_SHOT = { parttime: 'drop', contract: 'paper', vlookup: 'bar', acct_le
 const ENRAGE = { at: 0.5, atk: 1.2, speed: 1.3, interval: 0.7 }; // bosses enrage under 50% HP
 // 스킬 연출이 겹치지 않도록 두는 최소 간격. 필살기는 컷인이 길어 조금 더 쉰다.
 const CAST_GAP = 1.1, CAST_GAP_ULT = 2.0;
-const TRAVEL_TIME = 1.6;      // seconds of scrolling between waves
-const SCROLL_SPEED = 150;     // px/s background scroll while travelling
 const MELEE_REACH = 9;        // melee heroes dash to any monster that has reached the line, wherever they stand
 const TANK_REACH = 9;
 
@@ -117,7 +115,7 @@ export class EntityManager {
       if (h.alive) h.hp = h.maxHp;
       h.x = h.homeX; h.y = h.homeY; h.targetId = null; h.anim = 'walk';
     }
-    this.traveling = true; this.travelT = TRAVEL_TIME * 0.6;
+    this.traveling = true; this.travelT = BALANCE.PACE.travel * 0.6;
   }
 
   #frontX() { const alive = this.heroes.filter((h) => h.alive); return alive.length ? Math.max(...alive.map((h) => h.x)) : FRONT_X; }
@@ -162,7 +160,7 @@ export class EntityManager {
     const stage = this.game.state.stage;
     const e = this.#spawnMonster(stage, false, index, mimic ? MIMIC : CHEST);
     e.hp = e.maxHp = Math.max(1, Math.floor(monsterHP(stage) * BALANCE.CHEST.hpMult * (mimic ? 1.6 : 1)));
-    e.atk = mimic ? Math.floor(monsterATK(stage) * 1.3) : 0; e.interval = 1.2; e.speed = BALANCE.MONSTER_SPEED * 0.8;
+    e.atk = mimic ? Math.floor(monsterATK(stage) * 1.3) : 0; e.interval = 1.2; e.speed = BALANCE.PACE.monsterSpeed * 0.8;
     e.elite = false; e.proj = null; e.standoff = GRID.cellW * 0.9 + index * 34;
     this.fx('sparkle', { x: Math.min(e.x, CANVAS_W - 40), y: e.y - 20, color: '#f9e79f', n: 8 });
     return e;
@@ -182,7 +180,7 @@ export class EntityManager {
       atk: (isBoss ? bossATK(stage) * (def.atk ?? 1) : monsterATK(stage)) * (elite ? BALANCE.ELITE.atk : 1) * (isBoss ? 1 : mod?.atk ?? 1),
       interval: isBoss ? (def.interval ?? 2.0) : proj ? 1.9 : 1.5, cd: 0.9 + Math.random() * 0.6, hits: 0,
       range, standoff: range * 0.9 + (proj ? 0 : index * 34),
-      speed: isBoss ? (def.speed ?? 40) : BALANCE.MONSTER_SPEED * (0.9 + Math.random() * 0.25) * (elite ? 0.9 : 1),
+      speed: isBoss ? (def.speed ?? 40) * BALANCE.PACE.bossMult : BALANCE.PACE.monsterSpeed * (0.9 + Math.random() * 0.25) * (elite ? 0.9 : 1),
       alive: true, targetId: null, anim: 'walk', animT: Math.random(), stun: 0, shake: 0, lunge: 0, flash: 0, spawnT: 0,
       w: isBoss ? 128 : 64, h: isBoss ? 116 : 64,
     };
@@ -212,8 +210,8 @@ export class EntityManager {
 
     // --- travel between waves: scroll the dungeon, party runs in place
     if (!monsters.length && !this.boss) {
-      if (!this.traveling) { this.traveling = true; this.travelT = this.game.overtime ? BALANCE.OVERTIME.travel : TRAVEL_TIME; }
-      this.travelT -= dt; this.scroll += SCROLL_SPEED * dt;
+      if (!this.traveling) { this.traveling = true; this.travelT = this.game.overtime ? BALANCE.OVERTIME.travel : BALANCE.PACE.travel; }
+      this.travelT -= dt; this.scroll += BALANCE.PACE.scroll * dt;
       for (const h of heroes) { h.anim = 'walk'; h.animT += dt; }
       if (this.travelT <= 0) { this.traveling = false; this.#restIfFarming(); this.#spawnWave(); }
     } else if (this.traveling) { this.traveling = false; }
@@ -261,7 +259,7 @@ export class EntityManager {
       if (h.role === 'healer') {
         const low = heroes.filter((a) => a.hp < a.maxHp * 0.6).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
         if (low && h.cd <= 0) {
-          const amt = Math.round(h.atk * 2.5);
+          const amt = Math.max(1, Math.round(low.maxHp * BALANCE.ROLE_PASSIVE.healer.castPct));
           low.hp = Math.min(low.maxHp, low.hp + amt);
           this.projectiles.push({ x: h.x, y: h.y - 10, tx: low.x, ty: low.y - 10, t: 0, dur: 0.3, color: '#2ecc71', kind: 'heal' });
           this.floaters.push({ x: low.x, y: low.y - 40, text: `+${amt}`, color: '#27ae60', t: 0 });

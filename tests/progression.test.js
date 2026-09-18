@@ -66,7 +66,8 @@ test('bosses rotate by phase, have pack sprites, and patterns spawn with their o
   run(g, 2.5);
   assert.ok(g.entities.boss, 'boss spawned');
   assert.equal(g.entities.boss.def.pattern, 'sweep');
-  assert.equal(g.entities.boss.speed, 90);
+  // 보스 속도는 데이터 값 × `PACE.bossMult` 다 — 배수를 바꿔도 보스끼리의 **순서**는 그대로여야 한다
+  assert.equal(g.entities.boss.speed, 90 * BALANCE.PACE.bossMult);
   const s2 = createInitialState(); s2.stage = 30; s2.maxStage = 30; s2.maxCleared = 29; s2.heroes[MAIN_ID].level = 30; s2.challenging = true;
   const g2 = new GameManager({ state: s2, save: memSave() });
   run(g2, 12);

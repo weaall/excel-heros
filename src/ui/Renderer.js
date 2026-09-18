@@ -301,7 +301,10 @@ export class Renderer {
 
   #drawMonster(m) {
     const { ctx } = this;
-    const frame = Math.floor(m.animT * (m.anim === 'walk' ? 8 : 5)) % 4;
+    // 걷는 프레임 속도는 **이동 속도를 따라간다**. 고정 8fps 로 두면 빨라진 적이 얼음판에서 미끄러진다
+    // (한 걸음에 30px 이 110px 이 된다). 보폭이 일정하게 보이도록 비례시키고 위로만 잘라 둔다.
+    const walkFps = Math.min(18, 8 * Math.max(1, (m.speed ?? 60) / 60));
+    const frame = Math.floor(m.animT * (m.anim === 'walk' ? walkFps : 5)) % 4;
     const img = monsterSprite(m.def, frame);
     const knock = m.flash ? 6 * (m.flash / 0.12) : 0;
     const lunge = m.lunge > 0 ? -14 * (m.lunge / 0.2) : 0;
