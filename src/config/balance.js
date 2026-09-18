@@ -84,7 +84,12 @@ export const BALANCE = Object.freeze({
   // 영원히 전진할 수 있어서 파티를 짤 이유가 사라진다. 전원이 쓰러지면 직전 스테이지로 후퇴한다.
   // 탱커 상시 '대신 맞기': 아군이 맞을 피해의 share 만큼을 앞선 탱커가 대신 받고, 그 몫은 reduce 만큼 줄어든다.
   // 둘 다 ★로 오른다 — 좋은 탱커일수록 더 많이, 더 싸게 막는다.
-  TANK: { share: 0.35, sharePerStar: 0.06, shareMax: 0.65, reduce: 0.25, reducePerStar: 0.05, reduceMax: 0.5 },
+  // 탱커 '대신 맞기': 매 타격마다 chance 확률로 가로챈다. 터지면 아군은 안 맞고 탱커가 reduce 만큼
+  // 감면된 채로 전부 받는다 — 무조건 나눠 받는 게 아니라 **막거나 못 막거나**다. 둘 다 ★로 오른다.
+  TANK: { chance: 0.30, chancePerStar: 0.07, chanceMax: 0.60, reduce: 0.25, reducePerStar: 0.05, reduceMax: 0.5 },
+  // 인사 복구: 죽음이 영구해진 뒤로 가장 값비싼 스킬이다. 확정 1명 + 추가 인원마다 확률 굴림.
+  // 확률은 ★(시전자)로 오르고, 최대 추가 인원이 상한이다 — 좋은 시전자는 한 번에 셋까지 일으킨다.
+  REVIVE: { extraChance: 0.30, extraPerStar: 0.10, extraMax: 2 },
   HERO_REGEN_PCT: 0.02,     // fraction of max HP regenerated per second while alive
   MELEE_ADVANCE_CELLS: 3,   // how far (cells) a melee hero may leave formation
   ELITE: { hp: 2.5, atk: 1.5, gold: 3 },

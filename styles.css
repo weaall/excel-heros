@@ -848,3 +848,14 @@ body.stealth .tutorial { display: none; }
 /* 되돌릴 수 없는 동작은 눈에 띄되, 실수로 누르지 않게 설명이 먼저 온다 */
 .danger-box { border: 1px solid #e6a9a2; background: #fdeceb; padding: 8px 10px; }
 .danger-box p { margin: 0 0 6px; color: #922b21; }
+
+/* 게임 설명: 길어도 읽히게 — 장 제목은 붙고, 표는 항목/설명 두 칸 */
+.manual { max-height: 62vh; overflow-y: auto; padding-right: 6px; }
+.manual-h { margin: 14px 0 6px; padding-bottom: 3px; color: #1b5e3a; border-bottom: 1px solid var(--xl-green); font-size: 13.5px; }
+.manual-h:first-child { margin-top: 0; }
+.manual-p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.55; color: #333; }
+.manual-p strong, .manual-p b { color: #111; }
+.manual-table { width: 100%; margin: 4px 0 2px; }
+.manual-table td.mk { width: 150px; font-weight: 700; color: #1b5e3a; vertical-align: top; white-space: normal; background: #f2f8f4; }
+.manual-table td { color: #444; line-height: 1.5; }
+.dialog.wide { width: min(760px, 92vw); }

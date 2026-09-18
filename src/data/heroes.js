@@ -29,7 +29,7 @@ export const SKILLS = Object.freeze({
   haste:   { name: '스프린트',    desc: '5초간 파티 공격 속도 +{p}%',                     cooldown: 14, duration: 5 },
   execute: { name: '저격 보고',   desc: '단일 대상 ×{p} 피해 · 대상 HP 30% 미만이면 2배', cooldown: 9 },
   cleanse: { name: '스트레스 해소', desc: '파티 {p}% 회복 · 둔화 해제 · 3초간 공격 속도 +20%', cooldown: 14, duration: 3 },
-  revive:  { name: '인사 복구',     desc: '쓰러진 동료 1명을 HP {p}%로 즉시 복귀 · 없으면 가장 약한 동료를 {p}% 회복', cooldown: 20 },
+  revive:  { name: '인사 복구',     desc: '쓰러진 동료를 HP {p}%로 복귀 — 1명은 확정, 추가 인원은 ★에 따른 확률(최대 3명) · 쓰러진 동료가 없으면 가장 약한 동료를 {p}% 회복', cooldown: 20 },
   drain:   { name: '성과 회수',     desc: '모든 적에게 ×{p} 피해 · 입힌 피해의 40%만큼 파티 회복', cooldown: 13 },
   chain:   { name: '참조 연쇄',     desc: '적 3명에게 차례로 ×{p} 피해 (연쇄마다 70%)', cooldown: 10 },
   taunt:   { name: '총대 메기',     desc: '5초간 모든 적의 공격을 자신이 받고 받는 피해 {p}% 감소', cooldown: 16, duration: 5 },

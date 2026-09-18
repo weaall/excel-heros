@@ -280,7 +280,7 @@ test('죽음: a full wipe retreats to the last cleared stage', async () => {
   assert.equal(g.isChallenging(), false, '도전이 끝난다');
 });
 
-test('탱커: takes a share of what the party would eat, and a better tank takes more of it', async () => {
+test('탱커: intercepts hits by chance, and a better tank intercepts more often and cheaper', async () => {
   const { createInitialState } = await import('../src/core/state.js');
   const { GameManager } = await import('../src/core/GameManager.js');
   const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
@@ -288,7 +288,8 @@ test('탱커: takes a share of what the party would eat, and a better tank takes
   const tankDef = HEROES.find((x) => x.role === 'tank' && x.id !== MAIN_ID);
   const rangedDef = HEROES.find((x) => x.role === 'ranged');
 
-  const hit = (star, withTank = true) => {
+  // 확률이라 한 번으로는 못 본다 — 여러 번 때려 비율을 센다
+  const trial = (star, withTank, n = 400) => {
     const g = new GameManager({ save: memSave() });
     for (const d of [tankDef, rangedDef]) Object.assign(g.state.heroes[d.id], { owned: true, star, level: 30 });
     g.state.party = withTank ? [MAIN_ID, tankDef.id, rangedDef.id] : [MAIN_ID, rangedDef.id];
@@ -296,18 +297,53 @@ test('탱커: takes a share of what the party would eat, and a better tank takes
     const em = g.entities;
     const tank = em.heroes.find((h) => h.heroId === tankDef.id);
     const ranged = em.heroes.find((h) => h.heroId === rangedDef.id);
-    for (const h of em.heroes) { h.maxHp = 1e7; h.hp = 1e7; h.trait = null; }
-    em.__testHit({ atk: 1000 }, ranged);
-    return { tank: tank ? tank.maxHp - tank.hp : 0, ranged: ranged.maxHp - ranged.hp };
+    for (const h of em.heroes) { h.maxHp = 1e9; h.hp = 1e9; h.trait = null; }
+    for (let i = 0; i < n; i++) em.__testHit({ atk: 1000 }, ranged);
+    return { tank: tank ? tank.maxHp - tank.hp : 0, ranged: ranged.maxHp - ranged.hp, n };
   };
 
-  const alone = hit(1, false);
-  const s1 = hit(1), s5 = hit(5);
-  assert.equal(s1.tank > 0, true, '탱커가 대신 맞아야 한다');
+  const alone = trial(1, false);
+  const s1 = trial(1, true), s5 = trial(5, true);
+  assert.ok(s1.tank > 0, '탱커가 가끔 가로채야 한다');
   assert.ok(s1.ranged < alone.ranged, '탱커가 있으면 아군이 덜 맞는다');
-  assert.ok(s5.ranged < s1.ranged, '★이 높은 탱커일수록 더 많이 막는다');
-  // 대신 받은 몫은 감면된다 — 그래서 탱커를 세우는 게 파티 전체에 이득이다
-  const total1 = s1.tank + s1.ranged;
-  assert.ok(total1 < alone.ranged, `파티 전체 피해가 줄어야 한다 (${alone.ranged} → ${total1})`);
-  assert.ok(BALANCE.TANK.shareMax <= 1 && BALANCE.TANK.reduceMax < 1);
+  assert.ok(s5.ranged < s1.ranged, '★이 높은 탱커일수록 더 자주 가로챈다');
+  // 무조건이 아니라 확률이다 — 탱커가 있어도 아군은 상당 부분을 그대로 맞는다
+  assert.ok(s1.ranged > alone.ranged * 0.4, '무조건 막아 주면 안 된다 (확률이어야 한다)');
+  // 가로챈 몫은 감면되므로 파티 전체 피해는 줄어든다
+  assert.ok(s5.tank + s5.ranged < alone.ranged, '파티 전체 피해는 줄어든다');
+  assert.ok(BALANCE.TANK.chanceMax < 1, '가로채기 확률에 상한이 있어야 한다 — 100%면 무조건이 된다');
+});
+
+test('인사 복구: one guaranteed, extras by chance, capped — and worth far more now that death sticks', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+  const R = BALANCE.REVIVE;
+
+  const caster = byType('revive'); // revive 를 가진 영웅
+  // 실제 측정: 파티를 채우고 여러 번 시전해 평균 복귀 인원을 센다
+  const { HEROES } = await import('../src/data/heroes.js');
+  const run = (star, trials = 300) => {
+    let total = 0;
+    for (let t = 0; t < trials; t++) {
+      const g = new GameManager({ save: memSave() });
+      g.state.heroes[caster.id] = { owned: true, star: 2, shards: 0, level: 40, enhance: 0 };
+      const others = HEROES.filter((h) => h.id !== MAIN_ID && h.id !== caster.id).slice(0, 3);
+      for (const d of others) Object.assign(g.state.heroes[d.id], { owned: true, star: 1, level: 20 });
+      g.state.party = [MAIN_ID, caster.id, ...others.map((d) => d.id)];
+      g.entities.rebuildParty();
+      const em = g.entities;
+      const h = em.heroes.find((a) => a.heroId === caster.id);
+      h.star = star; // 시전자의 ★이 추가 인원 확률을 정한다
+      for (const a of em.heroes) if (a !== h) { a.alive = false; a.hp = 0; }
+      em.castSkill(h, null, em.monsters, em.heroes.filter((a) => a.alive));
+      total += em.heroes.filter((a) => a.alive && a !== h).length;
+    }
+    return total / trials;
+  };
+
+  const avg1 = run(1), avg5 = run(5);
+  assert.ok(avg1 >= 1, `★1도 최소 1명은 확정으로 일으켜야 한다 (평균 ${avg1.toFixed(2)})`);
+  assert.ok(avg5 > avg1, `★이 높을수록 더 많이 일으킨다 (${avg1.toFixed(2)} → ${avg5.toFixed(2)})`);
+  assert.ok(avg5 <= 1 + R.extraMax, `최대 인원을 넘으면 안 된다 (평균 ${avg5.toFixed(2)}, 상한 ${1 + R.extraMax})`);
 });

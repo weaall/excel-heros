@@ -381,8 +381,8 @@ export class EntityManager {
   }
 
   /**
-   * 앞선 탱커가 대신 받을 몫. 탱커 본인이나 탱커가 없을 때는 0이다.
-   * 비율은 ★로 오른다 — 탱킹이 '스킬 하나'가 아니라 **탱커라는 직무**가 되게 하는 부분이다.
+   * 앞선 탱커가 이 타격을 가로챌 확률과 감면율. 탱커 본인이거나 탱커가 없으면 null.
+   * 매번 나눠 받는 게 아니라 **막거나 못 막거나**다 — 확률과 감면 모두 ★로 오른다.
    */
   #tankGuard(target) {
     if (!target || target.role === 'tank') return null;
@@ -392,18 +392,17 @@ export class EntityManager {
     const star = Math.max(1, tank.star ?? 1);
     return {
       tank,
-      share: Math.min(T.shareMax, T.share + T.sharePerStar * (star - 1)),
+      chance: Math.min(T.chanceMax, T.chance + T.chancePerStar * (star - 1)),
       reduce: Math.min(T.reduceMax, T.reduce + T.reducePerStar * (star - 1)),
     };
   }
-  /** 대신 맞기를 적용해 실제로 피해를 나눈다. 아군 몫은 줄고, 나머지를 탱커가 감면된 채로 받는다. */
+  /** 확률로 탱커가 가로챈다. 터지면 아군은 하나도 안 맞고, 탱커가 감면된 채로 전부 받는다. */
   #splitToTank(target, dmg, crit) {
     const g = this.#tankGuard(target);
-    if (!g) { this.#damage(target, dmg, crit); return; }
-    const taken = dmg * g.share;
-    this.#damage(target, dmg - taken, crit);
-    this.#damage(g.tank, taken * (1 - g.reduce), false);
-    this.fx('puff', { x: g.tank.x, y: g.tank.y - 14, color: '#5dade2', life: 0.22 });
+    if (!g || Math.random() >= g.chance) { this.#damage(target, dmg, crit); return; }
+    this.#damage(g.tank, dmg * (1 - g.reduce), false);
+    this.fx('puff', { x: g.tank.x, y: g.tank.y - 14, color: '#5dade2', life: 0.25 });
+    this.floaters.push({ x: g.tank.x, y: g.tank.y - 62, text: '엄호', color: '#5dade2', t: 0 });
   }
   /** 테스트 전용 통로: 몬스터 한 대를 그 자리에서 때린다(비공개 메서드라 밖에서 못 부른다). */
   __testHit(m, target, mult = 1) { return this.#monsterHit(m, target, mult); }
@@ -537,13 +536,24 @@ export class EntityManager {
         this.fx('ring', { x: h.x, y: h.y, color: '#a3e4d7', radius: 300, life: 0.5 });
         break;
       }
-      case 'revive': { // 복직: the only way to get a downed hero back before the timer
-        const down = heroes.concat(this.heroes.filter((a) => !a.alive)).find((a) => !a.alive);
-        if (down) {
-          down.alive = true; down.reviveT = 0; down.hp = Math.max(1, Math.round(down.maxHp * (power * boost) / 100));
-          this.fx('ring', { x: down.x, y: down.y, color: '#f1c40f', radius: 120, life: 0.7 }); this.fx('sparkle', { x: down.x, y: down.y - 20, color: '#ffe9a8', n: 16 });
-          this.floaters.push({ x: down.x, y: down.y - 60, text: '복직!', color: '#f1c40f', t: 0, big: true });
-          this.game.log(`${h.def.name}: ${down.def.name} 복직 처리`, 'skill');
+      case 'revive': { // 복직: 죽음이 영구해진 뒤로 유일한 복귀 수단이자 가장 값비싼 스킬
+        // 확정 1명 + 추가 인원마다 확률 굴림. 확률은 시전자의 ★로 오르고, 추가 인원에는 상한이 있다.
+        const R = BALANCE.REVIVE;
+        const star = Math.max(1, h.star ?? 1);
+        const extraChance = R.extraChance + R.extraPerStar * (star - 1);
+        const fallen = this.heroes.filter((a) => !a.alive);
+        if (fallen.length) {
+          const raised = [];
+          for (const down of fallen) {
+            if (raised.length >= 1 + R.extraMax) break;              // 최대 인원
+            if (raised.length >= 1 && Math.random() >= extraChance) continue; // 둘째부터는 확률
+            down.alive = true; down.reviveT = 0; down.hp = Math.max(1, Math.round(down.maxHp * (power * boost) / 100));
+            this.fx('ring', { x: down.x, y: down.y, color: '#f1c40f', radius: 120, life: 0.7 });
+            this.fx('sparkle', { x: down.x, y: down.y - 20, color: '#ffe9a8', n: 16 });
+            this.floaters.push({ x: down.x, y: down.y - 60, text: '복직!', color: '#f1c40f', t: 0, big: true });
+            raised.push(down);
+          }
+          this.game.log(`${h.def.name}: ${raised.map((a) => a.def.name).join(', ')} 복직 처리 (${raised.length}명)`, 'skill');
         } else {
           const weak = heroes.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
           if (weak) { const amt = Math.round(weak.maxHp * (power * boost) / 100); weak.hp = Math.min(weak.maxHp, weak.hp + amt); this.floaters.push({ x: weak.x, y: weak.y - 40, text: `+${amt}`, color: '#27ae60', t: 0 }); this.fx('sparkle', { x: weak.x, y: weak.y, color: '#ffe9a8', n: 10 }); }

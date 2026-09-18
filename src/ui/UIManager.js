@@ -15,6 +15,7 @@ import { artVersion } from '../data/cardArt.js';
 import { SLOT_ORDER, gradeColor } from '../data/equipment.js';
 import { STEALTH_TEXT, STEALTH_HIDE, stealthStatus } from '../data/stealthLabels.js';
 import { TUTORIAL_BONUS } from '../data/tutorial.js';
+import { MANUAL, skillRows } from '../data/manual.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
 import { ALL_CLEAR_BONUS, STREAK } from '../data/quests.js';
 import { heroIconDataURL, cardCanvas, portraitCanvas, monsterSprite, heroSprite } from '../data/sprites.js';
@@ -176,6 +177,7 @@ export class UIManager {
       input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeem(); });
     }
     $('#tut-hide')?.addEventListener('click', () => this.game.hideTutorial(true));
+    $('#qa-manual')?.addEventListener('click', () => this.showManual());
     // 수식 대응: Enter 로 제출. 입력 칸이 자동으로 포커스를 받으므로 손을 옮길 필요가 없다.
     $('#brace-input')?.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
@@ -1473,6 +1475,37 @@ export class UIManager {
    * 수식 대응 줄. 보스가 특수 공격을 예고하면 전투 화면 위에 `=SUM(a, b)` 가 뜨고, 제한 시간 안에 답을 치면
    * 그 한 방이 약해진다. 엑셀로 위장한 게임에서 위기를 넘기는 방법이 셀에 숫자를 넣는 것이라는 게 요점이다.
    */
+  /**
+   * 게임 설명. 시스템이 스무 개쯤 쌓이는 동안 설명은 툴팁에만 있었는데, 툴팁은 **이미 그 버튼을 찾은
+   * 사람**에게만 보인다. 여기서 한 번에 읽을 수 있게 한다. 스킬 표는 SKILLS 에서 직접 읽어 오므로
+   * 스킬을 고치면 설명도 같이 바뀐다.
+   */
+  showManual() {
+    const wrap = el('div', { class: 'manual' });
+    const table = (rows) => {
+      const t = el('table', { class: 'xl-table compact manual-table' });
+      for (const [k, v] of rows) t.append(el('tr', {}, el('td', { class: 'mk' }, k), rich('td', v)));
+      return t;
+    };
+    /** `**굵게**` 만 해석한다 — 설명에 별표가 그대로 찍히지 않게. */
+    const rich = (tag, text) => {
+      const node = el(tag, {});
+      for (const part of String(text).split(/(\*\*[^*]+\*\*)/g)) {
+        if (!part) continue;
+        node.append(part.startsWith('**') ? el('b', {}, part.slice(2, -2)) : document.createTextNode(part));
+      }
+      return node;
+    };
+    for (const ch of MANUAL) {
+      wrap.append(el('h4', { class: 'manual-h' }, ch.title));
+      for (const p of ch.body ?? []) { const n = rich('p', p); n.className = 'manual-p'; wrap.append(n); }
+      if (ch.rows) wrap.append(table(ch.rows));
+    }
+    wrap.append(el('h4', { class: 'manual-h' }, '스킬'));
+    wrap.append(el('p', { class: 'manual-p' }, '★2에서 해금됩니다. N은 스킬 레벨과 강화에 따라 오르는 수치입니다.'));
+    wrap.append(table(skillRows(SKILLS).map(([n, d]) => [n, d])));
+    this.openModal('게임 설명', wrap, { wide: true });
+  }
   #refreshBrace() {
     const bar = $('#brace-bar'); if (!bar) return;
     const b = this.game.braceInfo();
@@ -1634,9 +1667,10 @@ export class UIManager {
     });
   }
 
-  openModal(title, content) {
+  openModal(title, content, { wide = false } = {}) {
     this.detailId = null;
     $('#modal-title').textContent = title;
+    $('#modal .dialog')?.classList.toggle('wide', !!wide); // 설명처럼 긴 내용은 좁은 창에서 읽히지 않는다
     const body = $('#modal-body'); body.innerHTML = '';
     if (typeof content === 'string') body.innerHTML = content; else body.append(content);
     $('#modal-actions').innerHTML = ''; $('#modal-actions').append(btn('확인', () => this.closeModal(), 'primary'));
