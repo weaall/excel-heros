@@ -218,7 +218,10 @@ export class EntityManager {
       if (!h.alive) continue; // 쓰러지면 이 스테이지 동안 일어나지 못한다 — 부활 스킬만이 예외다
       if (this.traveling) continue;
       h.animT += dt;
-      h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (BALANCE.HERO_REGEN_PCT + (h.trait === 'regen' ? tv(h, 'regen') : 0) + (this.perks?.regen ?? 0) + (this.healerAura ?? 0)) * dt);
+      // 전투 중과 전투 밖의 회복을 분리한다. 전투 중에 알아서 차오르면 힐러를 넣을 이유가 사라진다.
+      const inFight = this.monsters.some((m) => m.alive && m.arrived) || (this.boss?.alive && this.boss.arrived);
+      const base = inFight ? BALANCE.HERO_REGEN_PCT : BALANCE.HERO_REGEN_IDLE_PCT;
+      h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (base + (h.trait === 'regen' ? tv(h, 'regen') : 0) + (this.perks?.regen ?? 0) + (this.healerAura ?? 0)) * dt);
       const rush = h.meleeRush && h.meleeRush.until > this.time ? h.meleeRush.mult : 1; // 근접 처치 기세 (자신만)
       h.cd -= dt * speedMult * rush; h.skillCd -= dt;
 

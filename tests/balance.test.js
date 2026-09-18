@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BALANCE, upgradeCost, monsterHP, baseGold, offlineGold, stageLabel, isBossStage, heroATK, estimateGoldPerSec, starMult, enhanceMult, enhanceCost, relativeGold } from '../src/config/balance.js';
+import { BALANCE, upgradeCost, monsterHP, baseGold, offlineGold, stageLabel, isBossStage, heroATK, estimateGoldPerSec, starMult, enhanceMult, enhanceCost, relativeGold, atkRamp, monsterATK } from '../src/config/balance.js';
 
 test('GDD formulas at level/stage 1 return base values', () => {
   assert.equal(upgradeCost(1), 10);
@@ -108,4 +108,19 @@ test('레벨 상한은 ★로만 열린다 — 골드로는 넘을 수 없다', 
   s.heroes.parttime.star = 2;
   assert.ok(g.upgradeHero('parttime'), '★2가 되면 다시 올라간다');
   assert.equal(g.heroView('parttime').levelCap, levelCap(2));
+});
+
+test('적 화력 유예: 1단계는 그대로, 25단계에서 5배가 되고 그 뒤로는 일정하다', () => {
+  const { full, byStage } = BALANCE.MONSTER_ATK_RAMP;
+  assert.equal(atkRamp(1), 1, '1단계는 유예 없음 — 영웅 한 명으로 시작하는 구간을 건드리지 않는다');
+  assert.equal(atkRamp(0), 1, '0·음수 단계도 1단계로 취급');
+  assert.equal(atkRamp(byStage), full, `${byStage}단계에서 ${full}배`);
+  assert.equal(atkRamp(byStage + 500), full, '그 뒤로는 더 오르지 않는다 — 곡선이 아니라 수준만 올린 것');
+  // 단조 증가
+  for (let s2 = 2; s2 <= byStage; s2++) assert.ok(atkRamp(s2) > atkRamp(s2 - 1), `${s2}단계 유예가 더 크다`);
+  // 유예가 실제로 화력에 곱해진다
+  assert.equal(monsterATK(1), 1, '1단계 화력은 기본값 그대로');
+  const bare = (st) => BALANCE.MONSTER_ATK_BASE * BALANCE.MONSTER_ATK_GROWTH ** (st - 1);
+  assert.equal(monsterATK(40), Math.floor(bare(40) * full), '유예가 끝난 뒤에는 정확히 full배');
+  assert.ok(monsterATK(25) > Math.floor(bare(25)) * 4, '유예 구간 끝에서 4배는 넘는다');
 });

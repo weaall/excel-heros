@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createInitialState, migrate } from '../src/core/state.js';
 import { GameManager } from '../src/core/GameManager.js';
 import { BALANCE } from '../src/config/balance.js';
-import { MAIN_ID } from '../src/data/heroes.js';
+import { MAIN_ID, HEROES } from '../src/data/heroes.js';
 import { AFFIXES, asElite, MONSTER_TYPES } from '../src/data/monsters.js';
 import { pullOnce, initialPity } from '../src/core/GachaManager.js';
 import { dailyQuestIds, DAILY_COUNT, QUEST_BY_ID } from '../src/data/quests.js';
@@ -27,7 +27,7 @@ test('forecast rises with party strength and is stricter for boss stages', () =>
 test('safe auto-advance waits while the forecast is bad and resumes after upgrades', () => {
   const s = createInitialState(); s.stage = 9; s.maxStage = 9; s.maxCleared = 8; s.challenging = true; s.heroes[MAIN_ID].level = 22;
   const g = new GameManager({ state: s, save: memSave() });
-  assert.ok(g.challengeForecast(10).prob < BALANCE.SAFE_ADVANCE_MIN, 'boss 1-10 forecast is bad for a lone lv22 main');
+  assert.ok(g.challengeForecast(10).prob < BALANCE.SAFE_ADVANCE.min, 'boss 1-10 forecast is bad for a lone lv22 main');
   run(g, 300);
   assert.ok(g.state.maxCleared >= 9, `cleared 1-9 (maxCleared=${g.state.maxCleared})`);
   assert.equal(g.state.stage, 9, 'stays farming 1-9 instead of failing the boss');
@@ -115,4 +115,31 @@ test('combo quest hook fires at 20 hits', () => {
   g.state.daily.quests = ['kills', 'combo'];
   g.onCombo(19); assert.equal(Q.questProgress(g.state, 'combo'), 0);
   g.onCombo(20); assert.equal(Q.questProgress(g.state, 'combo'), 1);
+});
+
+test('승산은 지금 싸울 파티로 계산한다 — 쓰러진 사원과 깎인 체력을 센다', () => {
+  const g = new GameManager({ save: memSave() });
+  for (const role of ['tank', 'healer', 'ranged']) {
+    const d = HEROES.find((h) => h.role === role && h.id !== MAIN_ID);
+    Object.assign(g.state.heroes[d.id], { owned: true, star: 3, level: 40, shards: 0, enhance: 0 });
+    g.state.party.push(d.id);
+  }
+  g.entities.rebuildParty();
+  const full = g.fightingParty();
+  assert.equal(full.count, g.state.party.length, '전원 살아 있으면 전원을 센다');
+  const before = g.challengeForecast(12);
+
+  // 체력이 깎이면 승산이 내려간다 — 최대 체력으로 재면 여기서 아무 일도 안 일어난다
+  for (const h of g.entities.heroes) h.hp = Math.max(1, Math.round(h.maxHp * 0.2));
+  const hurt = g.challengeForecast(12);
+  assert.ok(g.fightingParty().hp < full.hp, '깎인 체력이 반영된다');
+  assert.ok(hurt.prob <= before.prob, '피가 빠진 파티는 승산이 높아질 수 없다');
+
+  // 쓰러진 사원은 화력에서도 빠진다
+  const victim = g.entities.heroes.at(-1);
+  victim.alive = false;
+  const down = g.fightingParty();
+  assert.equal(down.count, full.count - 1, '쓰러진 사원은 세지 않는다');
+  assert.ok(down.dps < full.dps, '쓰러진 사원의 화력은 빠진다');
+  assert.ok(g.challengeForecast(12).prob <= hurt.prob, '한 명 빠지면 승산이 더 낮아진다');
 });

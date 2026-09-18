@@ -48,6 +48,10 @@ export const BALANCE = Object.freeze({
 
   // --- Derived (not in GDD) ---------------------------------------------
   MONSTER_ATK_BASE: 1,     MONSTER_ATK_GROWTH: 1.13,
+  // 적 화력 유예 곡선. 성장률(1.13)은 파티 체력 성장률과 거의 같아서 '여유'가 단계와 무관하게 일정한데,
+  // 그 일정한 값이 80~190배였다 — 교전이 3~14초, 파티가 쓰러지는 데 300초. 그래서 생존 시스템이 전부
+  // 장식이었다. 수준만 올리고 곡선은 그대로 둔다. 초반은 영웅 한 명으로 버티는 구간이라 유예를 준다.
+  MONSTER_ATK_RAMP: { full: 5, byStage: 25 },
   HERO_ATK_GROWTH: 1.10,   // per level (cost grows 1.12 -> slow soft wall, solved by stars/enhance/jobs)
   HERO_HP_GROWTH: 1.08,
   STAR_MULT: [1, 1.25, 1.6, 2.1, 2.8], // index = star-1
@@ -110,7 +114,10 @@ export const BALANCE = Object.freeze({
     drainLeech: 0.05,   // 흡혈 비율: ★당 +5%p (40% → 60%)
     healShield: 0.05,   // 회복: 넘친 만큼 ★당 최대 HP 5%까지 보호막으로
   },
-  HERO_REGEN_PCT: 0.02,     // fraction of max HP regenerated per second while alive
+  // 자연 회복. 전투 중에 크게 회복되면 탱커·힐러·보호막·부활이 전부 장식이 된다 — 실제로 그랬다
+  // (2시간 계측에서 평균 체력 99.8%, 체력 50% 미만인 시간 0.02%). 회복은 힐러의 일이어야 한다.
+  HERO_REGEN_PCT: 0.004,        // 전투 중 초당 회복 (적이 붙어 있을 때)
+  HERO_REGEN_IDLE_PCT: 0.06,    // 전투 밖 초당 회복 — 다음 웨이브까지 회복하는 건 지루함이 아니라 준비다
   MELEE_ADVANCE_CELLS: 3,   // how far (cells) a melee hero may leave formation
   ELITE: { hp: 2.5, atk: 1.5, gold: 3 },
   CARDS_FIRST_CLEAR_PER_PHASE: 2, // 강화 카드 on first clear = phase * this
@@ -131,7 +138,9 @@ export const BALANCE = Object.freeze({
   STAR_TRAIT_BOOST: { star: 3, mult: 1.25 }, // ★ perks: ★2 skill unlock · ★3 trait ×1.25 · ★4 skill ×1.5 · ★5 awakening (trait ×1.5, skill ×1.25) + enhance cap ★×10`,
   // 승산 forecast (calibrated with headless sims, scripts/calib): power ratio = (partyDPS/enemyHP) / (enemyDPS/partyHP)
   FORECAST: { normal: [2, 10], boss: [3, 15], bossTimeFrac: 0.9 }, // ratio at which win chance is 0% / 100%
-  SAFE_ADVANCE_MIN: 0.35,   // auto-advance waits (keeps farming) while the forecast is below this
+  // 안전 자동 진행이 기다리는 문턱. 중첩 객체인 이유는 BALANCE 가 freeze 라서 — 스칼라로 두면
+  // 감사 스크립트가 값을 바꿀 수 없고(대입이 조용히 무시된다) 그러면 훑어 볼 수도 없다.
+  SAFE_ADVANCE: { min: 0.35 },
   TEN_PULL_MIN_GRADE: 'A',
   FIRST_TEN_GUARANTEE: 'S',  // 신입 환영: the very first 10-pull of a save always contains an S  // a 10-pull always contains at least one A // consecutive hero hits without taking damage: +0.5% dmg each, cap +25%     // seconds between automatic "자동 합계" passes when the toggle is on
 
@@ -190,7 +199,13 @@ export const offlineGold = (goldPerSec, seconds) => {
 };
 
 // --- Derived ----------------------------------------------------------------
-export const monsterATK = (stage) => Math.max(1, Math.floor(B.MONSTER_ATK_BASE * B.MONSTER_ATK_GROWTH ** (Math.max(1, stage) - 1)));
+/** 적 화력 유예 배수. 1단계 1배에서 시작해 `byStage`에서 `full`배가 되고, 그 뒤로는 일정하다. */
+export const atkRamp = (stage) => {
+  const { full, byStage } = B.MONSTER_ATK_RAMP;
+  const t = Math.min(1, Math.max(0, (Math.max(1, stage) - 1) / (byStage - 1)));
+  return 1 + (full - 1) * t;
+};
+export const monsterATK = (stage) => Math.max(1, Math.floor(B.MONSTER_ATK_BASE * B.MONSTER_ATK_GROWTH ** (Math.max(1, stage) - 1) * atkRamp(stage)));
 export const isBossStage = (stage) => stage % B.BOSS_EVERY === 0;
 export const bossHP  = (stage) => monsterHP(stage) * B.BOSS_HP_MULT;
 export const bossATK = (stage) => monsterATK(stage) * B.BOSS_ATK_MULT;

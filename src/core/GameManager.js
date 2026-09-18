@@ -163,7 +163,7 @@ export class GameManager extends Emitter {
     const info = this.prestigeInfo();
     if (!info.eligible) return null;
     const fc = this.challengeForecast(this.state.stage + (this.isChallenging() ? 0 : 1));
-    const stalled = this.waitingAdvance || fc.prob < BALANCE.SAFE_ADVANCE_MIN;
+    const stalled = this.waitingAdvance || fc.prob < BALANCE.SAFE_ADVANCE.min;
     if (!stalled) return null;
     return { ...info, stalled: true, text: `다음 단계 승산 ${Math.round(fc.prob * 100)}% — 지금 회사를 이전하면 지분 +${info.gain} (파티 ATK·골드 +${Math.round(info.gain * info.perShare * 100)}%)을 영구히 얻고, 다시 올라오는 속도는 처음보다 훨씬 빠릅니다.` };
   }
@@ -668,6 +668,29 @@ export class GameManager extends Emitter {
     return this.state.party.reduce((sum, id) => { const v = this.heroView(id); return sum + v.atk / v.interval; }, 0) * this.speedMult();
   }
   partyATK() { return this.state.party.reduce((sum, id) => sum + this.heroView(id).atk, 0); }
+  /**
+   * **실제로 싸울 파티.** 쓰러진 사원은 세지 않고, 살아 있는 사원은 지금 체력으로 센다.
+   * 승산을 최대 체력으로 계산하면 이가 빠진 파티에게도 "유리"라고 답하고, 그러면 안전 자동 진행이
+   * 멈춰야 할 때 멈추지 않는다 — 소모전 규칙이 들어온 뒤 실제로 그랬다(6-94).
+   * 전투가 시작되기 전(엔티티가 없을 때)에는 최대 체력으로 답한다 — 그때는 전원이 만피로 출발한다.
+   */
+  fightingParty() {
+    const ents = this.entities?.heroes ?? [];
+    const speed = this.speedMult();
+    if (!ents.length) {
+      return {
+        count: this.state.party.length,
+        hp: this.state.party.reduce((a, id) => a + this.heroView(id).hp, 0),
+        dps: this.state.party.reduce((a, id) => { const v = this.heroView(id); return a + v.atk / v.interval; }, 0) * speed,
+      };
+    }
+    let count = 0, hp = 0, dps = 0;
+    for (const h of ents) {
+      if (!h.alive) continue;
+      count++; hp += h.hp; dps += h.atk / Math.max(0.05, h.interval);
+    }
+    return { count, hp, dps: dps * speed };
+  }
   goldPerSecAt(stage) { return estimateGoldPerSec(stage, this.partyDPS(), this.goldMult()); }
   killsRequired() { return isBossStage(this.state.stage) ? 1 : BALANCE.KILLS_PER_STAGE; }
 
@@ -922,7 +945,7 @@ export class GameManager extends Emitter {
   setAutoAdvance(v) {
     this.state.settings.autoAdvance = !!v; this.emit('settings');
     if (!v) this.waitingAdvance = false;
-    if (v && !this.isChallenging()) { if (!this.state.settings.safeAdvance || this.challengeForecast(this.nextStage()).prob >= BALANCE.SAFE_ADVANCE_MIN) this.startChallenge(); else { this.waitingAdvance = true; this.log(`${stageLabel(this.nextStage())} 승산이 낮아 강화 후 자동 진행 재개`, 'warn'); this.emit('challenge'); } }
+    if (v && !this.isChallenging()) { if (!this.state.settings.safeAdvance || this.challengeForecast(this.nextStage()).prob >= BALANCE.SAFE_ADVANCE.min) this.startChallenge(); else { this.waitingAdvance = true; this.log(`${stageLabel(this.nextStage())} 승산이 낮아 강화 후 자동 진행 재개`, 'warn'); this.emit('challenge'); } }
   }
   /** Auto-upgrade: keep running "자동 합계" (cheapest party upgrade) every second while on. */
   setAutoUpgrade(v) {
@@ -993,8 +1016,9 @@ export class GameManager extends Emitter {
    * calibrated against headless runs — normal stages are won from ratio ≈ 7-10, boss stages from ≈ 10-15.
    */
   challengeForecast(stage = this.nextStage()) {
-    const dps = Math.max(1, this.partyDPS());
-    const hp = Math.max(1, this.state.party.reduce((a, id) => a + this.heroView(id).hp, 0));
+    const live = this.fightingParty();
+    const dps = Math.max(1, live.dps);
+    const hp = Math.max(1, live.hp);
     const mod = stageModifier(stage); const boss = isBossStage(stage); const bDef = bossForStage(stage);
     const count = Math.min(BALANCE.MAX_MONSTERS + (mod?.count ?? 0), 3 + Math.floor(stage / 10) + (mod?.count ?? 0));
     const enemyHp = boss ? bossHP(stage) * (bDef.hp ?? 1) : monsterHP(stage) * count;
@@ -1004,13 +1028,13 @@ export class GameManager extends Emitter {
     let prob = Math.max(0, Math.min(1, Math.log(Math.max(1e-9, ratio) / lo) / Math.log(hi / lo)));
     const bossTime = boss ? enemyHp / dps : null;
     if (boss && bossTime > BALANCE.BOSS_TIME_LIMIT * BALANCE.FORECAST.bossTimeFrac) prob = Math.min(prob, 0.15);
-    return { stage, boss, ratio, prob, bossTime, label: prob >= 0.7 ? '유리' : prob >= BALANCE.SAFE_ADVANCE_MIN ? '접전' : '불리' };
+    return { stage, boss, ratio, prob, bossTime, label: prob >= 0.7 ? '유리' : prob >= BALANCE.SAFE_ADVANCE.min ? '접전' : '불리' };
   }
   /** Auto-advance that waited for a better forecast resumes as soon as the party is strong enough. */
   #maybeResumeAdvance() {
     const s = this.state;
     if (!this.waitingAdvance || !s.settings.autoAdvance || this.isChallenging()) return;
-    if (!s.settings.safeAdvance || this.challengeForecast(this.nextStage()).prob >= BALANCE.SAFE_ADVANCE_MIN) { this.waitingAdvance = false; this.startChallenge(); }
+    if (!s.settings.safeAdvance || this.challengeForecast(this.nextStage()).prob >= BALANCE.SAFE_ADVANCE.min) { this.waitingAdvance = false; this.startChallenge(); }
   }
   setSafeAdvance(v) { this.state.settings.safeAdvance = !!v; this.emit('settings'); this.#maybeResumeAdvance(); }
 
@@ -1206,7 +1230,7 @@ export class GameManager extends Emitter {
     if (boss || first) this.sayLine();
     this.emit('stage'); this.emit('gems'); this.emit('cards'); this.emit('kills'); this.emit('quests');
     const fc = this.challengeForecast(s.stage + 1);
-    if (s.settings.autoAdvance && (!s.settings.safeAdvance || fc.prob >= BALANCE.SAFE_ADVANCE_MIN)) this.startChallenge();
+    if (s.settings.autoAdvance && (!s.settings.safeAdvance || fc.prob >= BALANCE.SAFE_ADVANCE.min)) this.startChallenge();
     else {
       this.entities.startStage(true);  // 전진을 멈추고 사냥 = 재정비
       if (s.settings.autoAdvance) { this.waitingAdvance = true; this.log(`${stageLabel(s.stage + 1)} 승산 ${Math.round(fc.prob * 100)}% — 강화 후 자동 진행 재개`, 'warn'); }
