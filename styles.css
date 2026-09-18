@@ -17,7 +17,7 @@ button:disabled { cursor: default; opacity: .55; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ------------------------------------------------------------ window --- */
-.app { width: min(100vw, 1240px); min-width: 1024px; margin: 0 auto; height: 100vh; min-height: 720px; background: var(--bg); display: flex; flex-direction: column; box-shadow: 0 0 0 1px #c9c9c9; }
+.app { width: min(100vw, 1240px); min-width: 1024px; margin: 0 auto; height: 100vh; min-height: 620px; background: var(--bg); display: flex; flex-direction: column; box-shadow: 0 0 0 1px #c9c9c9; }
 .titlebar { display: flex; align-items: center; gap: 8px; background: var(--xl-green); color: #fff; height: 32px; padding: 0 6px 0 10px; font-size: 13px; flex: none; }
 .app-icon { display: inline-flex; width: 20px; height: 20px; align-items: center; justify-content: center; background: #fff; color: var(--xl-green); font-weight: 700; border-radius: 2px; font-size: 12px; }
 .win-btn { width: 34px; text-align: center; opacity: .9; font-size: 12px; }
@@ -108,7 +108,9 @@ button:disabled { cursor: default; opacity: .55; }
 .ws-body.generic { padding: 0 0 20px; }
 .ws-body.generic > * { position: relative; }
 .ws-body.generic .xl-table, .ws-body.generic .sheet-head, .ws-body.generic .card-grid, .ws-body.generic .gacha-layout, .ws-body.generic .quest-footer, .ws-body.generic .ad-box, .ws-body.generic .section-title { background: #fff; }
-.cell-area { width: 832px; height: 416px; position: relative; background: #fff; box-shadow: 0 0 0 1px var(--line-dark); }
+/* 전투 화면은 832×416 으로 그리되, 창이 낮으면 비율을 지키며 줄어든다.
+   고정 높이면 창이 720 미만일 때 페이지 전체가 세로로 스크롤된다 — 그건 위장에도 어울리지 않는다. */
+.cell-area { width: 832px; max-width: 100%; height: 416px; max-height: calc(100% - 22px); aspect-ratio: 832 / 416; position: relative; background: #fff; box-shadow: 0 0 0 1px var(--line-dark); }
 .ws-row { display: flex; height: 22px; }
 .ws-row .cell { flex: none; width: var(--cell-w); height: 22px; line-height: 21px; padding: 0 5px; font-size: 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; }
 .ws-row .cell.k { background: #f3f3f3; color: #555; font-size: 11.5px; }
@@ -130,8 +132,8 @@ button:disabled { cursor: default; opacity: .55; }
 .ws-log td:first-child { color: #777; font-family: Consolas, monospace; font-size: 11px; text-align: right; }
 .ws-log tr.k-boss td { color: #b03a2e; } .ws-log tr.k-warn td { color: #9a6700; } .ws-log tr.k-skill td { color: #6c3483; } .ws-log tr.k-stage td { color: var(--xl-green); font-weight: 600; } .ws-log tr.k-gacha td { color: #1f5fa8; }
 
-.canvas-wrap { line-height: 0; }
-#battle { width: 832px; height: 416px; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.canvas-wrap { line-height: 0; width: 100%; height: 100%; }
+#battle { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
 .stealth-view { width: 832px; height: 416px; overflow: auto; background: #fff; }
 
 
@@ -147,10 +149,12 @@ button:disabled { cursor: default; opacity: .55; }
 .gacha-layout { padding-top: 6px; }
 
 /* ------------------------------------------------------------ task pane -- */
-.task-pane { width: 340px; flex: none; border-left: 1px solid var(--line-dark); background: #fafafa; display: flex; flex-direction: column; min-height: 0; }
+.task-pane { width: 340px; flex: none; border-left: 1px solid var(--line-dark); background: #fafafa; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .pane-title { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; font-weight: 600; font-size: 13px; background: var(--panel); border-bottom: 1px solid var(--line-dark); }
 .pane-x { color: var(--muted); font-size: 12px; }
-.pane-body { overflow-y: auto; flex: 1; }
+.pane-body { overflow-y: auto; overflow-x: hidden; flex: 1; min-width: 0; scrollbar-gutter: stable; }
+.pane-body table { table-layout: fixed; max-width: 100%; }
+.pane-body td, .pane-body th { overflow: hidden; text-overflow: ellipsis; }
 .pane-actions { display: flex; gap: 6px; padding: 8px 10px 2px; }
 .xl-table td.act .xl-btn + .xl-btn { margin-left: 3px; }
 #hero-table td.act .xl-btn { padding: 2px 5px; font-size: 11px; }

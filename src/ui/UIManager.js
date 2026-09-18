@@ -1642,7 +1642,7 @@ export class UIManager {
    */
   #logCapacity() {
     const h = ($('.sheets')?.clientHeight ?? 640) - 28 - GRID.rows * GRID.cellH - 22; // 헤더 · 캔버스 · 상태 행
-    return Math.max(3, Math.min(20, Math.floor(h / 22)));
+    return Math.max(0, Math.min(20, Math.floor(h / 22)));
   }
   #buildLog() { const tb = $('#log-table tbody'); tb.innerHTML = ''; for (const r of this.game.logs.slice(-this.#logCapacity())) this.#appendLog(r); }
   #appendLog(row) {

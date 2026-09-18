@@ -211,11 +211,12 @@ function monsterFrame(def, frame) {
  * 손그림 보스: 64×58 격자에 찍어 SCALE 2 로 그린다 → 128×116. 팩 보스와 같은 캔버스 크기이면서
  * 픽셀 밀도는 일반 몬스터(2×)와 같다 — 사무기기 몬스터 옆에 세워도 결이 맞는 유일한 방법이다.
  */
+const HAND_BOSS_GRID = 43, HAND_BOSS_SCALE = 3; // 43 × 3 = 129px — 0x72 보스(96~108px)와 같은 급, 같은 픽셀 밀도
 function handBossFrame(map, def, frame) {
-  const g = blank(64, 58);
+  const g = blank(HAND_BOSS_GRID, 39);
   const w = map[0].length, h = map.length;
-  stamp(g, map, Math.floor((64 - w) / 2), 56 - h);
-  if (def.elite) stamp(g, ['C..C..C..C', 'CCLCCLCCLC', 'CCCCCCCCCC'], 27, Math.max(0, 56 - h - 4));
+  stamp(g, map, Math.floor((HAND_BOSS_GRID - w) / 2), 38 - h);
+  if (def.elite) stamp(g, ['C..C..C..C', 'CCLCCLCCLC', 'CCCCCCCCCC'], Math.floor(HAND_BOSS_GRID / 2) - 5, Math.max(0, 38 - h - 4));
   return frame % 2 ? shiftDown(g, 1) : g; // 숨 쉬듯 1px 위아래
 }
 
@@ -289,7 +290,7 @@ export function monsterSprite(mon, frame = 0) {
   if (cache.has(key)) return cache.get(key);
   const hand = BOSS_MAPS[String(mon.id).split(':')[0]];
   const g = hand ? handBossFrame(hand, mon, frame) : mon.shape === 'ticket' ? bossFrame(mon, frame) : monsterFrame(mon, frame);
-  return render(key, g, monsterPalette(mon), SCALE);
+  return render(key, g, monsterPalette(mon), hand ? HAND_BOSS_SCALE : SCALE);
 }
 
 const flashCache = new WeakMap();
