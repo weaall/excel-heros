@@ -59,21 +59,15 @@ const run = (seed, stage, only, level) => {
     g.entities.castSkill = (...a) => { casts++; return rc(...a); };
   };
   hook(); apply();
-  // 받은 피해는 체력 변화를 적분해서 잰다(사적 메서드를 안 건드리고도 양을 알 수 있다)
-  let taken = 0, kills0 = g.state.stats.totalKills ?? 0, downs = 0;
-  const prev = new Map();
+  let kills0 = g.state.stats.totalKills ?? 0, downs = 0;
   let t = 0; const DT = 0.2;
   while (t < MIN * 60) {
-    for (const h of g.entities.heroes) prev.set(h.id, h.alive ? h.hp : null);
     g.tick(DT); t += DT;
-    for (const h of g.entities.heroes) {
-      const p = prev.get(h.id); if (p == null) continue;
-      if (!h.alive) { taken += p; downs++; continue; }
-      if (h.hp < p) taken += p - h.hp;
-    }
+    if (g.entities.heroes.some((h) => !h.alive)) downs++;
     if (g.braceFormula) { const f = g.braceInfo(); g.submitBraceFormula(f.a + f.b); }
   }
   const kills = (g.state.stats.totalKills ?? 0) - kills0;
+  const taken = g.entities.heroDamageTaken;   // **게임이 센 원래 피해** — 밖에서 체력을 적분하면 회복이 상쇄한다(6-134)
   const maxHp = g.entities.heroes.reduce((a, h) => a + h.maxHp, 0) || 1;
   return { kills: kills / MIN, taken: taken / maxHp / MIN, casts, downs };   // 분당 처치 · 분당 받은 피해(파티 총 체력 배수)
 };

@@ -39,6 +39,7 @@ export class EntityManager {
     this.taunt = null; // { heroId, reduce, until } — 도발: every monster swings at this hero and it hurts less
     this.castLock = 0; // 스킬 순차 발동: 남은 잠금 시간(초). 한 번에 하나씩만 터지게 한다
     this.reviveGuard = null; // 재고용 보장: 다음에 쓰러지는 한 명을 그 자리에서 일으킨다
+    this.heroDamageTaken = 0; // 계측용: 영웅이 받은 **원래 피해**의 누계 (회복과 상쇄되기 전)
     this.braced = false; // 수식 대응 성공 — 다음 특수 공격 한 번만 약해진다
     this.healerAura = 0; // 파티의 힐러가 주는 상시 회복 (rebuildParty 에서 계산)
     this.time = 0; this.dmgLog = []; this.rallyMult = 1; this.shake = 0;
@@ -589,6 +590,9 @@ export class EntityManager {
     if (target.kind === 'monster') this.fx('impact', { x: target.x + (Math.random() * 16 - 8), y: target.y - 24 + (Math.random() * 16 - 8), color: crit ? '#f1c40f' : '#ffffff', life: 0.18, big: isSkill || crit });
     else if (this.combo > 0) { this.floaters.push({ x: target.x, y: target.y - 70, text: `COMBO ×${this.combo} 끊김`, color: '#95a5a6', t: 0 }); this.combo = 0; }
     const dealt = Math.min(amount, target.hp);
+    // **영웅이 실제로 맞은 양**을 따로 센다. 밖에서 체력 변화를 적분해 재면 같은 틱의 회복이 상쇄해서
+    // 회복 계열 시스템을 아예 못 잰다 — 벤치 두 개가 그 자尺로 '힐은 기여 0'이라고 적고 있었다(6-134).
+    if (target.kind === 'hero') this.heroDamageTaken += dealt;
     target.hp -= amount; target.shake = 1; target.flash = 0.12;
     const color = target.kind === 'monster' ? (crit ? '#ff7675' : isSkill ? '#f1c40f' : '#ffffff') : '#e74c3c';
     this.floaters.push({ x: target.x + (Math.random() * 24 - 12), y: target.y - 44, text: crit ? `${amount}!` : String(amount), color, t: 0, big: isSkill || crit });
@@ -777,24 +781,28 @@ export class EntityManager {
         break;
       }
       case 'heal': {
-        // ★가 붙으면 넘친 회복량이 버려지지 않고 파티 보호막이 된다 — 풀피일 때도 쓸모가 생긴다
-        const capPct = BALANCE.SKILL_STAR.healShield * this.#starStep(h);
-        let spill = 0;
+        // **잃은 체력의 {p}% 를 채운다** — 최대 체력 기준이 아니라.
+        //
+        // 최대 체력의 몇 % 로 두면 회복량의 대부분이 넘쳐서 버려진다. 이 게임은 회복이 흔해서 파티가
+        // 대체로 만피에 가깝고(6-130), 그래서 이 스킬은 벤치 14종 중 꼴찌였다(6-133, +4.5). 넘침을
+        // 보호막으로 바꾸는 ★ 보너스로 때워 봤지만, 그걸 노리고 만피에 시전하게 했더니 오히려 손해였다
+        // (6-124: 60단계 64분 → 105분). 답은 **애초에 넘치지 않게 하는 것**이다.
+        //
+        // 이러면 이 스킬은 **위험할수록 세진다.** 한 명이 20%까지 떨어져 있으면 잃은 체력이 80%이므로
+        // 한 번에 최대 체력의 절반 가까이 돌아온다. 아무도 안 다쳤으면 거의 아무 일도 안 하는데, 그건
+        // 이 스킬이 보험이기 때문에 맞는 동작이다.
+        const pct = (power * boost) / 100;
+        // ★ 보너스: 가장 많이 다친 한 명은 **두 배**로 회복한다(넘침이 없으니 보호막으로 바꿀 것도 없다).
+        const focusMult = 1 + BALANCE.SKILL_STAR.healFocus * this.#starStep(h);
+        const worst = heroes.slice().sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
         for (const a of heroes) {
-          const amt = Math.round(a.maxHp * (power * boost) / 100);
+          const missing = a.maxHp - a.hp;
+          if (missing <= 0) { this.fx('coffee', { x: a.x, y: a.y - 54, life: 1.0 }); continue; }
+          const amt = Math.max(1, Math.round(missing * pct * (a === worst ? focusMult : 1)));
           const before = a.hp;
           a.hp = Math.min(a.maxHp, a.hp + amt);
-          spill += amt - (a.hp - before);
-          this.floaters.push({ x: a.x, y: a.y - 40, text: `+${a.hp - before}`, color: '#27ae60', t: 0 });
+          this.floaters.push({ x: a.x, y: a.y - 40, text: `+${a.hp - before}`, color: a === worst && focusMult > 1 ? '#f1c40f' : '#27ae60', t: 0 });
           this.fx('sparkle', { x: a.x, y: a.y, color: '#2ecc71', n: 8 }); this.fx('coffee', { x: a.x, y: a.y - 54, life: 1.0 });
-        }
-        if (capPct > 0 && spill > 0) {
-          const cap = Math.round(h.maxHp * capPct * heroes.length);
-          const hp = Math.min(spill, cap);
-          if (hp > 0) {
-            this.barrier = { hp: Math.max(this.barrier?.hp ?? 0, hp), max: Math.max(this.barrier?.max ?? 0, hp), until: this.time + this.#dur(h, 6) };
-            this.floaters.push({ x: h.x, y: h.y - 76, text: `보호막 ${hp}`, color: '#5dade2', t: 0 });
-          }
         }
         break;
       }

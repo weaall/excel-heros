@@ -3,10 +3,9 @@
 //
 //   MIN=30 RUNS=4 STAGE=60 TARGET=0.85 node scripts/sysBench.mjs
 //
-// **이 스크립트의 '받은 피해'는 순수한 피해량이 아니라 `틱마다 줄어든 체력의 합`이다.** 같은 틱에
-// 회복이 섞이면 상쇄된 채로 세어지므로 **회복 계열 시스템을 비교하는 데는 쓸 수 없다**(6-129에서
-// 이걸 모르고 '힐러 오라를 끄면 덜 맞는다'는 불가능한 결과를 냈다). 피해 감면 계열(탱커 엄호 ·
-// 보호막)에는 쓸 수 있다 — 거기서는 회복이 끼어들지 않는다.
+// '받은 피해'는 `entities.heroDamageTaken` — **게임이 직접 센 원래 피해**다(회복과 상쇄되기 전).
+// 예전에는 밖에서 체력 변화를 적분했는데, 같은 틱의 회복이 상쇄해서 **회복 계열을 아예 못 쟀다**
+// (6-129에서 '힐러 오라를 끄면 덜 맞는다'는 불가능한 결과가 그래서 나왔다). 6-134에서 고쳤다.
 const R = new URL('../src/', import.meta.url).href;
 const { GameManager } = await import(R + 'core/GameManager.js');
 const { BALANCE } = await import(R + 'config/balance.js');
@@ -30,15 +29,13 @@ const run = (seed, level) => {
     g.state.party.push(d.id);
   }
   g.entities.rebuildParty();
-  let taken = 0, deaths = 0, kills0 = g.state.stats.totalKills ?? 0;
+  let deaths = 0, kills0 = g.state.stats.totalKills ?? 0;
   g.on('log', (row) => { if (/쓰러짐/.test(row.text)) deaths++; });
-  const prev = new Map();
   for (let i = 0; i < MIN * 60 / 0.2; i++) {
-    for (const h of g.entities.heroes) prev.set(h.id, h.alive ? h.hp : null);
     g.tick(0.2);
-    for (const h of g.entities.heroes) { const p = prev.get(h.id); if (p == null) continue; if (!h.alive) { taken += p; continue; } if (h.hp < p) taken += p - h.hp; }
     if (g.braceFormula) { const f = g.braceInfo(); g.submitBraceFormula(f.a + f.b); }
   }
+  const taken = g.entities.heroDamageTaken;   // **게임이 센 원래 피해** — 밖에서 체력을 적분하면 회복이 상쇄한다(6-134)
   const maxHp = g.entities.heroes.reduce((a, h) => a + h.maxHp, 0) || 1;
   return { kills: ((g.state.stats.totalKills ?? 0) - kills0) / MIN, taken: taken / maxHp / MIN, deaths };
 };
