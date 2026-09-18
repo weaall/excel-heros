@@ -80,8 +80,10 @@ setInterval(simulate, 50);
 let lastDraw = performance.now();
 function frame(now) {
   const dt = Math.min(0.5, (now - lastDraw) / 1000); lastDraw = now;
-  ui.update(dt);
-  // a rendering bug must never kill the frame loop (the sim keeps running regardless)
+  // 그리기 오류가 프레임 루프를 죽이면 안 된다. **`ui.update` 도 마찬가지다** — 여기만 감싸지 않아서,
+  // UI 쪽에서 한 번 던지면 루프가 영영 멈추고 화면은 마지막 프레임에 얼어붙은 채 시뮬레이션만 돈다.
+  // 플레이어 눈에는 '게임이 멈췄다'로 보이는데 저장은 계속돼서 원인을 찾을 단서가 없다.
+  try { ui.update(dt); } catch (e) { if (!frame.uiWarned) { frame.uiWarned = true; console.error("[ui]", e); } }
   if (!game.state.settings.excel) { try { renderer.draw(dt); } catch (e) { if (!frame.warned) { frame.warned = true; console.error("[render]", e); } } }
   requestAnimationFrame(frame);
 }

@@ -477,7 +477,20 @@ export class EntityManager {
   /** 확률로 탱커가 가로챈다. 터지면 아군은 하나도 안 맞고, 탱커가 감면된 채로 전부 받는다. */
   #splitToTank(target, dmg, crit) {
     const g = this.#tankGuard(target);
-    if (!g || Math.random() >= g.chance) { this.#damage(target, dmg, crit); return; }
+    if (!g) { this.#damage(target, dmg, crit); return; }
+    // **치명타 엄호**: 이 한 대가 동료를 눕힐 만한 것이면 탱커가 **확실히** 가로챈다(재사용 대기 있음).
+    // 확률 엄호만 있을 때 탱커는 A/B에서 −0.6% 였다(6-116, 6판). 이유: 회복이 넘쳐서 '누적 피해'가
+    // 승패를 가르지 않고 **한 방에 눕는 것**만이 문제인데, 확률 엄호는 그 한 방을 못 집어낸다.
+    const T = BALANCE.TANK;
+    const lethal = dmg >= target.hp;
+    if (lethal && this.time >= (g.tank.saveAt ?? -1e9) + T.saveCd && g.tank.hp > dmg * (1 - g.reduce)) {
+      g.tank.saveAt = this.time;
+      this.#damage(g.tank, dmg * (1 - g.reduce), false);
+      this.fx('ring', { x: g.tank.x, y: g.tank.y - 10, color: '#5dade2', radius: 70, life: 0.4 });
+      this.floaters.push({ x: g.tank.x, y: g.tank.y - 62, text: '엄호!', color: '#5dade2', t: 0, big: true });
+      return;
+    }
+    if (Math.random() >= g.chance) { this.#damage(target, dmg, crit); return; }
     this.#damage(g.tank, dmg * (1 - g.reduce), false);
     this.fx('puff', { x: g.tank.x, y: g.tank.y - 14, color: '#5dade2', life: 0.25 });
     this.floaters.push({ x: g.tank.x, y: g.tank.y - 62, text: '엄호', color: '#5dade2', t: 0 });
@@ -604,7 +617,10 @@ export class EntityManager {
         this.fx('papers', { x: h.x + 30, y: h.y - 20, n: 6, spread: 300, life: 0.6 }); this.shake = Math.max(this.shake, 4); break;
       }
       case 'barrier': { // 보호막: one shared pool for the party
-        const hp = Math.round(h.atk * power * boost);
+        // **파티 총 체력의 {p}%**. 예전엔 `ATK × p` 였는데 ATK는 레벨당 1.10, HP는 1.08로 자라서
+        // 보호막이 한 명 최대 HP의 22%(레벨 1) → 324%(레벨 145)가 됐다 — 6초 무적이나 다름없었다(6-116).
+        const pool = heroes.reduce((a, x) => a + x.maxHp, 0) || h.maxHp;
+        const hp = Math.max(1, Math.round(pool * (power * boost) / 100));
         this.barrier = { hp, max: hp, until: this.time + this.#dur(h, SKILLS.barrier.duration) };
         for (const a of heroes) this.fx('ring', { x: a.x, y: a.y + 16, color: '#5dade2', radius: 46, life: 0.6 });
         this.floaters.push({ x: h.x, y: h.y - 76, text: `보호막 ${hp}`, color: '#5dade2', t: 0 }); break;
@@ -693,7 +709,11 @@ export class EntityManager {
         this.fx('ring', { x: h.x, y: h.y, color: '#8e44ad', radius: 400, life: 0.5 }); this.shake = Math.max(this.shake, 5);
         for (const m of monsters) { this.fx('slash', { x: m.x, y: m.y - 6, color: '#c39bd3', angle: 0.2, life: 0.25 }); dealt += this.#heroHit(h, m, power * boost, true) ?? 0; }
         const leech = 0.4 + BALANCE.SKILL_STAR.drainLeech * this.#starStep(h); // 흡혈 비율이 ★로 오른다
-        const back = Math.round(dealt * leech / Math.max(1, heroes.length));
+        // 흡혈도 같은 함정에 걸린다 — `dealt` 는 적 체력(=ATK) 눈금이고 돌려주는 곳은 아군 체력 눈금이다.
+        // 한 번에 되돌릴 수 있는 양을 **최대 HP의 일정 비율**로 묶는다.
+        const raw = dealt * leech / Math.max(1, heroes.length);
+        const cap = (heroes[0]?.maxHp ?? 1) * BALANCE.SKILL_CAP.drainPct;
+        const back = Math.round(Math.min(raw, cap));
         if (back > 0) for (const a of heroes) { a.hp = Math.min(a.maxHp, a.hp + back); this.floaters.push({ x: a.x, y: a.y - 40, text: `+${back}`, color: '#27ae60', t: 0 }); }
         break;
       }

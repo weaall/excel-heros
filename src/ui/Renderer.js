@@ -23,7 +23,15 @@ export class Renderer {
     this.t = 0;
     this.banner = null;
     this.skillCard = null; // small illustration cut-in for regular skills (one at a time; a new cast replaces it)
-    game.on('skill-cast', ({ hero, type }) => { this.skillCard = { hero, type, t: 0, life: 1.6 }; });
+    // 컷인은 아껴야 값을 한다(6-116). `CUTIN.gap` 안에 한 번만 — 필살기와 각성한 시전자는 예외.
+    this.cutinAt = -1e9;
+    game.on('skill-cast', ({ hero, type }) => {
+      const C = BALANCE.CUTIN;
+      const always = type === 'ult' || hero.awakened;
+      if (!always && this.t - this.cutinAt < C.gap) return;
+      this.cutinAt = this.t;
+      this.skillCard = { hero, type, t: 0, life: C.life };
+    });
     this.selected = null;   // { col, row } selected worksheet cell (Excel-style selection box)
     game.on('challengeStart', ({ stage, boss }) => {
       this.banner = boss

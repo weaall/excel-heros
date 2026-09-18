@@ -35,7 +35,10 @@ const mem = () => ({ save() {}, load() { return null; }, clear() {}, export: () 
 
 /** 끌 수 있는 시스템들. 각각 `off(g)` 가 그 시스템만 무력화한다(다른 건 건드리지 않는다). */
 const SYSTEMS = {
-  tank:    { name: '탱커 엄호',        off: () => { BALANCE.TANK.chance = 0; BALANCE.TANK.chancePerStar = 0; } },
+  // 탱커는 **두 가지**를 한다. 하나만 끄면 나머지가 그 자리를 메워서 '기여 없음'으로 읽힌다 — 6-94의 덫이다.
+  tank:    { name: '탱커 엄호(전부)',  off: () => { BALANCE.TANK.chance = 0; BALANCE.TANK.chancePerStar = 0; BALANCE.TANK.saveCd = 1e9; } },
+  tankOdds: { name: '탱커 확률 엄호',  off: () => { BALANCE.TANK.chance = 0; BALANCE.TANK.chancePerStar = 0; } },
+  tankSave: { name: '탱커 치명타 엄호', off: () => { BALANCE.TANK.saveCd = 1e9; } },
   healer:  { name: '힐러 오라',        off: () => { BALANCE.ROLE_PASSIVE.healer.regen = 0; BALANCE.ROLE_PASSIVE.healer.perStar = 0; } },
   melee:   { name: '근접 기세',        off: () => { BALANCE.ROLE_PASSIVE.melee.haste = 0; BALANCE.ROLE_PASSIVE.melee.perStar = 0; } },
   ranged:  { name: '원거리 관통',      off: () => { BALANCE.ROLE_PASSIVE.ranged.pierce = 0; BALANCE.ROLE_PASSIVE.ranged.perStar = 0; } },
