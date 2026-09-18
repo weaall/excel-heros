@@ -257,7 +257,7 @@ export class EntityManager {
       h.animT += dt;
       // 전투 중과 전투 밖의 회복을 분리한다. 전투 중에 알아서 차오르면 힐러를 넣을 이유가 사라진다.
       const inFight = this.monsters.some((m) => m.alive && m.arrived) || (this.boss?.alive && this.boss.arrived);
-      const base = inFight ? BALANCE.HERO_REGEN_PCT : BALANCE.HERO_REGEN_IDLE_PCT;
+      const base = inFight ? BALANCE.REGEN.inFight : BALANCE.REGEN.idle;
       h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (base + (h.trait === 'regen' ? tv(h, 'regen') : 0) + (this.perks?.regen ?? 0) + (this.healerAura ?? 0)) * dt);
       const rush = h.meleeRush && h.meleeRush.until > this.time ? h.meleeRush.mult : 1; // 근접 처치 기세 (자신만)
       h.cd -= dt * speedMult * rush; h.skillCd -= dt;

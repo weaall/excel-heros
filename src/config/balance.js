@@ -227,8 +227,13 @@ export const BALANCE = Object.freeze({
   },
   // 자연 회복. 전투 중에 크게 회복되면 탱커·힐러·보호막·부활이 전부 장식이 된다 — 실제로 그랬다
   // (2시간 계측에서 평균 체력 99.8%, 체력 50% 미만인 시간 0.02%). 회복은 힐러의 일이어야 한다.
-  HERO_REGEN_PCT: 0.004,        // 전투 중 초당 회복 (적이 붙어 있을 때)
-  HERO_REGEN_IDLE_PCT: 0.06,    // 전투 밖 초당 회복 — 다음 웨이브까지 회복하는 건 지루함이 아니라 준비다
+  /**
+   * 초당 자연 회복. **얼려 있지 않은 객체에 둔다** — 최상위 스칼라는 훑기 스크립트가 못 바꾸고,
+   * 그러면 '효과 없음'이라는 거짓 결과가 나온다(6-95).
+   *  · `inFight` — 적이 붙어 있을 때. 여기가 이 게임의 **회복 공급**을 정하는 자리다.
+   *  · `idle`    — 웨이브 사이. 다음 웨이브까지 회복하는 건 지루함이 아니라 준비다.
+   */
+  REGEN: { inFight: 0.004, idle: 0.06 },
   MELEE_ADVANCE_CELLS: 3,   // how far (cells) a melee hero may leave formation
   ELITE: { hp: 2.5, atk: 1.5, gold: 3 },
   CARDS_FIRST_CLEAR_PER_PHASE: 2, // 강화 카드 on first clear = phase * this
