@@ -113,7 +113,9 @@ test('야근 모드: once a day, 60 s of kills pay gems without touching stage p
   assert.equal(g.combatStage(), 12 + BALANCE.OVERTIME.stageOffset); assert.equal(g.bossActive(), false);
   assert.equal(g.startOvertime(), false, 'not twice at once');
   let ended = null; g.on('overtime-end', (r) => { ended = r; });
-  for (let i = 0; i < (BALANCE.OVERTIME.duration + 2) * 10; i++) g.tick(0.1);
+  // 야근이 끝나는 **즉시** 멈춘다. 끝난 뒤에도 계속 돌리면 평소 전투가 이어져서 `state.kills` 가
+  // 올라가고, 6-115에서 적이 빨라진 뒤로는 그 2초 안에 실제로 한 마리가 죽는다.
+  for (let i = 0; i < (BALANCE.OVERTIME.duration + 2) * 10 && !ended; i++) g.tick(0.1);
   assert.ok(ended, 'run ended by the clock'); assert.equal(g.overtime, null);
   assert.ok(ended.kills > 0, `killed something (${ended.kills})`);
   // 보석은 페이즈 배수를 탄다(6-118) — 깊이 갈수록 한 마리 잡기가 어려우니 한 마리의 값을 올린다

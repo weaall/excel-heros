@@ -146,6 +146,9 @@ test('taunt: monsters hit the taunting hero instead, for reduced damage, until i
   const otherBefore = other.hp, tankBefore = h.hp;
   for (let i = 0; i < 40 && h.hp === tankBefore && em.taunt; i++) g.tick(0.1); // stay inside the 5 s window
   assert.equal(other.hp, otherBefore, 'the other hero was never hit while the taunt held');
+  // 재사용 대기를 막아 두고 만료를 잰다 — 안 그러면 같은 틱에 탱커가 도발을 **다시 걸어서**
+  // 'taunt 가 남아 있다'로 보인다(간헐적으로 실패하던 이유).
+  h.skillCd = 999;
   if (em.taunt) { em.taunt.until = em.time - 1; g.tick(0.1); }
   assert.equal(em.taunt, null, 'taunt expires');
 });

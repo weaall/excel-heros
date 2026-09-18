@@ -38,17 +38,25 @@ test('forecast reports a finite clear estimate that grows as the stage gets hard
 });
 
 test('safe auto-advance waits while the forecast is bad and resumes after upgrades', () => {
-  const s = createInitialState(); s.stage = 9; s.maxStage = 9; s.maxCleared = 8; s.challenging = true; s.heroes[MAIN_ID].level = 22;
+  // 재는 것은 **문턱의 규칙**이다: 승산이 낮으면 보스에 들어가지 않고, 강해지면 스스로 들어간다.
+  // 예전엔 9단계를 20마리 처리할 때까지 600초를 돌려 그 상태를 만들었는데, 적이 3배 빨라진 뒤로는
+  // 혼자 있는 레벨 22가 **전멸하기도 한다** — 그러면 8단계로 후퇴해 영영 9를 못 깬다. 시뮬레이션으로
+  // 상태를 만들지 말고 **결정 시점에서 시작한다.**
+  const s = createInitialState(); s.stage = 9; s.maxStage = 9; s.maxCleared = 9; s.challenging = false; s.heroes[MAIN_ID].level = 22;
   const g = new GameManager({ state: s, save: memSave() });
   assert.ok(g.challengeForecast(10).prob < BALANCE.SAFE_ADVANCE.min, 'boss 1-10 forecast is bad for a lone lv22 main');
-  run(g, 300);
-  assert.ok(g.state.maxCleared >= 9, `cleared 1-9 (maxCleared=${g.state.maxCleared})`);
-  assert.equal(g.state.stage, 9, 'stays farming 1-9 instead of failing the boss');
-  assert.equal(g.state.challenging, false); assert.equal(g.waitingAdvance, true); assert.equal(g.state.settings.autoAdvance, true);
+  g.setAutoAdvance(true);
+  assert.equal(g.state.challenging, false, '승산이 낮으면 보스에 들어가지 않는다');
+  assert.equal(g.waitingAdvance, true); assert.equal(g.state.settings.autoAdvance, true);
+  run(g, 10);
+  assert.equal(g.state.stage, 9, '기다리는 동안 9단계에 머문다');
+
   g.state.heroes[MAIN_ID].level = 45; g.state.gold = 0; g.entities.refreshHeroStats();
-  run(g, 3);
-  assert.equal(g.state.stage, 10, 'resumed the boss challenge once strong enough');
-  assert.equal(g.state.challenging, true);
+  assert.ok(g.challengeForecast(10).prob >= BALANCE.SAFE_ADVANCE.min, '레벨 45면 승산이 문턱을 넘는다');
+  // 재개 판정은 2초마다 돈다 — 한 번은 반드시 돌도록 넉넉히 돌린다
+  run(g, 6);
+  assert.ok(g.state.maxStage >= 10, `강해지면 스스로 보스에 들어간다 (maxStage=${g.state.maxStage})`);
+  assert.equal(g.waitingAdvance, false, '대기가 풀린다');
 });
 
 test('elite affixes: every affix is applied at spawn; shield soaks damage first; volatile explodes', () => {
