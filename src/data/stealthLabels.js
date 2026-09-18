@@ -28,10 +28,50 @@ export const STEALTH_TEXT = Object.freeze({
   '#qa-collection': '요약 보기',
   '#qa-upgrade-all': '일괄 적용',
   '#qa-forecast': '예측 시트',
+  '#rb-label-combat': '계산',
+  '#stage-k-mode': '상태',
+  '#stage-k-range': '범위',
+  '#bestiary-title': '이번 범위 요약',
 });
 
 /** 위장 중에는 감춘다 — 게임 어휘를 피할 수 없는 안내류. */
-export const STEALTH_HIDE = Object.freeze(['#prestige-hint']);
+// 위장 중 숨길 요소. 승진·이전 권유는 문장 전체가 게임이라 바꿀 말이 없다 — 자리도 작아 레이아웃에
+// 영향이 적다(작업 창 위쪽, 교육 창과 달리 높이가 고정돼 있지 않다).
+export const STEALTH_HIDE = Object.freeze(['#prestige-hint', '#promo-hint']);
+
+/**
+ * 위장 중 전투 로그 한 줄. 접두사만 바꾸고 본문을 그대로 두면 "마일스톤 달성 … (보석 15)" 같은 문장이
+ * 통째로 남는다(실측 6-101). 행 번호로 결정되므로 0.5초마다 다시 그려도 문장이 흔들리지 않는다.
+ */
+export function stealthLogLine(row) {
+  const KIND = [
+    (r) => `Sheet2!A${(r % 200) + 1}:M${(r % 200) + 8} 재계산 완료`,
+    (r) => `SUMIFS 배열 ${((r * 7) % 900) + 100}행 평가`,
+    (r) => `외부 연결 새로 고침 — 레코드 ${((r * 13) % 4000) + 500}건`,
+    (r) => `피벗 캐시 갱신 (필드 ${(r % 9) + 3}개)`,
+    (r) => `조건부 서식 규칙 ${(r % 12) + 1}개 적용`,
+    (r) => `이름 정의 범위 검사 — 순환 참조 없음`,
+    (r) => `VLOOKUP 조회 ${((r * 3) % 700) + 60}건 일치`,
+    (r) => `자동 필터 재적용 (표시 ${((r * 11) % 300) + 20}행)`,
+  ];
+  return KIND[row % KIND.length](row);
+}
+
+/**
+ * 매 프레임 다시 쓰이는 문구는 어휘집(STEALTH_TEXT)에 넣어도 곧 덮어쓰인다 — 만드는 자리에서 갈라야 한다.
+ * 도전 버튼과 '잠긴 골드' 줄이 그랬다(6-101).
+ */
+export const STEALTH_DYN = Object.freeze({
+  challenge: (challenging) => (challenging ? '재계산 중단' : '선택 영역 재계산'),
+  bench: (n) => `참조되지 않는 범위 ${n}개`,
+});
+
+/** 위장 중 진행 상태 세 줄. 같은 정보(무엇을 얼마나 처리했는지)를 재계산 어휘로 옮긴다. */
+export const STEALTH_STAGE = Object.freeze({
+  mode: (challenging) => (challenging ? '재계산 중' : '자동 계산 대기'),
+  kills: (done, total, challenging) => (challenging ? `${done} / ${total}행 처리` : `유휴 — 누적 ${done}행 처리`),
+  hint: (stage) => `반복 계산 사용 · 최대 반복 ${100 + (stage % 40)}회 · 허용 오차 0.001`,
+});
 
 /**
  * 위장 모드의 신입 사원 교육 창 = **문서 검사 결과.**

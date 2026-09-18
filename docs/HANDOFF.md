@@ -106,3 +106,20 @@ Excel 문서로 위장한 방치형 픽셀 RPG + 가챠. **55명 영웅(D~S) + �
 
 ## 7. 메모리(사용자 홈)
 `C:\Users\weaal\.claude\projects\C--Users-weaal-excel-heros\memory\` — `excel-heroes-project.md`(회차별 결정), `excel-heroes-art-and-ui-prefs.md`, `bash-heredoc-size-limit.md`. 새 세션은 MEMORY.md 인덱스를 자동으로 봄.
+
+### 위장 유출 점검 (6-102에서 29건 → 0건)
+새 UI 를 넣은 뒤에는 위장이 깨졌는지 센다. 브라우저 콘솔(`?guest=1`)에서:
+```js
+const g=window.EH.game; g.toggleExcel(true); await new Promise(r=>setTimeout(r,800));
+const W=['파티','영웅','보석','골드','스킬','승진','전투','사냥','보스','뽑기','강화 카드','지분','회사 이전','스테이지','몬스터','탱커','힐러','도전','처치','쓰러','복직','호감도','교육','등급','★','엘리트','마일스톤'];
+const hits=[]; for(const el of document.querySelectorAll('*')){ if(el.children.length) continue;
+  const cs=getComputedStyle(el); if(cs.display==='none'||cs.visibility==='hidden'||cs.opacity==='0') continue;
+  const r=el.getBoundingClientRect(); if(r.width<1||r.height<1||el.closest('[hidden]')) continue;
+  const t=(el.textContent||'').trim(); if(!t||t.length>120) continue;
+  const w=W.filter(x=>t.includes(x)); if(w.length) hits.push((el.id?'#'+el.id:el.className)+' : '+t.slice(0,50)); }
+console.log(hits.length, hits);
+```
+기준: 위장 모드 **0~3건**(오탐: '사원'이 들어간 사람 이름·시트 탭). 기본 모드는 40건 내외가 정상이다.
+- **어휘집(`STEALTH_TEXT`)은 정적 라벨만 담는다.** `textContent = …` 로 매 프레임 다시 쓰는 문구는 곧 덮어쓰이므로 만드는 자리에서 갈라야 한다(`STEALTH_DYN`).
+- **같은 내용을 그리는 곳이 둘이면 둘 다 고쳐야 한다** — 로그 표가 위장 표와 홈 시트 표로 둘이었다.
+- **숨길 때는 `visibility: hidden`.** `display: none` 은 레이아웃을 움직인다(교육 창이 322px 움직였다).

@@ -13,7 +13,7 @@ import { extraOf } from '../data/profilesExtra.js';
 import { PROLOGUE } from '../data/prologue.js';
 import { artVersion } from '../data/cardArt.js';
 import { SLOT_ORDER, gradeColor } from '../data/equipment.js';
-import { STEALTH_TEXT, STEALTH_HIDE, STEALTH_TUTORIAL, stealthStatus } from '../data/stealthLabels.js';
+import { STEALTH_TEXT, STEALTH_HIDE, STEALTH_TUTORIAL, STEALTH_STAGE, STEALTH_DYN, stealthLogLine, stealthStatus } from '../data/stealthLabels.js';
 import { TUTORIAL_BONUS } from '../data/tutorial.js';
 import { MANUAL, skillRows } from '../data/manual.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
@@ -535,8 +535,9 @@ export class UIManager {
     const s = this.game.state; const g = this.game;
     const challenging = g.isChallenging(); const boss = g.bossActive();
     $('#stage-label').textContent = `${g.stageLabel()} · ${phaseName(s.stage)}`;
+    const stealth = s.settings.excel;
     const mode = $('#stage-mode');
-    mode.textContent = challenging ? (boss ? '보스 도전 중' : '도전 중') : '자동 사냥';
+    mode.textContent = stealth ? STEALTH_STAGE.mode(challenging) : challenging ? (boss ? '보스 도전 중' : '도전 중') : '자동 사냥';
     mode.className = `cell v stage-mode ${challenging ? 'challenge' : 'farm'}`;
     const pool = stagePool(s.stage);
     const bossDef = bossForStage(s.stage);
@@ -544,17 +545,20 @@ export class UIManager {
     const req = g.killsRequired();
     $('#kill-bar').style.width = challenging ? `${Math.min(100, (s.kills / req) * 100)}%` : '100%';
     $('#kill-bar').style.opacity = challenging ? '1' : '0.35';
-    $('#kill-text').textContent = boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : challenging ? `${s.kills} / ${req}행 처리` : `사냥 중 · 처치 ${s.kills}`;
+    $('#kill-text').textContent = stealth ? STEALTH_STAGE.kills(s.kills, req, challenging)
+      : boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : challenging ? `${s.kills} / ${req}행 처리` : `사냥 중 · 처치 ${s.kills}`;
     const ec = eliteChance(s.stage);
     const mod = stageModifier(s.stage);
-    $('#stage-hint').textContent = boss ? `${bossDef.desc} · ${BALANCE.BOSS_TIME_LIMIT}초 제한` : mod ? `${mod.name}: ${mod.desc}` : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
+    $('#stage-hint').textContent = stealth ? STEALTH_STAGE.hint(s.stage)
+      : boss ? `${bossDef.desc} · ${BALANCE.BOSS_TIME_LIMIT}초 제한` : mod ? `${mod.name}: ${mod.desc}` : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
     const next = g.nextStage();
     const fc = g.challengeForecast(challenging ? s.stage : next);
-    $('#qa-challenge-label').textContent = challenging ? '도전 중단' : `${stageLabel(next)} 도전${isBossStage(next) ? ' (보스)' : ''}`;
+    $('#qa-challenge-label').textContent = stealth ? STEALTH_DYN.challenge(challenging)
+      : challenging ? '도전 중단' : `${stageLabel(next)} 도전${isBossStage(next) ? ' (보스)' : ''}`;
     this.#refreshNowDoing();
     const fcEl = $('#qa-forecast'); fcEl.textContent = `승산 ${Math.round(fc.prob * 100)}% · ${fc.label}${fc.boss && fc.bossTime ? ` · 예상 ${fc.bossTime.toFixed(0)}s` : ''}`;
     fcEl.className = `rb-forecast ${fc.prob >= 0.7 ? 'good' : fc.prob >= BALANCE.SAFE_ADVANCE.min ? 'mid' : 'bad'}`;
-    if (!challenging && g.waitingAdvance) $('#stage-hint').textContent = `자동 진행 대기: ${stageLabel(next)} 승산 ${Math.round(fc.prob * 100)}% (강화하면 자동 재개)`;
+    if (!stealth && !challenging && g.waitingAdvance) $('#stage-hint').textContent = `자동 진행 대기: ${stageLabel(next)} 승산 ${Math.round(fc.prob * 100)}% (강화하면 자동 재개)`;
     this.#refreshBestiary(boss ? [bossDef] : pool);
     this.#refreshFormulaBar();
   }
@@ -1562,7 +1566,7 @@ export class UIManager {
     if (!heroes || gold <= 0) { box.hidden = true; return; }
     box.hidden = false; box.innerHTML = '';
     box.append(
-      el('span', {}, `대기 사원 ${heroes}명에 골드 `), el('b', {}, fmt(gold)), el('span', {}, ' 잠김'),
+      el('span', {}, this.game.state.settings.excel ? `${STEALTH_DYN.bench(heroes)} · ` : `대기 사원 ${heroes}명에 골드 `), el('b', {}, fmt(gold)), el('span', {}, this.game.state.settings.excel ? ' 셀' : ' 잠김'),
       btn('회수', () => { const r = this.game.reclaimBenchLevels(); this.toast(`골드 +${fmt(r.gold)} 회수`); }, 'small primary', false, '대기 중인 카드의 레벨을 되돌려 골드를 전액 돌려받습니다 (등급과 무관하게 레벨 값 그대로)'));
   }
   /**
@@ -1692,6 +1696,9 @@ export class UIManager {
     $('#qa-stealth').classList.toggle('active', on); $('#qa-normal').classList.toggle('active', !on);
     if (on) this.closeBackstage();
     this.#refreshTutorial();  // 교육 창 ↔ 문서 검사 — 자리는 그대로, 말만 바뀐다
+    this.#refreshStage();     // 모드·처리·힌트 세 줄도 어휘가 바뀐다
+    this.#buildLog();         // 로그 본문도 (다음 이벤트까지 옛 문구가 남는다)
+    this.#refreshBenchGold(); // 잠긴 골드 줄
     this.#refreshFormulaBar();
     if (on) { this.#refreshStealth(); this.closeModal(); }
     if (!silent) this.toast(on ? '페이지 레이아웃 보기 (Esc: 기본 보기)' : '기본 보기');
@@ -1728,7 +1735,9 @@ export class UIManager {
       tbody.append(el('tr', {}, el('td', {}, `B${n++}`), el('td', {}, `${m.def.name} 검증`), el('td', {}, '품질'), el('td', {}, `${Math.round((m.hp / m.maxHp) * 100)}%`), el('td', { class: 'num' }, fmt(m.hp))));
     }
     for (const row of this.game.logs.slice(-10).reverse()) {
-      tbody.append(el('tr', { class: 'log' }, el('td', {}, `#${row.row}`), el('td', {}, `Processing Row #${row.row}... ${row.text}`), el('td', {}, '시스템'), el('td', {}, 'OK'), el('td', { class: 'num' }, '')));
+      // 위장 중에는 본문을 재계산 로그로 **대체**한다 — 접두사만 바꾸면 게임 문장이 통째로 남는다(6-101).
+      const body = this.game.state.settings.excel ? stealthLogLine(row.row) : row.text;
+      tbody.append(el('tr', { class: 'log' }, el('td', {}, `#${row.row}`), el('td', {}, `Processing Row #${row.row}... ${body}`), el('td', {}, '시스템'), el('td', {}, 'OK'), el('td', { class: 'num' }, '')));
     }
   }
 
@@ -1744,7 +1753,10 @@ export class UIManager {
   #buildLog() { const tb = $('#log-table tbody'); tb.innerHTML = ''; for (const r of this.game.logs.slice(-this.#logCapacity())) this.#appendLog(r); }
   #appendLog(row) {
     const tb = $('#log-table tbody');
-    tb.prepend(el('tr', { class: `k-${row.kind}`, title: new Date(row.t).toLocaleTimeString('ko-KR') }, el('td', {}, `#${row.row}`), el('td', {}, row.text)));
+    // 위장 중에는 본문을 재계산 로그로 바꾼다. 로그 표는 **둘**이다 — 여기(홈 시트)와 위장 표.
+    // 한쪽만 고치면 다른 쪽에서 "COO 호감도 Lv 1" 이 그대로 보인다(6-101).
+    const text = this.game.state.settings.excel ? stealthLogLine(row.row) : row.text;
+    tb.prepend(el('tr', { class: `k-${row.kind}`, title: new Date(row.t).toLocaleTimeString('ko-KR') }, el('td', {}, `#${row.row}`), el('td', {}, text)));
     while (tb.children.length > this.#logCapacity()) tb.lastChild.remove();
   }
 

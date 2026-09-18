@@ -48,7 +48,7 @@
             <label class="rb-check" title="1초마다 자동 합계를 실행해 골드를 가장 싼 업그레이드에 계속 사용"><input type="checkbox" id="qa-auto-up"> 자동 합계 유지</label>
           </div>
         </div>
-        <div class="rb-group-label">전투</div>
+        <div class="rb-group-label" id="rb-label-combat">전투</div>
       </div>
       <span class="rb-sep"></span>
       <div class="rb-group">
@@ -176,8 +176,8 @@
           </div>
           <!-- row 9: stage status as key/value cells (kill progress = conditional-formatting data bar) -->
           <div class="ws-row stage-bar" id="stage-row">
-            <div class="cell k">모드</div><div class="cell v stage-mode" id="stage-mode">도전 중</div>
-            <div class="cell k">스테이지</div><div class="cell v w2 stage-label" id="stage-label">Phase 1-1</div>
+            <div class="cell k" id="stage-k-mode">모드</div><div class="cell v stage-mode" id="stage-mode">도전 중</div>
+            <div class="cell k" id="stage-k-range">스테이지</div><div class="cell v w2 stage-label" id="stage-label">Phase 1-1</div>
             <div class="cell k">출현</div><div class="cell v w2 stage-monster" id="stage-monster"></div>
             <div class="cell k">처리</div><div class="cell v w2 databar-cell"><div class="databar" id="kill-bar"></div><span class="databar-text" id="kill-text"></span></div>
             <div class="cell v hint" id="stage-hint"></div>
@@ -410,7 +410,7 @@
           <thead><tr><th>항목</th><th class="num">Lv</th><th class="num">비용</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
-        <h3 class="section-title">이번 스테이지 출현</h3>
+        <h3 class="section-title" id="bestiary-title">이번 스테이지 출현</h3>
         <div class="bestiary" id="bestiary"></div>
       </div>
     </aside>
