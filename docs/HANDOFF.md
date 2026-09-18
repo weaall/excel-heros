@@ -62,9 +62,15 @@ Excel 문서로 위장한 방치형 픽셀 RPG + 가챠. **55명 영웅(D~S) + �
    - 통합 시뮬(3시간 연속, `scratchpad/integ.mjs` 패턴)은 돌려 봤고 6-93이 그 결과다. 시뮬은 **시스템이 서로를 밟는지**는 잡지만 체감은 못 잡는다.
    - 시뮬을 또 돌릴 때 주의: 단위 테스트가 통과해도 시스템이 **서로를 무력화**할 수 있다(자동 부활을 지웠는데 스테이지 전환이 같은 일을 하고 있었다). 하나를 끄고 켜 보며 **결과 지표가 실제로 달라지는지**를 봐야 한다.
 2. **0x72 보스 3종(악마·좀비·오우거)**: 재확인해 보니 **픽셀 밀도는 이미 9종 모두 3px 로 같다**(팩 32px×3, 손그림 43격자×3). 남은 차이는 몸통이 던전 생물이라는 것뿐이고, 사무실 소품이 정체를 만들어 주고 있어 급하지 않다. 사람 보스(야근 좀비 부장)는 오히려 있는 편이 낫다.
-3. **애드센스 승인 후**: `EXCEL_HEROES_ADS.publisherId` 설정, 노출 빈도 조정, ads.txt 확인.
-4. **HF 토큰 재발급**(사용자 작업) 후 `.hf_tokens` 갱신.
-5. 열린 질문(BALANCE 8장): 부장 트랙 "전직" 기능 필요 여부, 순위표 노출 정책 등.
+3. **지적된 카드 14장 재생성 미완**: `staff_park parttime courier intern_seo mail_cho macro design_lead chro cdo ceo founder ai_lead chief_of_staff union_chief`. 프롬프트 수정(헤일로 사다리 · 자세 · 설명 정리)은 커밋됐고 **그림은 아직 옛것**이다. Space 가 `No GPU was available after 60s` 로 막혀 한 장도 못 뽑았다. 다시 시도:
+   ```
+   node scripts/genCardsHF.mjs --force staff_park parttime courier intern_seo mail_cho macro design_lead chro cdo ceo founder ai_lead chief_of_staff union_chief
+   ```
+   뽑은 뒤 `python scripts/thumbs.py --force` → `--manifest` → `extractPalettes.mjs` → `IDS=... artSheet.mjs` 로 눈 검수.
+4. **화력 A/B 부호가 거꾸로** (6-95 미해결): 원거리 관통 +8.6% · ★스킬 +6.9% · 콤보 +6.1% · 전진 소모전 +17%. 버프를 끄면 좋아질 수 없으므로 아직 틀린 곳이 있다. 가설 셋(문턱 · 벽 오판 · 하니스 자동 진행)은 이미 확인했다. 다음에 볼 곳: **깊은 단계의 시간당 골드**. 화력이 세면 더 깊은 단계에서 더 오래 싸우는데, 그 단계가 시간당으로 손해일 수 있다.
+5. **애드센스 승인 후**: `EXCEL_HEROES_ADS.publisherId` 설정, 노출 빈도 조정, ads.txt 확인.
+6. **HF 토큰 재발급**(사용자 작업) 후 `.hf_tokens` 갱신.
+7. 열린 질문(BALANCE 8장): 부장 트랙 "전직" 기능 필요 여부, 순위표 노출 정책 등.
 
 ### 레이아웃 규칙 (6-91에서 세 번 넘어진 곳)
 - **세로 스크롤바가 가로 스크롤바를 만든다.** 스크롤 컨테이너 안의 표는 `table-layout: fixed`, 컨테이너는 `overflow-x: hidden` + `scrollbar-gutter: stable`.
@@ -78,8 +84,19 @@ Excel 문서로 위장한 방치형 픽셀 RPG + 가챠. **55명 영웅(D~S) + �
 - **넓은 장소를 배경으로 쓰지 않는다.** '거리'·'연회장'·'메일룸'은 전신 원경을 부른다. `... close behind him` 으로 좁힌다.
 - **장식 단어는 붙을 자리를 지정한다.** `gold filigree` 만 쓰면 카드에 금색 액자가 생긴다 → `thin gold embroidery on the collar and cuffs`.
 - **머리 위 여백을 명시한다.** `whole head in frame with space above the head` — 정수리 잘림도 막고 후광 자리도 생긴다.
+- **머리 위를 채우는 요소를 캐릭터 설명에 쓰지 않는다.** 머리 위는 헤일로의 자리다. `rings of holographic data rotating around her` · `golden light rays` · `speed lines` 가 있으면 모델은 헤일로를 따로 그리지 않는다 — 헤일로가 약한 게 아니라 밀린 것이다(6-96).
+- **억제는 크기만, 존재는 막지 않는다.** 헤일로가 캐릭터를 잡아먹는 걸 막으려 NEG를 키웠더니 D급에서 아예 사라졌다. 긍정은 `thin but clearly visible`, NEG는 `halo wider than shoulders` 처럼 **크기·위치**만.
+- **자세는 하나만 준다.** 캐릭터 설명에 이미 `arms crossed` 가 있으면 자세 태그를 덧붙이지 않는다(`POSED` 정규식). 모순된 지시 두 개면 손이 세 개가 된다.
+- **얇은 설명은 채워 준다.** `dark hoodie, headphones, laptop` 셋뿐이면 모델이 빈칸을 자기 취향으로 채운다 — 네온 사이버펑크 전신 포즈가 나왔다.
+- **정규식을 편집 스크립트로 넣을 때 `` 를 이스케이프한다.** 안 하면 파일에 **실제 백스페이스 문자(0x08)** 가 들어가고 정규식이 조용히 아무것도 매치하지 않는다. Python 이면 raw 문자열(`r"..."`)만 쓴다.
 
 ### 밸런스 시뮬레이션을 돌릴 때 (6-76의 교훈)
+**난수를 시드로 고정하고 짝지어 비교한다.** 안 하면 뽑기 운이 시스템 효과를 완전히 덮는다 — 시드 없이 돌린 A/B 표는 **모든 변종이 기준선보다 좋게** 나왔고(버프를 끄면 좋아질 수 없다) 그걸 믿었다면 탱커 엄호를 지웠을 것이다. 붙이기 전에 **불가능한 결과가 있는지** 먼저 본다.
+
+**시뮬레이터는 사람이 하는 행동을 해야 한다.** 전멸하면 게임이 `autoAdvance` 를 끄고, 사람은 다시 켠다. 하니스가 안 켜면 재는 건 게임이 아니라 하니스의 무기력이다. 그리고 상태를 직접 건드리는 것만으로는 부족하다 — `setAutoAdvance(true)` 를 불러야 도전이 다시 시작된다.
+
+**`BALANCE` 는 `Object.freeze` 다.** 최상위 스칼라에 대입하면 조용히 무시되므로 A/B 로 끌 수 없고, '효과 없음'이라는 거짓 결과가 나온다. 훑을 값은 중첩 객체 안에 둔다(`SAFE_ADVANCE.min` 처럼).
+
 `scratchpad` 시뮬로 결론을 내기 전에 **플레이어가 누르는 걸 전부 넣었는지** 확인한다. 최소 넷: 10연 · ★한계 돌파 · **주인공 승진(`promoteMain`)** · **회사 이전(`prestige`)**. 하나만 빠져도 결론의 부호가 바뀐다 — 실제로 "골드가 남아돈다"가 "골드가 모자란다"로 뒤집혔다.
 
 ## 6. 검증 루틴
