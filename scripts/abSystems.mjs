@@ -225,6 +225,9 @@ for (const k of keys) {
   );
 }
 console.log('-'.repeat(84));
+// 쓰러짐은 **관문과 같이** 읽어야 한다. 약해진 파티는 안전 자동 진행에 막혀 덜 싸우므로 **덜 죽기도**
+// 한다 — 관문이 밀리면서 쓰러짐이 줄었다면 그건 '안전해졌다'가 아니라 '덜 갔다'는 뜻이다.
+console.log('쓰러짐은 관문과 같이 읽는다: 관문이 밀리면서 쓰러짐이 줄었다면 안전해진 게 아니라 덜 싸운 것이다.');
 const dead = rows.filter((r) => r.pct !== null && Math.abs(r.pct) < 3);
 const wrong = rows.filter((r) => r.pct !== null && r.pct < -3);
 const unknown = rows.filter((r) => r.pct === null);
