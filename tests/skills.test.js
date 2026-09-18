@@ -171,3 +171,76 @@ test('스킬은 순서대로: 같은 순간에 두 개가 겹쳐 터지지 않�
   assert.ok(casts.length >= 2, '잠금이 풀리면 다음 스킬이 나간다');
   assert.ok(casts[1].t > casts[0].t, '두 스킬은 같은 순간이 아니라 시간차를 두고 나간다');
 });
+
+
+// ------------------------------------------------------------ 수식 대응 --
+// 전투 중 유일한 조작. 세 가지가 동시에 참이어야 의미가 있다:
+// 예고 때만 문제가 나오고 · 맞히면 그 한 방이 실제로 줄고 · **안 치면 예전과 완전히 똑같다**.
+const bossGame = () => {
+  const g = new GameManager({ save: memSave() });
+  g.state.stage = 10; g.state.maxStage = 10; g.state.maxCleared = 9;
+  g.state.heroes[MAIN_ID].level = 60; g.state.challenging = true;
+  for (let i = 0; i < 400 && !g.entities.boss; i++) g.tick(0.05);
+  return g;
+};
+
+test('수식 대응: the formula only opens on a telegraph, and only the right answer in time counts', async () => {
+  const { BALANCE } = await import('../src/config/balance.js');
+  const g = bossGame();
+  assert.ok(g.entities.boss, '보스가 나와야 한다');
+  assert.equal(g.braceInfo().open, false, '예고 전에는 수식이 없다');
+  assert.equal(g.submitBraceFormula(1), false, '수식이 없으면 제출도 없다');
+
+  g.openBraceFormula();
+  const f = g.braceInfo();
+  assert.equal(f.open, true);
+  assert.ok(f.a >= 10 && f.b >= 10 && f.a <= BALANCE.BRACE.max && f.b <= BALANCE.BRACE.max, '읽고 더할 만한 크기여야 한다');
+
+  assert.equal(g.submitBraceFormula(f.a + f.b + 1), false, '틀리면 아무 일도 없다');
+  assert.equal(g.entities.braced, false);
+
+  g.openBraceFormula();
+  const f2 = g.braceInfo();
+  assert.equal(g.submitBraceFormula(f2.a + f2.b), true);
+  assert.equal(g.entities.braced, true, '맞히면 다음 한 방이 약해진다');
+
+  // 시간을 넘기면 맞아도 소용없다
+  const g2 = bossGame();
+  g2.openBraceFormula();
+  g2.braceFormula.until = Date.now() - 1;
+  const f3 = { a: g2.braceFormula.a, b: g2.braceFormula.b };
+  assert.equal(g2.submitBraceFormula(f3.a + f3.b), false, '제한 시간을 넘기면 정답도 소용없다');
+  assert.equal(g2.entities.braced, false);
+});
+
+test('수식 대응: the same special hurts less after a correct answer, and is untouched without one', async () => {
+  const { BALANCE } = await import('../src/config/balance.js');
+  const run = (answer) => {
+    const g = bossGame();
+    const em = g.entities, boss = em.boss;
+    boss.def = { ...boss.def, specials: [{ every: 1, kind: 'stomp', name: '테스트', desc: 't' }] };
+    for (const h of em.heroes) { h.maxHp = 1e7; h.hp = 1e7; h.trait = null; }
+    if (answer) { g.openBraceFormula(); const f = g.braceInfo(); assert.equal(g.submitBraceFormula(f.a + f.b), true); }
+    boss.hits = 1;
+    em.__testPattern(boss, em.heroes.filter((h) => h.alive), 100);
+    return em.heroes.reduce((a, h) => a + (h.maxHp - h.hp), 0);
+  };
+  const plain = run(false), solved = run(true);
+  assert.ok(plain > 0 && solved > 0);
+  assert.ok(solved < plain, `맞히면 덜 아파야 한다 (${plain} → ${solved})`);
+  // 감소율은 설정값을 따라간다 (치명타 같은 변동이 있으니 넉넉한 밴드로 본다)
+  const ratio = solved / plain;
+  assert.ok(ratio < 1 - BALANCE.BRACE.reduce + 0.2 && ratio > 1 - BALANCE.BRACE.reduce - 0.2,
+    `감소율이 설정값 근처여야 한다 (실측 ${ratio.toFixed(2)}, 기대 ${(1 - BALANCE.BRACE.reduce).toFixed(2)})`);
+});
+
+test('수식 대응: a solved formula is spent on one special, not every one', async () => {
+  const g = bossGame();
+  const em = g.entities, boss = em.boss;
+  boss.def = { ...boss.def, specials: [{ every: 1, kind: 'stomp', name: '테스트', desc: 't' }] };
+  for (const h of em.heroes) { h.maxHp = 1e7; h.hp = 1e7; }
+  g.openBraceFormula(); const f = g.braceInfo(); g.submitBraceFormula(f.a + f.b);
+  assert.equal(em.braced, true);
+  boss.hits = 1; em.__testPattern(boss, em.heroes.filter((h) => h.alive), 100);
+  assert.equal(em.braced, false, '한 번 막으면 소진된다');
+});

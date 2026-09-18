@@ -176,6 +176,15 @@ export class UIManager {
       input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeem(); });
     }
     $('#tut-hide')?.addEventListener('click', () => this.game.hideTutorial(true));
+    // 수식 대응: Enter 로 제출. 입력 칸이 자동으로 포커스를 받으므로 손을 옮길 필요가 없다.
+    $('#brace-input')?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const ok = this.game.submitBraceFormula(e.target.value);
+      this.#closeBrace(ok);
+    });
+    this.game.on('brace-open', () => this.#refreshBrace());
+    this.game.on('brace-close', (r) => this.#closeBrace(r?.ok ?? null));
     $('#promo-hint-go')?.addEventListener('click', () => this.openDetail(MAIN_ID));
     $('#promo-hint-hide')?.addEventListener('click', () => { this.promoHintSnooze = Date.now() + 10 * 60 * 1000; $('#promo-hint').hidden = true; });
     this.game.on('tutorial', () => this.#refreshTutorial());
@@ -297,6 +306,7 @@ export class UIManager {
       this.acc = 0;
       this.#refreshStatus();
       this.#refreshNowDoing(); // 0.25s tick: the line must follow the game, not wait for a stage event
+      this.#refreshBrace();  // 예고는 한 대 앞서 뜬다 — 버튼도 같은 속도로 따라가야 한다
       this.#refreshHeroTable(true);
       { const el$ = $('#daily-reset'); if (el$ && document.querySelector('#sheet-quests.active')) { const now = new Date(); const mid = new Date(now); mid.setHours(24, 0, 0, 0); const sec = Math.max(0, Math.floor((mid - now) / 1000)); el$.textContent = `· 초기화까지 ${String(Math.floor(sec / 3600)).padStart(2, '0')}:${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')}`; } }
       if (document.querySelector('#sheet-quests.active') && this.game.dispatchInfo().active) this.#refreshDispatch(true);
@@ -1459,6 +1469,29 @@ export class UIManager {
   /**
    * 주인공 승진 안내. 상한에 걸린 순간은 계정 전체가 멈춘 순간이라, 이전(prestige) 안내보다 위에 둔다.
    */
+  /**
+   * 수식 대응 줄. 보스가 특수 공격을 예고하면 전투 화면 위에 `=SUM(a, b)` 가 뜨고, 제한 시간 안에 답을 치면
+   * 그 한 방이 약해진다. 엑셀로 위장한 게임에서 위기를 넘기는 방법이 셀에 숫자를 넣는 것이라는 게 요점이다.
+   */
+  #refreshBrace() {
+    const bar = $('#brace-bar'); if (!bar) return;
+    const b = this.game.braceInfo();
+    if (!b.open) { if (!bar.hidden) this.#closeBrace(); return; }
+    if (bar.hidden) {
+      bar.hidden = false;
+      $('#brace-formula').textContent = `=SUM(${b.a}, ${b.b})`;
+      const inp = $('#brace-input'); inp.value = ''; inp.disabled = false; inp.focus();
+    }
+    $('#brace-left').textContent = `${b.left.toFixed(1)}초`;
+    $('#brace-timer').style.width = `${Math.max(0, (b.left / b.limit) * 100)}%`;
+  }
+  #closeBrace(ok = null) {
+    const bar = $('#brace-bar'); if (!bar || bar.hidden) return;
+    bar.classList.remove('ok', 'miss');
+    if (ok !== null) bar.classList.add(ok ? 'ok' : 'miss');
+    const inp = $('#brace-input'); if (inp) inp.disabled = true;
+    setTimeout(() => { bar.hidden = true; bar.classList.remove('ok', 'miss'); }, ok === null ? 0 : 420);
+  }
   #refreshPromoHint() {
     const box = $('#promo-hint'); if (!box) return;
     if (this.promoHintSnooze && Date.now() < this.promoHintSnooze) { box.hidden = true; return; }

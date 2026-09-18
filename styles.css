@@ -822,3 +822,18 @@ body.stealth .tutorial { display: none; }
 .prestige-hint.promo b { color: #1b5e3a; }
 .prestige-hint.promo.blocked { border-color: #c0392b; background: #fdeceb; }
 .prestige-hint.promo.blocked b { color: #922b21; }
+
+/* 수식 대응: 보스가 특수 공격을 예고하는 동안에만 전투 화면 위에 뜨는 입력줄.
+   엑셀의 수식 입력줄과 같은 모양이어야 위장이 깨지지 않는다. */
+.brace-bar { position: absolute; left: 0; right: 0; top: 0; z-index: 6; display: flex; align-items: center; gap: 0;
+  height: 30px; background: #fbfbfb; border-bottom: 1px solid #c9c9c9; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+.brace-bar[hidden] { display: none; }
+.brace-bar .bb-cell { width: 58px; padding: 0 6px; border-right: 1px solid #c9c9c9; color: #333; }
+.brace-bar .bb-fx { width: 26px; text-align: center; color: #666; font-style: italic; border-right: 1px solid #c9c9c9; }
+.brace-bar code { padding: 0 10px; font-family: Consolas, monospace; color: #1f5fa8; font-weight: 700; }
+.brace-bar input { flex: 1; min-width: 0; height: 22px; border: 1px solid #1f5fa8; outline: none; padding: 0 6px;
+  font-family: Consolas, monospace; font-size: 13px; background: #fff; }
+.brace-bar .bb-left { width: 54px; text-align: right; padding-right: 8px; color: #c0392b; font-variant-numeric: tabular-nums; }
+.brace-bar .bb-timer { position: absolute; left: 0; bottom: 0; height: 2px; background: #c0392b; transition: width .1s linear; }
+.brace-bar.ok { background: #e8f7ee; } .brace-bar.ok input { border-color: #1b5e3a; }
+.brace-bar.miss { background: #fdeceb; } .brace-bar.miss input { border-color: #c0392b; }

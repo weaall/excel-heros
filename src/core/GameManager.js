@@ -615,6 +615,40 @@ export class GameManager extends Emitter {
       text: `김인턴이 Lv ${v.levelCap} 상한에 걸렸습니다. 주인공은 파티에서 뺄 수 없어서, ${next?.title ?? '다음 직급'}으로 승진하기 전까지 파티 전체가 여기서 멈춥니다. 남은 조건: ${missing.join(' · ')}` };
   }
 
+  // ------------------------------------------------------------ 대비 태세 --
+  /**
+   * 전투 중 유일한 조작. 보스가 특수 공격을 예고하는 동안에만 누를 수 있고, 누르면 그 한 방의 피해가 줄어든다.
+   * 안 눌러도 예전과 똑같이 굴러가므로 방치 플레이는 손해가 없다 — 보고 있는 사람만 이득을 본다.
+   */
+  braceInfo() {
+    const f = this.braceFormula;
+    const left = f ? Math.max(0, f.until - Date.now()) / 1000 : 0;
+    return {
+      open: !!f && left > 0,                       // 수식이 떠 있다
+      a: f?.a ?? 0, b: f?.b ?? 0,
+      left, limit: BALANCE.BRACE.limit,
+      braced: !!this.entities.braced,              // 이미 맞혀 뒀다
+      reduce: BALANCE.BRACE.reduce,
+    };
+  }
+  /** 보스가 특수 공격을 예고한 순간 수식을 낸다. 답은 두 수의 합 — 4초 안에 읽고 더하고 칠 수 있는 크기. */
+  openBraceFormula() {
+    if (this.entities.braced) return; // 이미 맞혔으면 또 묻지 않는다
+    const r = () => 10 + Math.floor(Math.random() * (BALANCE.BRACE.max - 9));
+    this.braceFormula = { a: r(), b: r(), until: Date.now() + BALANCE.BRACE.limit * 1000 };
+    this.emit('brace-open', this.braceInfo());
+  }
+  /** 답을 제출한다. 맞고 제한 시간 안이면 다음 특수 공격 한 번이 약해진다. */
+  submitBraceFormula(value) {
+    const f = this.braceFormula;
+    if (!f || Date.now() > f.until) { this.braceFormula = null; this.emit('brace-close'); return false; }
+    const ok = Number(value) === f.a + f.b;
+    this.braceFormula = null;
+    if (ok) { this.entities.markBraced(); this.log(`검산 완료 — 다음 보스 스킬 피해 ${Math.round(BALANCE.BRACE.reduce * 100)}% 감소`, 'skill'); }
+    this.emit('brace-close', { ok });
+    return ok;
+  }
+
   /** Theoretical party DPS (ATK / interval, speed-adjusted). */
   partyDPS() {
     return this.state.party.reduce((sum, id) => { const v = this.heroView(id); return sum + v.atk / v.interval; }, 0) * this.speedMult();

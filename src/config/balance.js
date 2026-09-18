@@ -91,6 +91,10 @@ export const BALANCE = Object.freeze({
   // 보물 상자: a chest may join a normal wave; killing it drops cards + gems. 30% are mimics that bite back.
   CHEST: { chance: 0.06, mimicChance: 0.3, hpMult: 0.6, gemsMin: 3, gemsMax: 8, cardsPerPhase: 1 },
   // 회사 이전 (prestige): reset progression for permanent 지분 (+3% ATK & gold each). Needs Phase 3 cleared.
+  // 수식 대응: 보스가 특수 공격을 예고하면 수식 입력줄에 =SUM(a, b) 가 뜬다. 제한 시간 안에 답을 치면
+  // 그 한 방이 약해진다. 전투 중 유일한 조작이고, 안 쳐도 예전과 똑같으므로 방치 플레이에는 손해가 없다.
+  // 읽고 더하고 치는 데 드는 시간이 limit 이다 — 짧으면 운, 길면 의미가 없다.
+  BRACE: { limit: 4.0, reduce: 0.6, max: 89 },
   PRESTIGE: { minCleared: 30, bonusPerShare: 0.03 },
   // 각성 (awakening): a ★5 card can be awakened with 강화 카드 — permanent +25% ATK/HP, trait ×1.5, skill ×1.25, gold frame
   AWAKEN: { star: 5, cards: { D: 60, C: 100, B: 160, A: 260, S: 400 }, atk: 0.25, hp: 0.25, trait: 1.5, skill: 1.25 },

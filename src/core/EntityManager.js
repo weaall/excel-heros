@@ -39,6 +39,7 @@ export class EntityManager {
     this.atkBuff = { mult: 1, until: 0 }; this.hasteBuff = { mult: 1, until: 0 }; this.barrier = { hp: 0, max: 0, until: 0 }; this.slow = { mult: 1, until: 0 }; // slow: boss debuff on party attack speed
     this.taunt = null; // { heroId, reduce, until } — 도발: every monster swings at this hero and it hurts less
     this.castLock = 0; // 스킬 순차 발동: 남은 잠금 시간(초). 한 번에 하나씩만 터지게 한다
+    this.braced = false; // 수식 대응 성공 — 다음 특수 공격 한 번만 약해진다
     this.time = 0; this.dmgLog = []; this.rallyMult = 1; this.shake = 0;
     this.scroll = 0;            // background scroll offset (px)
     this.traveling = false; this.travelT = 0;
@@ -273,7 +274,11 @@ export class EntityManager {
       if (m.cd > 0) continue;
       if (m.def.mimic) m.openFrame = 2;              // the mimic shows its teeth once it starts biting
       m.cd = m.interval; m.lunge = 0.2; m.hits++;
-      if (m.isBoss) m.warn = (m.def.specials ?? []).some((sp) => (m.hits + 1) % sp.every === 0); // telegraph one attack ahead
+      if (m.isBoss) {
+        const warn = (m.def.specials ?? []).some((sp) => (m.hits + 1) % sp.every === 0); // telegraph one attack ahead
+        if (warn && !m.warn) this.game.openBraceFormula(); // 예고가 새로 뜬 순간에만 수식을 낸다
+        m.warn = warn;
+      }
       if (m.isBoss && this.#bossPattern(m, heroes, frontX)) continue;
       if (m.proj || (m.isBoss && m.def.pattern === 'fire' && Math.random() < 0.35)) {
         // ranged monsters shoot a random party member so damage spreads across the line
@@ -331,31 +336,49 @@ export class EntityManager {
     return inField.sort((a, b) => (a.hp + (a.shield ?? 0)) / a.maxHp - (b.hp + (b.shield ?? 0)) / b.maxHp || a.x - b.x)[0];
   }
 
+  /** 수식 대응 성공 — 다음 특수 공격 한 번이 약해진다. */
+  markBraced() {
+    this.braced = true;
+    for (const h of this.heroes) if (h.alive) this.fx('puff', { x: h.x, y: h.y - 20, color: '#1f5fa8', life: 0.3 });
+  }
+
+  /** 테스트 전용 통로: 보스 특수 공격을 그 자리에서 한 번 실행한다(비공개 메서드라 밖에서 못 부른다). */
+  __testPattern(m, heroes, frontX) { return this.#bossPattern(m, heroes, frontX); }
+
   /** Boss specials (data: BOSSES[].specials). Every Nth attack; when two coincide the rarer one fires. Returns true when one fired. */
   #bossPattern(m, heroes, frontX) {
     const sp = (m.def.specials ?? []).filter((x) => m.hits % x.every === 0).sort((a, b) => b.every - a.every)[0];
     if (!sp) return false;
     this.floaters.push({ x: m.x, y: m.y - 110, text: sp.name, color: m.def.palette?.M ?? '#e74c3c', t: 0, big: true });
     this.game.emit('boss-special', { boss: m, special: sp });
+    // 수식 대응: 예고 때 답을 쳐 넣었다면 이 한 방만 크게 줄어든다. 안 쳤으면 k = 1 — 예전과 똑같다.
+    const braced = this.braced;
+    const k = braced ? 1 - BALANCE.BRACE.reduce : 1;
+    if (braced) {
+      this.braced = false; // 한 번 막으면 소진된다
+      this.fx('ring', { x: frontX - 40, y: GROUND_Y - 20, color: '#1f5fa8', radius: 320, life: 0.45 });
+      for (const t of heroes) this.floaters.push({ x: t.x, y: t.y - 78, text: '검산 완료', color: '#1f5fa8', t: 0 });
+      this.game.emit('sfx', 'block');
+    }
     if (sp.kind === 'sweep') {
       const front = heroes.slice().sort((a, b) => b.x - a.x).slice(0, 2);
       this.fx('slash', { x: frontX - 20, y: GROUND_Y - 14, color: '#e74c3c', angle: 0.25, life: 0.3, big: true }); this.shake = Math.max(this.shake, 8);
-      for (const t of front) this.#monsterHit(m, t, 0.9);
+      for (const t of front) this.#monsterHit(m, t, 0.9 * k);
     } else if (sp.kind === 'stomp') {
       this.fx('ring', { x: m.x, y: m.y, color: '#e67e22', radius: 520, life: 0.5 }); this.shake = Math.max(this.shake, 12);
-      for (const t of heroes) { this.#monsterHit(m, t, 0.5); this.fx('puff', { x: t.x, y: t.y, color: '#e67e22', life: 0.3 }); }
+      for (const t of heroes) { this.#monsterHit(m, t, 0.5 * k); this.fx('puff', { x: t.x, y: t.y, color: '#e67e22', life: 0.3 }); }
     } else if (sp.kind === 'volley') {
       // three fireballs at three different heroes (fewer when the party is smaller)
       const targets = heroes.slice().sort(() => Math.random() - 0.5).slice(0, 3);
-      targets.forEach((t, i) => this.projectiles.push({ x: m.x - 20, y: m.y - 40 - i * 10, tx: t.x, ty: t.y - 8, t: -i * 0.12, dur: 0.55, color: '#ff7043', kind: 'drop', hostile: true, targetId: t.id, dmg: m.atk * 0.6 }));
+      targets.forEach((t, i) => this.projectiles.push({ x: m.x - 20, y: m.y - 40 - i * 10, tx: t.x, ty: t.y - 8, t: -i * 0.12, dur: 0.55, color: '#ff7043', kind: 'drop', hostile: true, targetId: t.id, dmg: m.atk * 0.6 * k }));
       this.shake = Math.max(this.shake, 6);
     } else if (sp.kind === 'slow') {
-      this.slow = { mult: 0.7, until: this.time + 4 };
+      this.slow = { mult: 0.7, until: this.time + 4 * k }; // 둔화는 피해가 아니라 시간이라 지속이 줄어든다
       this.fx('ring', { x: m.x, y: m.y, color: '#27ae60', radius: 560, life: 0.6 });
       for (const t of heroes) { this.fx('puff', { x: t.x, y: t.y - 20, color: '#27ae60', life: 0.35 }); this.floaters.push({ x: t.x, y: t.y - 70, text: '느려짐', color: '#27ae60', t: 0 }); }
     } else if (sp.kind === 'throw') {
       const back = heroes.slice().sort((a, b) => a.x - b.x)[0]; if (!back) return true;
-      this.projectiles.push({ x: m.x - 30, y: m.y - 70, tx: back.x, ty: back.y - 8, t: 0, dur: 0.7, color: '#935116', kind: 'drop', hostile: true, targetId: back.id, dmg: m.atk * 1.4, crate: true });
+      this.projectiles.push({ x: m.x - 30, y: m.y - 70, tx: back.x, ty: back.y - 8, t: 0, dur: 0.7, color: '#935116', kind: 'drop', hostile: true, targetId: back.id, dmg: m.atk * 1.4 * k, crate: true });
       this.shake = Math.max(this.shake, 6);
     }
     return true;
