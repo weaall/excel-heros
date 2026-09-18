@@ -1,14 +1,8 @@
 {
   "version": 1789688654,
   "cards": {
-    "staff_park": {
-      "file": "staff_park.png",
-      "thumb": "thumb/staff_park.webp"
-    },
-    "parttime": {
-      "file": "parttime.png",
-      "thumb": "thumb/parttime.webp"
-    },
+    "staff_park": "staff_park.png",
+    "parttime": "parttime.png",
     "guard": {
       "file": "guard.png",
       "thumb": "thumb/guard.webp"
@@ -17,10 +11,7 @@
       "file": "barista.png",
       "thumb": "thumb/barista.webp"
     },
-    "courier": {
-      "file": "courier.png",
-      "thumb": "thumb/courier.webp"
-    },
+    "courier": "courier.png",
     "contract": {
       "file": "contract.png",
       "thumb": "thumb/contract.webp"
@@ -33,10 +24,7 @@
       "file": "pivot.png",
       "thumb": "thumb/pivot.webp"
     },
-    "macro": {
-      "file": "macro.png",
-      "thumb": "thumb/macro.webp"
-    },
+    "macro": "macro.png",
     "hr_jung": {
       "file": "hr_jung.png",
       "thumb": "thumb/hr_jung.webp"
@@ -73,10 +61,7 @@
       "file": "coo.png",
       "thumb": "thumb/coo.webp"
     },
-    "ceo": {
-      "file": "ceo.png",
-      "thumb": "thumb/ceo.webp"
-    },
+    "ceo": "ceo.png",
     "chairman": {
       "file": "chairman.png",
       "thumb": "thumb/chairman.webp"
@@ -101,22 +86,13 @@
       "file": "pm_lead.png",
       "thumb": "thumb/pm_lead.webp"
     },
-    "design_lead": {
-      "file": "design_lead.png",
-      "thumb": "thumb/design_lead.webp"
-    },
+    "design_lead": "design_lead.png",
     "cmo": {
       "file": "cmo.png",
       "thumb": "thumb/cmo.webp"
     },
-    "founder": {
-      "file": "founder.png",
-      "thumb": "thumb/founder.webp"
-    },
-    "intern_seo": {
-      "file": "intern_seo.png",
-      "thumb": "thumb/intern_seo.webp"
-    },
+    "founder": "founder.png",
+    "intern_seo": "intern_seo.png",
     "pr_yoo": {
       "file": "pr_yoo.png",
       "thumb": "thumb/pr_yoo.webp"
@@ -129,22 +105,13 @@
       "file": "lab_park.png",
       "thumb": "thumb/lab_park.webp"
     },
-    "chro": {
-      "file": "chro.png",
-      "thumb": "thumb/chro.webp"
-    },
+    "chro": "chro.png",
     "cso": {
       "file": "cso.png",
       "thumb": "thumb/cso.webp"
     },
-    "ai_lead": {
-      "file": "ai_lead.png",
-      "thumb": "thumb/ai_lead.webp"
-    },
-    "union_chief": {
-      "file": "union_chief.png",
-      "thumb": "thumb/union_chief.webp"
-    },
+    "ai_lead": "ai_lead.png",
+    "union_chief": "union_chief.png",
     "hacker": {
       "file": "hacker.png",
       "thumb": "thumb/hacker.webp"
@@ -157,10 +124,7 @@
       "file": "security_yang.png",
       "thumb": "thumb/security_yang.webp"
     },
-    "mail_cho": {
-      "file": "mail_cho.png",
-      "thumb": "thumb/mail_cho.webp"
-    },
+    "mail_cho": "mail_cho.png",
     "qa_lee": {
       "file": "qa_lee.png",
       "thumb": "thumb/qa_lee.webp"
@@ -205,18 +169,12 @@
       "file": "bd_lead.png",
       "thumb": "thumb/bd_lead.webp"
     },
-    "cdo": {
-      "file": "cdo.png",
-      "thumb": "thumb/cdo.webp"
-    },
+    "cdo": "cdo.png",
     "cco": {
       "file": "cco.png",
       "thumb": "thumb/cco.webp"
     },
-    "chief_of_staff": {
-      "file": "chief_of_staff.png",
-      "thumb": "thumb/chief_of_staff.webp"
-    },
+    "chief_of_staff": "chief_of_staff.png",
     "chairwoman": {
       "file": "chairwoman.png",
       "thumb": "thumb/chairwoman.webp"

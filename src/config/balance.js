@@ -81,10 +81,13 @@ export const BALANCE = Object.freeze({
 
   KILLS_PER_STAGE: 20,
   BOSS_EVERY: 10,
-  BOSS_TIME_LIMIT: 30,
-  BOSS_HP_MULT: 8,
-  BOSS_ATK_MULT: 3,
-  BOSS_GOLD_MULT: 20,
+  // 보스 조정값은 **중첩 객체**에 둔다 — `BALANCE` 가 freeze 라 최상위 스칼라는 훑을 수 없다(6-95).
+  BOSS: {
+    timeLimit: 30,
+    hpMult: 8,
+    atkMult: 3,
+    goldMult: 20,
+  },
 
   MAX_MONSTERS: 5,
   RESPAWN_DELAY: 1.0,
@@ -215,9 +218,9 @@ export const atkRamp = (stage) => {
 };
 export const monsterATK = (stage) => Math.max(1, Math.floor(B.MONSTER_ATK_BASE * B.MONSTER_ATK_GROWTH ** (Math.max(1, stage) - 1) * atkRamp(stage)));
 export const isBossStage = (stage) => stage % B.BOSS_EVERY === 0;
-export const bossHP  = (stage) => monsterHP(stage) * B.BOSS_HP_MULT;
-export const bossATK = (stage) => monsterATK(stage) * B.BOSS_ATK_MULT;
-export const bossGold = (stage) => baseGold(stage) * B.BOSS_GOLD_MULT;
+export const bossHP  = (stage) => monsterHP(stage) * B.BOSS.hpMult;
+export const bossATK = (stage) => monsterATK(stage) * B.BOSS.atkMult;
+export const bossGold = (stage) => baseGold(stage) * B.BOSS.goldMult;
 
 /** "Phase 1-1" .. "Phase 1-10" (10 = boss), stage 11 -> "Phase 2-1" */
 export function stageLabel(stage) {

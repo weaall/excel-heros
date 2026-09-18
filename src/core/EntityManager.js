@@ -147,7 +147,7 @@ export class EntityManager {
     }
     if (this.game.bossActive()) {
       this.boss = this.#spawnMonster(stage, true, 0);
-      this.bossTimer = BALANCE.BOSS_TIME_LIMIT; this.shake = 8;
+      this.bossTimer = BALANCE.BOSS.timeLimit; this.shake = 8;
       this.game.log(`보스 등장: ${this.boss.def.name} (${this.game.stageLabel()}) — ${this.boss.def.desc}`, 'boss');
       return;
     }
@@ -451,6 +451,11 @@ export class EntityManager {
   /** 테스트 전용 통로: 몬스터 한 대를 그 자리에서 때린다(비공개 메서드라 밖에서 못 부른다). */
   __testHit(m, target, mult = 1) { return this.#monsterHit(m, target, mult); }
 
+  /**
+   * @param floorKind 보스 특수 공격의 종류. 주어지면 **최대 체력 비례 바닥값**이 걸린다 —
+   *   특수 공격은 보스 ATK 배수인데 보스 ATK 가 파티 체력보다 느리게 자라서, 파티가 강해지면
+   *   보스가 간지러워진다(측정: ★ 진행이 빨라지자 쓰러짐 45 → 3). 일반 공격에는 걸지 않는다.
+   */
   #monsterHit(m, target, mult = 1) {
     // 도발: while it is up, the taunting hero takes the hit instead — and takes less of it
     const t = this.taunt && this.taunt.until >= this.time ? this.heroes.find((a) => a.id === this.taunt.heroId && a.alive) : null;

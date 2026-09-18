@@ -42,7 +42,7 @@ test('boss timeout falls back to farming 1-9 with auto-advance off; boss kill ad
   const g = new GameManager({ state: s, save: memSave() });
   run(g, 2);
   assert.ok(g.entities.boss, 'boss spawned on stage 10 challenge (after the approach)');
-  run(g, BALANCE.BOSS_TIME_LIMIT + 12); // the clock starts when the boss reaches the line, so allow the walk-in
+  run(g, BALANCE.BOSS.timeLimit + 12); // the clock starts when the boss reaches the line, so allow the walk-in
   assert.equal(g.state.stage, 9, 'farming 1-9 after timeout');
   assert.equal(g.isChallenging(), false);
   assert.equal(g.state.settings.autoAdvance, false, 'auto-advance switched off by the failure');

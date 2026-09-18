@@ -1067,7 +1067,7 @@ export class GameManager extends Emitter {
     const [lo, hi] = boss ? BALANCE.FORECAST.boss : BALANCE.FORECAST.normal;
     let prob = Math.max(0, Math.min(1, Math.log(Math.max(1e-9, ratio) / lo) / Math.log(hi / lo)));
     const bossTime = boss ? enemyHp / dps : null;
-    if (boss && bossTime > BALANCE.BOSS_TIME_LIMIT * BALANCE.FORECAST.bossTimeFrac) prob = Math.min(prob, 0.15);
+    if (boss && bossTime > BALANCE.BOSS.timeLimit * BALANCE.FORECAST.bossTimeFrac) prob = Math.min(prob, 0.15);
     return { stage, boss, ratio, prob, bossTime, label: prob >= 0.7 ? '유리' : prob >= BALANCE.SAFE_ADVANCE.min ? '접전' : '불리' };
   }
   /** Auto-advance that waited for a better forecast resumes as soon as the party is strong enough. */
@@ -1283,7 +1283,7 @@ export class GameManager extends Emitter {
 
   onBossTimeout() {
     this.state.stats.bossFails++;
-    this.#failChallenge(`보스 에스컬레이션 (${BALANCE.BOSS_TIME_LIMIT}초 초과)`);
+    this.#failChallenge(`보스 에스컬레이션 (${BALANCE.BOSS.timeLimit}초 초과)`);
   }
 
   /** Party wipe: a failed challenge falls back to farming the previous stage; a farming wipe just restarts. */

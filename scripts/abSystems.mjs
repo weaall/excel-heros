@@ -141,7 +141,11 @@ const GATE_KEYS = ['t60', 't90', 't120'];
 // 기준선이 못 간 관문은 아예 쓰지 않는다 — 비교할 바탕이 없다.
 const usable = GATE_KEYS.filter((k) => base.every((r) => r[k] !== null));
 console.log('기준선  ', GATE_KEYS.map((k) => `${k.slice(1)}단계 ${mmss(avg(base, k))}`).join(' · '), '· 지분', String(avg(base, 'shares')).padStart(4), '· 최고', String(avg(base, 'stage')).padStart(4), '· 쓰러짐', String(avg(base, 'deaths')).padStart(4));
-if (usable.length < GATE_KEYS.length) console.log(`※ 기준선이 ${GATE_KEYS.filter((k) => !usable.includes(k)).map((k) => k.slice(1) + '단계').join(', ')}에 못 갔다 — 그 관문은 평균에서 뺀다. HOURS 를 늘려라.`);
+if (usable.length < GATE_KEYS.length) {
+  const missed = GATE_KEYS.filter((k) => !usable.includes(k));
+  const detail = missed.map((k) => `${k.slice(1)}단계(${base.filter((r) => r[k] !== null).length}/${RUNS}판)`).join(', ');
+  console.log(`※ 기준선의 일부 판이 ${detail}에 못 갔다 — 그 관문은 평균에서 뺀다. HOURS 를 늘려라.`);
+}
 console.log('-'.repeat(84));
 
 const rows = [];

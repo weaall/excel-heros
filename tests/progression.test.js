@@ -147,7 +147,9 @@ test('boss specials: every boss has named Nth-attack specials, distinct sprites 
   const kinds = new Set();
   for (const b of BOSSES) {
     assert.ok(Array.isArray(b.specials) && b.specials.length >= 1, b.id);
-    for (const sp of b.specials) { assert.ok(sp.every >= 3 && sp.name && sp.desc, `${b.id} ${sp.kind}`); kinds.add(sp.kind); }
+    // 하한 2: 매 타격마다 특수면 그건 특수가 아니라 평타다. 첫 특수를 2타로 당긴 이유는 6-112 —
+    // 보스전이 평균 5.4초라 3타 이후로 잡아 두면 대부분의 보스가 특수를 한 번도 못 쓰고 죽었다.
+    for (const sp of b.specials) { assert.ok(sp.every >= 2 && sp.name && sp.desc, `${b.id} ${sp.kind}`); kinds.add(sp.kind); }
     assert.ok(b.desc.length > 10);
   }
   assert.ok(kinds.size >= 5, 'five different special kinds across the three bosses');

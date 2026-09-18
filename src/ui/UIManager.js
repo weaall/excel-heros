@@ -549,11 +549,11 @@ export class UIManager {
     $('#kill-bar').style.width = challenging ? `${Math.min(100, (s.kills / req) * 100)}%` : '100%';
     $('#kill-bar').style.opacity = challenging ? '1' : '0.35';
     $('#kill-text').textContent = stealth ? STEALTH_STAGE.kills(s.kills, req, challenging)
-      : boss ? `보스 · 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : challenging ? `${s.kills} / ${req}행 처리` : `사냥 중 · 처치 ${s.kills}`;
+      : boss ? `보스 · 제한 ${BALANCE.BOSS.timeLimit}초` : challenging ? `${s.kills} / ${req}행 처리` : `사냥 중 · 처치 ${s.kills}`;
     const ec = eliteChance(s.stage);
     const mod = stageModifier(s.stage);
     $('#stage-hint').textContent = stealth ? STEALTH_STAGE.hint(s.stage)
-      : boss ? `${bossDef.desc} · ${BALANCE.BOSS_TIME_LIMIT}초 제한` : mod ? `${mod.name}: ${mod.desc}` : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
+      : boss ? `${bossDef.desc} · ${BALANCE.BOSS.timeLimit}초 제한` : mod ? `${mod.name}: ${mod.desc}` : ec > 0 ? `엘리트 출현 ${Math.round(ec * 100)}% (HP ×${BALANCE.ELITE.hp}, 골드 ×${BALANCE.ELITE.gold})` : '';
     const next = g.nextStage();
     const fc = g.challengeForecast(challenging ? s.stage : next);
     $('#qa-challenge-label').textContent = stealth ? STEALTH_DYN.challenge(challenging)
@@ -1563,7 +1563,7 @@ export class UIManager {
     if (g.paused) return { kind: 'paused' };
     if (g.overtime) return { kind: 'overtime', seconds: Math.ceil(g.overtime.t) };
     if (g.entities.traveling) return { kind: 'travel' };
-    if (g.isChallenging()) return isBossStage(s.stage) ? { kind: 'boss', seconds: BALANCE.BOSS_TIME_LIMIT } : { kind: 'challenge', done: s.kills, total: BALANCE.KILLS_PER_STAGE };
+    if (g.isChallenging()) return isBossStage(s.stage) ? { kind: 'boss', seconds: BALANCE.BOSS.timeLimit } : { kind: 'challenge', done: s.kills, total: BALANCE.KILLS_PER_STAGE };
     if (g.waitingAdvance) return { kind: 'waiting' };
     return { kind: 'farm' };
   }
@@ -1577,7 +1577,7 @@ export class UIManager {
     else if (g.entities.traveling) txt = `🚶 ${stageLabel(g.combatStage())}(으)로 이동 중`;
     else if (g.isChallenging()) {
       const boss = isBossStage(s.stage);
-      txt = boss ? `⚑ ${stageLabel(s.stage)} 보스전 — 제한 ${BALANCE.BOSS_TIME_LIMIT}초` : `⚑ ${stageLabel(s.stage)} 도전 중 — ${s.kills} / ${BALANCE.KILLS_PER_STAGE} 처치`;
+      txt = boss ? `⚑ ${stageLabel(s.stage)} 보스전 — 제한 ${BALANCE.BOSS.timeLimit}초` : `⚑ ${stageLabel(s.stage)} 도전 중 — ${s.kills} / ${BALANCE.KILLS_PER_STAGE} 처치`;
     } else if (g.waitingAdvance) txt = `⏳ ${stageLabel(s.stage)}에서 사냥하며 대기 — 승산이 오르면 자동으로 다음 단계`;
     else txt = `🔁 ${stageLabel(s.stage)} 반복 사냥 중 — 골드·비품을 모으는 중`;
     box.textContent = txt;

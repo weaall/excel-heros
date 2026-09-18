@@ -165,3 +165,34 @@ test('몬스터 변종 이름: 팔레트가 보이는 도트만 색 이름을 �
     }
   }
 });
+
+test('보스 설명의 "N번째"는 실제 특수 공격 주기와 일치한다', async () => {
+  const { BOSSES } = await import('../src/data/monsters.js');
+  for (const b of BOSSES) {
+    const evs = new Set(b.specials.map((s) => s.every));
+    // 설명과 각 특수의 desc 에 등장하는 'N번째' 는 전부 실제 주기여야 한다
+    const texts = [b.desc, ...b.specials.map((s) => s.desc)].filter(Boolean);
+    for (const text of texts) {
+      for (const m of text.matchAll(/(\d+)번째/g)) {
+        assert.ok(evs.has(Number(m[1])), `${b.name}: 설명의 "${m[1]}번째"가 실제 주기(${[...evs].join(', ')})에 없다 — "${text}"`);
+      }
+    }
+    // 그리고 모든 주기가 설명 어딘가에 나와야 한다 (숨은 특수 금지)
+    for (const e of evs) {
+      assert.ok(texts.some((t) => t.includes(`${e}번째`)), `${b.name}: ${e}번째 특수가 설명에 없다`);
+    }
+  }
+});
+
+test('보스 첫 특수는 보스전이 끝나기 전에 발동할 수 있어야 한다', async () => {
+  const { BOSSES } = await import('../src/data/monsters.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+  // 계측: 보스전 평균 5.4초. 첫 특수가 그 안에 안 들어오면 특수도 수식 대응도 잠자게 된다(6-112).
+  const TYPICAL_FIGHT = 6;
+  for (const b of BOSSES) {
+    const first = Math.min(...b.specials.map((s) => s.every));
+    const at = first * b.interval;
+    assert.ok(at <= TYPICAL_FIGHT + 0.5, `${b.name}: 첫 특수가 ${at.toFixed(1)}초에 나온다 — 평균 보스전(${TYPICAL_FIGHT}초)보다 늦다`);
+    assert.ok(at <= BALANCE.BOSS.timeLimit, `${b.name}: 첫 특수가 제한 시간보다 늦다`);
+  }
+});

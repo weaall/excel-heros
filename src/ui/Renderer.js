@@ -27,7 +27,7 @@ export class Renderer {
     this.selected = null;   // { col, row } selected worksheet cell (Excel-style selection box)
     game.on('challengeStart', ({ stage, boss }) => {
       this.banner = boss
-        ? { kind: 'boss', text: `${bossForStage(stage).name} 등장!`, sub: `${bossForStage(stage).desc} · ${BALANCE.BOSS_TIME_LIMIT}초 안에 처리`, t: 0, life: 2.4 }
+        ? { kind: 'boss', text: `${bossForStage(stage).name} 등장!`, sub: `${bossForStage(stage).desc} · ${BALANCE.BOSS.timeLimit}초 안에 처리`, t: 0, life: 2.4 }
         : { kind: 'challenge', text: `${stageLabel(stage)} 도전`, sub: `${phaseName(stage)}${stageModifier(stage) ? ` · ${stageModifier(stage).name}: ${stageModifier(stage).desc}` : ` · 오류 ${BALANCE.KILLS_PER_STAGE}건 처리 시 클리어`}`, t: 0, life: stageModifier(stage) ? 2.2 : 1.6 };
     });
     game.on('cleared', ({ stage, boss, first }) => {
@@ -111,7 +111,7 @@ export class Renderer {
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(x - 4, y - 4, w + 8, h + 14);
     ctx.fillStyle = '#5a1a12'; ctx.fillRect(x, y, w, h);
     ctx.fillStyle = '#e74c3c'; ctx.fillRect(x, y, w * Math.max(0, b.hp / b.maxHp), h);
-    ctx.fillStyle = '#f1c40f'; ctx.fillRect(x, y + h + 2, w * Math.min(1, em.bossTimer / BALANCE.BOSS_TIME_LIMIT), 4);
+    ctx.fillStyle = '#f1c40f'; ctx.fillRect(x, y + h + 2, w * Math.min(1, em.bossTimer / BALANCE.BOSS.timeLimit), 4);
     ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Malgun Gothic", "Segoe UI", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(`${b.def.name}   ${fmt(b.hp)} / ${fmt(b.maxHp)}   ⏱ ${em.bossTimer.toFixed(1)}s`, x + w / 2, y + h / 2);
   }

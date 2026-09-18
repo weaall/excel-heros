@@ -50,8 +50,8 @@ test('relative rewards scale with the best stage', () => {
 
 test('progression stays feasible: stage 10 boss reachable with ~10 levels per hero', () => {
   const partyDPS = 5 * heroATK(6, 10, 1);
-  const bossHp = monsterHP(10) * BALANCE.BOSS_HP_MULT;
-  assert.ok(bossHp / partyDPS < BALANCE.BOSS_TIME_LIMIT, `boss takes ${bossHp / partyDPS}s`);
+  const bossHp = monsterHP(10) * BALANCE.BOSS.hpMult;
+  assert.ok(bossHp / partyDPS < BALANCE.BOSS.timeLimit, `boss takes ${bossHp / partyDPS}s`);
 });
 
 test('estimateGoldPerSec caps kill rate at MAX_MONSTERS/sec', () => {
