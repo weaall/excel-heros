@@ -68,7 +68,7 @@ async function probe(token) {
   if (!r.ok) return { status: 'error', detail: `join ${r.status}` };
 
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 60000);
+  const timer = setTimeout(() => ctl.abort(), 180000); // 90초 생성의 판정을 끝까지 본다 (60초면 abort → '알 수 없음')
   try {
     const ev = await fetch(`${BASE}/queue/data?session_hash=${session_hash}`, { headers: AUTH, signal: ctl.signal });
     const reader = ev.body.getReader(); const dec = new TextDecoder(); let buf = '';
@@ -84,12 +84,10 @@ async function probe(token) {
           if (err) return { status: 'exhausted', detail: err, ...parseQuota(err) };
           return { status: 'spent', detail: '한 장을 끝까지 생성했다 — 이 확인이 90초를 썼다' };
         }
-        // 실행이 시작됐다 = 쿼터가 있다. 여기서 끊어 90초를 통째로 쓰지 않게 한다.
-        if (m.msg === 'process_starts' || m.msg === 'process_generating') {
-          ctl.abort();
-          // 끊어도 Space 쪽 작업은 계속 돈다 — 그래서 '있다'가 아니라 '있었고 지금 썼다'로 기록한다.
-          return { status: 'spent', detail: '실행 시작됨 — 쿼터가 있었고, 이 확인이 90초를 썼다' };
-        }
+        // `process_starts` 는 **쿼터의 증거가 아니다.** Space 는 큐 작업을 시작한 뒤에도 거절할 수 있다 —
+        // 이 스크립트가 토큰 #1을 '쿼터 있음'이라고 답한 30초 뒤에 실제 요청이 `88s left` 로 거절됐다.
+        // 그래서 여기서 끊지 않고 `process_completed` 까지 기다린다. 그게 유일하게 믿을 수 있는 신호다.
+        // 대가: 쿼터가 정말 있으면 이 확인이 90초를 쓴다. 공짜로 알 수 있는 건 '소진됨' 뿐이다.
         if (m.msg === 'close_stream') return { status: 'unknown', detail: 'stream closed' };
       }
     }

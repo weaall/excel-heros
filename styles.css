@@ -276,7 +276,9 @@ body.stealth #roster-table { display: table; }
 .card-badge { position: absolute; top: 0; right: 0; background: var(--xl-green); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 0; font-weight: 600; }
 .card-badge.main { top: 18px; background: #e67e22; }
 .card-badge.new { background: #e74c3c; }
-.card-grid.result { padding: 4px 0; grid-template-columns: repeat(auto-fill, 96px); }
+/* 10연은 **5×2** 로 떨어져야 한다. `auto-fill` 은 열 수를 창 폭에 맡기므로 4/4/2 가 됐다.
+   5×96 + 4×10 = 520px 로 대화상자 내부에 들어간다. */
+.card-grid.result { padding: 4px 0; grid-template-columns: repeat(5, 96px); justify-content: center; }
 .card-canvas { width: 128px; height: 204px; }
 .card-grid.result .card-canvas { width: 96px; height: 153px; }
 .promo-card .card-canvas { width: 140px; height: 223px; }
@@ -400,7 +402,7 @@ body.stealth #roster-table { display: table; }
 
 
 /* ------------------------------------------------------------ card detail (record layout) -- */
-.dialog:has(.dt) { width: min(94vw, 720px); }
+.dialog:has(.dt) { width: min(94vw, 820px); }  /* 조작 버튼과 값이 같은 줄에 들어갈 최소 폭 (6-106) */
 /* 카드 상세는 **높이를 고정한다.** 탭마다 내용이 699~927px 로 달라서, 높이를 내용에 맡기면 탭을 누를
    때마다 창이 튄다(6-96). 스크롤은 오른쪽 정보 열만 하고 일러스트는 제자리에 있는다. */
 .dialog:has(.dt) .dialog-body { height: clamp(360px, 74vh, 560px); overflow: hidden; padding-bottom: 0; }
@@ -423,8 +425,10 @@ body.stealth #roster-table { display: table; }
 .dt-table td { border: 1px solid var(--line); padding: 5px 8px; vertical-align: middle; }
 .dt-table td.val { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
 .dt-table td.val .hint { font-weight: 400; color: var(--muted); font-size: 11px; margin-top: 2px; white-space: normal; }
-.dt-table td.ctl { text-align: right; white-space: nowrap; width: 1%; }
-.ctl-group { display: inline-flex; gap: 3px; }
+/* 조작 열은 **줄바꿈할 수 있어야 한다.** nowrap 이면 버튼 다섯 개가 한 줄을 요구해(316px) 값 열이
+   42px 로 찌그러지고 표가 창을 34px 넘친다(계측 6-106). 두 줄로 내려가는 게 잘리는 것보다 낫다. */
+.dt-table td.ctl { text-align: right; white-space: normal; width: 176px; }
+.ctl-group { display: inline-flex; gap: 3px; flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
 .dt-sections { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .dt-sec { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 12.5px; padding: 6px 8px; border: 1px solid #c6dfc9; background: #fff; }
 .dt-sec > b { color: #1b5e3a; background: #e2efda; padding: 1px 6px; font-size: 11.5px; min-width: 44px; }
