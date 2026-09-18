@@ -8,7 +8,7 @@ import { PALETTES } from '../src/data/monsters.js';
 const [, , out = 'mon.png', scArg = '4', palArg = '0', which = 'mon'] = process.argv;
 const sc = Number(scArg), pal = PALETTES[Number(palArg) % PALETTES.length];
 const maps = which === 'boss' ? BOSS_MAPS : MONSTER_MAPS;
-const ids = Object.keys(maps);
+const ids = (process.env.IDS ? process.env.IDS.split(',') : Object.keys(maps)).filter((i) => maps[i]);
 
 const darken = (h, k = 0.7) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * k).toString(16).padStart(2, '0')).join('');
 const lighten = (h, k = 0.3) => '#' + [1, 3, 5].map((i) => { const v = parseInt(h.slice(i, i + 2), 16); return Math.round(v + (255 - v) * k).toString(16).padStart(2, '0'); }).join('');

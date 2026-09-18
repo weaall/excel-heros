@@ -196,3 +196,14 @@ test('보스 첫 특수는 보스전이 끝나기 전에 발동할 수 있어야
     assert.ok(at <= BALANCE.BOSS.timeLimit, `${b.name}: 첫 특수가 제한 시간보다 늦다`);
   }
 });
+
+test('몬스터는 전부 사무실 물건이다 — 판타지 생물 이름이 남아 있지 않다', async () => {
+  const { MONSTER_TYPES } = await import('../src/data/monsters.js');
+  // 던전 생물 어휘가 이름에 남으면 사무실 위장이 깨진다(6-113에서 마지막 둘을 바꿨다)
+  const FANTASY = ['원숭이', '황소', '고릴라', '악어', '코끼리', '드래곤', '슬라임', '오크', '고블린', '늑대', '곰'];
+  for (const t of MONSTER_TYPES) {
+    for (const w of FANTASY) {
+      assert.ok(!t.name.includes(w), `${t.name}: 판타지 생물 이름이 남아 있다 ("${w}")`);
+    }
+  }
+});

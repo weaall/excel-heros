@@ -22,8 +22,8 @@ export const MONSTER_TYPES = [
   { id: 'bug',       shape: 'bug',       name: '런타임 버그',   face: { eyes: 'angry',  mouth: 'teeth' } },
   { id: 'cloud',     shape: 'cloud',     name: '동기화 충돌',   face: { eyes: 'round',  mouth: 'o' } },
   { id: 'cursor',    shape: 'cursor',    name: '커서 도둑',     face: { eyes: 'one',    mouth: 'smile' } },
-  { id: 'monkey',    shape: 'monkey',    name: '복붙 원숭이',   face: { eyes: 'round',  mouth: 'smile' } },
-  { id: 'bull',      shape: 'bull',      name: '마감 황소',     face: { eyes: 'angry',  mouth: 'teeth' } },
+  { id: 'monkey',    shape: 'monkey',    name: '복사 클립보드',   face: { eyes: 'round',  mouth: 'smile' } },
+  { id: 'bull',      shape: 'bull',      name: '마감 알람',     face: { eyes: 'angry',  mouth: 'teeth' } },
   // Tiny Creatures additions (single-frame creatures, bob animation)
   { id: 'mushroom',  shape: 'blob',      name: '스팸 메일함',     face: { eyes: 'round',  mouth: 'smile' } },
   { id: 'eyeball',   shape: 'blob',      name: '감시 카메라',     face: { eyes: 'one',    mouth: 'flat' }, ranged: 'drop' },
