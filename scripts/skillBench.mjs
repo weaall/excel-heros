@@ -90,12 +90,16 @@ const calibrate = (stage) => {
 for (const stage of STAGES) {
   const cal = calibrate(stage);
   if (!cal) { console.log(`${stage}단계: 쓸 만한 레벨을 못 찾았다`); continue; }
-  const level = cal.lv;
+    // **반응형 스킬(회복·복직)은 아무도 안 쓰러지는 싸움에서 값이 0이다 — 그게 맞는 값이다.**
+  // 회복은 피해를 막는 게 아니라 되돌리는 것이라 '받은 피해' 칸에 영원히 안 잡힌다. 잡히는 곳은
+  // **쓰러짐**이고, 쓰러짐이 0인 싸움에서는 보험이 값을 할 일이 없다. `LEVEL_DROP` 으로 파티를
+  // 계산된 지점보다 약하게 만들면 실제로 쓰러지기 시작하고, 거기서 비로소 비교가 된다.
+  const level = cal.lv - Number(process.env.LEVEL_DROP ?? 0);
   const base = Array.from({ length: RUNS }, (_, i) => run(i, stage, null, level));
   if (base.reduce((a, r) => a + r.casts, 0)) { console.log('⚠ 기준선에서 스킬이 발동했다 — 못 믿는다.'); process.exit(1); }
   const bk = mean(base.map((r) => r.kills)), bt = mean(base.map((r) => r.taken));
   console.log(`\n${stage}단계 · ${MIN}분 × ${RUNS}판 — 기준선(스킬 없음) 분당 처치 ${bk.toFixed(1)} · 분당 받은 피해 ${bt.toFixed(2)}×파티체력\n`);
-  console.log('스킬'.padEnd(10), '위력'.padStart(6), '분당처치'.padStart(9), '처치 증가'.padStart(10), '받은피해'.padStart(9), '피해 감소'.padStart(10), '발동'.padStart(6));
+  console.log('스킬'.padEnd(10), '위력'.padStart(6), '분당처치'.padStart(9), '처치 증가'.padStart(10), '받은피해'.padStart(9), '피해 감소'.padStart(10), '쓰러짐'.padStart(7), '발동'.padStart(6));
   const rows = [];
   for (const ty of TYPES) {
     const rs = Array.from({ length: RUNS }, (_, i) => run(i, stage, ty, level));
@@ -104,7 +108,8 @@ for (const stage of STAGES) {
     rows.push({ ty, dk, dt2, total: dk + dt2 });
     console.log(ty.padEnd(10), String(POWER[ty]).padStart(6), k.toFixed(1).padStart(9),
       `${dk >= 0 ? '+' : ''}${dk.toFixed(1)}%`.padStart(10), tk.toFixed(2).padStart(9),
-      `${dt2 >= 0 ? '+' : ''}${dt2.toFixed(1)}%`.padStart(10), String(Math.round(mean(rs.map((r) => r.casts)))).padStart(6));
+      `${dt2 >= 0 ? '+' : ''}${dt2.toFixed(1)}%`.padStart(10),
+      mean(rs.map((r) => r.downs)).toFixed(0).padStart(7), String(Math.round(mean(rs.map((r) => r.casts)))).padStart(6));
   }
   rows.sort((a, b) => b.total - a.total);
   console.log('\n합계(처치증가 + 피해감소) 순:', rows.map((r) => `${r.ty} ${r.total >= 0 ? '+' : ''}${r.total.toFixed(0)}`).join(' · '));
