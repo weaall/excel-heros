@@ -1,9 +1,13 @@
 // 보석 코드 (promo codes). Hand these out however you like — the table below is the whole system.
 //
 // The code list ships with the game, so treat a code as a coupon you *chose* to publish, never as a secret.
-// Redemption is recorded **per account** by the Worker (POST /v1/redeem, table `redemptions`), so wiping the local
-// save does not hand out a second payout. When the player is signed out the client falls back to a local-only
-// record; the next sign-in is authoritative. The plausibility budget knows about redemptions either way.
+// Redemption is recorded **per account** by the Worker (POST /v1/redeem, table `redemptions`), so clearing the
+// browser's storage does not hand out a second payout. When the player is signed out the client falls back to a
+// local-only record; the next sign-in is authoritative. The plausibility budget knows about redemptions either way.
+//
+// 예외는 하나다: **완전 초기화(통합 문서 삭제)는 사용 기록도 지운다** — `POST /v1/save/reset`. 처음부터 다시
+// 시작하는데 "이미 사용한 코드"가 나오면 처음부터가 아니다. 코드를 다시 쓰려고 초기화하는 건 영웅·보석·
+// 지분을 전부 버리는 일이라 언제나 손해이므로, 코드 농사 통로는 되지 않는다.
 //
 // To add a code: one entry here, redeploy. `until` is optional (ISO date, inclusive); `once` defaults to true.
 //   WELCOME2026: { gems: 300, label: '입사 축하', until: '2026-12-31' }

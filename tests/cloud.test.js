@@ -90,6 +90,7 @@ function fakeDB() {
       else if (sql.startsWith('INSERT INTO saves')) t.saves.set(a[0], { save: a[1], updated_at: a[2] });
       else if (sql.startsWith('DELETE FROM saves')) t.saves.delete(a[0]);
       else if (sql.startsWith('DELETE FROM board')) t.board.delete(a[0]);
+      else if (sql.startsWith('DELETE FROM redemptions')) { for (const k of [...t.redemptions]) if (k.startsWith(`${a[0]}|`)) t.redemptions.delete(k); }
       else if (sql.startsWith('INSERT INTO board')) t.board.set(a[0], { id: a[0], name: a[1], picture: a[2], max_cleared: a[3], shares: a[4], prestige: a[5], dps: a[6], play_seconds: a[7], collection: a[8], score: a[9], updated_at: a[10] });
       else if (sql.startsWith('INSERT INTO redemptions')) t.redemptions.add(`${a[0]}|${a[1]}`);
       else if (sql.startsWith('INSERT INTO ad_views')) t.ads.push({ id: a[0], kind: a[1], at: a[2] });
@@ -301,6 +302,16 @@ test('완전 초기화: 서버 기록을 지워야 초기화 뒤에도 저장이
   const board = await (await worker.fetch(req('/v1/board'), env)).json();
   assert.ok(!(board.entries ?? board.rows ?? []).some((e) => e.me), '순위표에서도 내려갔다');
   assert.equal((await worker.fetch(req('/v1/save', { method: 'PUT', body: JSON.stringify({ save: fresh }) }, token), env)).status, 200, '초기화 뒤 저장이 된다');
+
+  // 코드 사용 기록도 지워야 '처음부터 다시'가 된다
+  const CODE = Object.keys((await import('../src/data/codes.js')).CODES ?? {})[0];
+  if (CODE) {
+    const use = () => worker.fetch(req('/v1/redeem', { method: 'POST', body: JSON.stringify({ code: CODE }) }, token), env);
+    assert.equal((await use()).status, 200, '코드를 한 번 쓴다');
+    assert.equal((await use()).status, 409, '두 번은 안 된다');
+    assert.equal((await worker.fetch(req('/v1/save/reset', { method: 'POST', body: '{}' }, token), env)).status, 200);
+    assert.equal((await use()).status, 200, '초기화하면 코드를 다시 쓸 수 있다');
+  }
 
   // 로그인 없이는 거부
   assert.equal((await worker.fetch(req('/v1/save/reset', { method: 'POST', body: '{}' }), env)).status, 401, '남의 기록은 못 지운다');

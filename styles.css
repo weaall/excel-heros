@@ -705,10 +705,6 @@ body.stealth #roster-table { display: table; }
 #hero-table td.eq.bad { color: #b03a2e; }
 
 /* 보석 코드 */
-.code-box { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 10px 0 2px; flex-wrap: wrap; }
-.code-box label { font-size: 12px; color: var(--muted); }
-.code-box input { font: inherit; font-size: 13px; padding: 4px 8px; border: 1px solid var(--line-dark); width: 190px; text-transform: uppercase; }
-.code-box .ok { color: var(--xl-green); } .code-box .bad { color: #b03a2e; }
 /* 회사 이전 권유 (벽에 막혔을 때만) */
 .prestige-hint { margin: 0 0 8px; padding: 8px 10px; border: 1px solid #d4a017; background: linear-gradient(135deg, #fdf6e3, #fff 70%); }
 .prestige-hint[hidden] { display: none; }
@@ -849,12 +845,6 @@ body.stealth .tutorial { display: none; }
 .brace-bar.miss { background: #fdeceb; } .brace-bar.miss input { border-color: #c0392b; }
 
 /* 코드 등록: '있다'와 '보인다'는 다르다 — 엑셀 양식처럼 테두리와 제목을 준다 */
-.code-box { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 10px 8px; padding: 8px 10px;
-  background: #fffbe8; border: 1px solid #e0c85a; }
-.code-box .code-title { width: 100%; color: #6b5700; font-size: 12.5px; }
-.code-box label { color: #6b5700; font-size: 12px; }
-.code-box input { width: 190px; }
-.code-box .small { width: 100%; }
 /* 되돌릴 수 없는 동작은 눈에 띄되, 실수로 누르지 않게 설명이 먼저 온다 */
 .danger-box { border: 1px solid #e6a9a2; background: #fdeceb; padding: 8px 10px; }
 .danger-box p { margin: 0 0 6px; color: #922b21; }

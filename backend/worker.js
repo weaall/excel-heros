@@ -141,6 +141,9 @@ export default {
         if (!rateLimit(a.id, now, Number(env.SAVE_MIN_GAP_MS ?? 20000))) return json({ error: 'too many requests; try again in a moment' }, 429, origin);
         await env.DB.prepare('DELETE FROM saves WHERE id = ?').bind(a.id).run();
         await env.DB.prepare('DELETE FROM board WHERE id = ?').bind(a.id).run();
+        // 코드 사용 기록도 지운다 — 남기면 초기화 뒤에도 "이미 사용한 코드"가 나와 처음부터가 아니다.
+        // 코드를 다시 쓰려고 초기화하는 건 언제나 손해이므로(전부 사라진다) 농사 통로가 되지 않는다.
+        await env.DB.prepare('DELETE FROM redemptions WHERE user_id = ?').bind(a.id).run();
         return json({ ok: true, reset: true }, 200, origin);
       }
 
@@ -150,6 +153,7 @@ export default {
         if (!rateLimit(a.id, now, Number(env.SAVE_MIN_GAP_MS ?? 20000))) return json({ error: 'too many requests; try again in a moment' }, 429, origin);
         await env.DB.prepare('DELETE FROM saves WHERE id = ?').bind(a.id).run();
         await env.DB.prepare('DELETE FROM board WHERE id = ?').bind(a.id).run();
+        await env.DB.prepare('DELETE FROM redemptions WHERE user_id = ?').bind(a.id).run();
         return json({ ok: true, reset: true }, 200, origin);
       }
 

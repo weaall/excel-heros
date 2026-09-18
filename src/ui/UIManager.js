@@ -163,13 +163,8 @@ export class UIManager {
         this.toast(r.count + '장 방출 → 강화 카드 ' + fmt(r.cards) + '장' + (r.gold ? ', 골드 ' + fmt(r.gold) : ''));
       });
     });
-    {
-      // 시트의 입력란. 대화상자와 **같은** 등록 함수를 쓴다 — 두 입구가 갈라지면 한쪽만 고쳐진다.
-      const input = $('#code-input'), msg = $('#code-msg'), go = $('#code-redeem');
-      const redeem = () => this.#redeemCode(input, msg, go);
-      go?.addEventListener('click', redeem);
-      input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeem(); });
-    }
+    // 코드 등록은 **삽입 › 보석 코드 등록… 한 곳에서만** 한다. 뽑기 시트에 있던 입력란은 뺐다 —
+    // 픽업 카드와 뽑기 버튼 사이에 끼여 흐름을 끊었고, 같은 기능이 두 곳에 있으면 한쪽은 잊혀진다.
     $('#qa-code')?.addEventListener('click', () => this.#openCodeDialog());
     $('#tut-hide')?.addEventListener('click', () => this.game.hideTutorial(true));
     $('#qa-manual')?.addEventListener('click', () => this.showManual());
@@ -1095,7 +1090,7 @@ export class UIManager {
 
   // ------------------------------------------------------------- gacha --
   /**
-   * 코드 등록 한 곳. 시트의 입력란과 대화상자가 이 함수를 공유한다.
+   * 코드 등록. 입구는 삽입 탭의 대화상자 하나뿐이다.
    * @param {HTMLInputElement} input 코드 입력란
    * @param {HTMLElement} msg 결과를 쓸 자리
    * @param {HTMLButtonElement|null} go 누른 버튼 (있으면 처리 중 비활성화)
