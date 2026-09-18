@@ -24,6 +24,19 @@ test('forecast rises with party strength and is stricter for boss stages', () =>
   assert.equal(g.challengeForecast(200).prob, 0);
 });
 
+// 승산은 97%의 시간 '유리'라 정보가 아니다 — 리본이 실제로 읽히는 숫자는 **예상 소요**다(6-117).
+test('forecast reports a finite clear estimate that grows as the stage gets harder', () => {
+  const g = new GameManager({ state: createInitialState(), save: memSave() });
+  g.state.heroes[MAIN_ID].level = 40; g.entities.refreshHeroStats();
+  const a = g.challengeForecast(5), b = g.challengeForecast(25);
+  for (const f of [a, b]) { assert.ok(Number.isFinite(f.eta) && f.eta > 0, `예상 소요가 유한한 양수여야 한다 (${f.eta})`); }
+  assert.ok(b.eta > a.eta, `깊은 단계가 더 오래 걸려야 한다 (${a.eta.toFixed(1)}초 → ${b.eta.toFixed(1)}초)`);
+  // 파티가 세지면 예상도 줄어든다 — 이게 깨지면 리본 숫자가 거짓말을 한다
+  const before = g.challengeForecast(25).eta;
+  g.state.heroes[MAIN_ID].level = 80; g.entities.refreshHeroStats();
+  assert.ok(g.challengeForecast(25).eta < before, '강해지면 예상 소요가 줄어야 한다');
+});
+
 test('safe auto-advance waits while the forecast is bad and resumes after upgrades', () => {
   const s = createInitialState(); s.stage = 9; s.maxStage = 9; s.maxCleared = 8; s.challenging = true; s.heroes[MAIN_ID].level = 22;
   const g = new GameManager({ state: s, save: memSave() });

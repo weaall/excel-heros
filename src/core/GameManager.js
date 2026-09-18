@@ -1068,7 +1068,20 @@ export class GameManager extends Emitter {
     let prob = Math.max(0, Math.min(1, Math.log(Math.max(1e-9, ratio) / lo) / Math.log(hi / lo)));
     const bossTime = boss ? enemyHp / dps : null;
     if (boss && bossTime > BALANCE.BOSS.timeLimit * BALANCE.FORECAST.bossTimeFrac) prob = Math.min(prob, 0.15);
-    return { stage, boss, ratio, prob, bossTime, label: prob >= 0.7 ? '유리' : prob >= BALANCE.SAFE_ADVANCE.min ? '접전' : '불리' };
+    // **예상 소요 시간.** 승산은 97%의 시간 '유리'라 정보가 아니다(6-114에서 2,880번 표본: 전력비
+    // 중앙값이 100% 기준선의 8.6배). 반면 한 단계에 걸리는 시간은 연속적으로 자라고, **그 증가가 곧
+    // 벽**이다 — 회사 이전을 언제 할지 정하는 신호가 여기 있다.
+    // 싸움 시간 + 웨이브마다 걸어 들어오는 시간(6-115에서 잰 그 시간이다).
+    const P = BALANCE.PACE;
+    const approach = P.travel + 430 / Math.max(1, P.monsterSpeed);   // 이동 + 화면 밖에서 전선까지
+    const F = BALANCE.FORECAST;
+    const eta = boss
+      ? (approach + bossTime) * F.etaBoss
+      : (() => {
+        const waves = Math.max(1, Math.ceil(BALANCE.KILLS_PER_STAGE / Math.max(1, count)));
+        return waves * (approach + enemyHp / dps) * F.etaNormal;
+      })();
+    return { stage, boss, ratio, prob, bossTime, eta, label: prob >= 0.7 ? '유리' : prob >= BALANCE.SAFE_ADVANCE.min ? '접전' : '불리' };
   }
   /** Auto-advance that waited for a better forecast resumes as soon as the party is strong enough. */
   #maybeResumeAdvance() {

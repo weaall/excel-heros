@@ -220,7 +220,11 @@ export const BALANCE = Object.freeze({
   COMBO: { perHit: 0.005, max: 0.25, decay: 3 },
   STAR_TRAIT_BOOST: { star: 3, mult: 1.25 }, // ★ perks: ★2 skill unlock · ★3 trait ×1.25 · ★4 skill ×1.5 · ★5 awakening (trait ×1.5, skill ×1.25) + enhance cap ★×10`,
   // 승산 forecast (calibrated with headless sims, scripts/calib): power ratio = (partyDPS/enemyHP) / (enemyDPS/partyHP)
-  FORECAST: { normal: [2, 10], boss: [3, 15], bossTimeFrac: 0.9 }, // ratio at which win chance is 0% / 100%
+  // `etaNormal`/`etaBoss` — 예상 소요 시간의 **보정 계수**. 순수 계산(적 체력 ÷ 파티 DPS + 걸어오는
+  // 시간)은 일반 단계를 짧게, 보스를 길게 잡는다. 2시간 × 206판으로 실제/예상을 재서 맞췄다:
+  // 일반 중앙값 1.17(파티가 한 놈씩 집중하느라 전체 DPS가 다 안 들어간다) · 보스 0.81(스킬 한 방이
+  // 큰 표적에 다 박힌다). 눈금을 바꾸면 **다시 재서** 고칠 것 — 안 맞는 예측은 없는 것보다 나쁘다.
+  FORECAST: { normal: [2, 10], boss: [3, 15], bossTimeFrac: 0.9, etaNormal: 1.17, etaBoss: 0.81 }, // ratio at which win chance is 0% / 100%
   // 안전 자동 진행이 기다리는 문턱. 중첩 객체인 이유는 BALANCE 가 freeze 라서 — 스칼라로 두면
   // 감사 스크립트가 값을 바꿀 수 없고(대입이 조용히 무시된다) 그러면 훑어 볼 수도 없다.
   SAFE_ADVANCE: { min: 0.35 },

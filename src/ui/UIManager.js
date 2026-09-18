@@ -559,7 +559,10 @@ export class UIManager {
     $('#qa-challenge-label').textContent = stealth ? STEALTH_DYN.challenge(challenging)
       : challenging ? '도전 중단' : `${stageLabel(next)} 도전${isBossStage(next) ? ' (보스)' : ''}`;
     this.#refreshNowDoing();
-    const fcEl = $('#qa-forecast'); fcEl.textContent = `승산 ${Math.round(fc.prob * 100)}% · ${fc.label}${fc.boss && fc.bossTime ? ` · 예상 ${fc.bossTime.toFixed(0)}s` : ''}`;
+    // 승산은 거의 늘 100%라 그것만으론 아무것도 못 읽는다 — **예상 소요**를 같이 적는다(6-117).
+    const fcEl = $('#qa-forecast');
+    const eta = fc.eta && Number.isFinite(fc.eta) ? ` · 예상 ${fc.eta < 90 ? `${Math.round(fc.eta)}초` : `${Math.floor(fc.eta / 60)}분 ${Math.round(fc.eta % 60)}초`}` : '';
+    fcEl.textContent = `승산 ${Math.round(fc.prob * 100)}% · ${fc.label}${eta}`;
     fcEl.className = `rb-forecast ${fc.prob >= 0.7 ? 'good' : fc.prob >= BALANCE.SAFE_ADVANCE.min ? 'mid' : 'bad'}`;
     if (!stealth && !challenging && g.waitingAdvance) $('#stage-hint').textContent = `자동 진행 대기: ${stageLabel(next)} 승산 ${Math.round(fc.prob * 100)}% (강화하면 자동 재개)`;
     this.#refreshBestiary(boss ? [bossDef] : pool);
