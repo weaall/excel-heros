@@ -244,3 +244,70 @@ test('수식 대응: a solved formula is spent on one special, not every one', a
   boss.hits = 1; em.__testPattern(boss, em.heroes.filter((h) => h.alive), 100);
   assert.equal(em.braced, false, '한 번 막으면 소진된다');
 });
+
+// ------------------------------------------------ 죽음의 값 · 탱커의 직무 --
+// 자동 부활이 있으면 탱커 하나만 키워 영원히 전진할 수 있고, 힐러도 부활 스킬도 쓸 이유가 없다.
+// 죽음에 값을 붙이고, 그 대가로 탱커에게 상시 역할을 준다.
+test('죽음: a downed hero stays down for the whole stage attempt', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
+  const g = new GameManager({ save: memSave() });
+  g.state.challenging = false;
+  for (const d of HEROES.filter((h) => h.id !== MAIN_ID).slice(0, 4)) {
+    Object.assign(g.state.heroes[d.id], { owned: true, star: 1, level: 20 });
+    g.state.party.push(d.id);
+  }
+  g.entities.rebuildParty();
+  for (let i = 0; i < 60 && !g.entities.monsters.length; i++) g.tick(0.1);
+  const em = g.entities, down = em.heroes[1];
+  down.alive = false; down.hp = 0; down.reviveT = 0;
+  // 스테이지가 끝나면 전원 회복이 정상이므로, 끝나지 않게 붙잡아 둔다
+  for (let i = 0; i < 300; i++) { for (const m of em.monsters) { m.hp = m.maxHp = 1e9; } g.tick(0.1); }
+  assert.equal(down.alive, false, '30초가 지나도 스스로 일어나면 안 된다 — 부활 스킬만이 예외다');
+  assert.ok(em.heroes.some((h) => h.alive), '나머지는 계속 싸운다');
+});
+
+test('죽음: a full wipe retreats to the last cleared stage', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const g = new GameManager({ save: memSave() });
+  g.state.stage = 5; g.state.maxStage = 5; g.state.maxCleared = 4; g.state.challenging = true;
+  for (let i = 0; i < 100 && !g.entities.monsters.length; i++) g.tick(0.1);
+  for (const h of g.entities.heroes) { h.alive = false; h.hp = 0; }
+  g.tick(0.1);
+  assert.equal(g.state.stage, 4, '직전 클리어 스테이지로 후퇴한다');
+  assert.equal(g.isChallenging(), false, '도전이 끝난다');
+});
+
+test('탱커: takes a share of what the party would eat, and a better tank takes more of it', async () => {
+  const { createInitialState } = await import('../src/core/state.js');
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { HEROES, MAIN_ID } = await import('../src/data/heroes.js');
+  const { BALANCE } = await import('../src/config/balance.js');
+  const tankDef = HEROES.find((x) => x.role === 'tank' && x.id !== MAIN_ID);
+  const rangedDef = HEROES.find((x) => x.role === 'ranged');
+
+  const hit = (star, withTank = true) => {
+    const g = new GameManager({ save: memSave() });
+    for (const d of [tankDef, rangedDef]) Object.assign(g.state.heroes[d.id], { owned: true, star, level: 30 });
+    g.state.party = withTank ? [MAIN_ID, tankDef.id, rangedDef.id] : [MAIN_ID, rangedDef.id];
+    g.entities.rebuildParty();
+    const em = g.entities;
+    const tank = em.heroes.find((h) => h.heroId === tankDef.id);
+    const ranged = em.heroes.find((h) => h.heroId === rangedDef.id);
+    for (const h of em.heroes) { h.maxHp = 1e7; h.hp = 1e7; h.trait = null; }
+    em.__testHit({ atk: 1000 }, ranged);
+    return { tank: tank ? tank.maxHp - tank.hp : 0, ranged: ranged.maxHp - ranged.hp };
+  };
+
+  const alone = hit(1, false);
+  const s1 = hit(1), s5 = hit(5);
+  assert.equal(s1.tank > 0, true, '탱커가 대신 맞아야 한다');
+  assert.ok(s1.ranged < alone.ranged, '탱커가 있으면 아군이 덜 맞는다');
+  assert.ok(s5.ranged < s1.ranged, '★이 높은 탱커일수록 더 많이 막는다');
+  // 대신 받은 몫은 감면된다 — 그래서 탱커를 세우는 게 파티 전체에 이득이다
+  const total1 = s1.tank + s1.ranged;
+  assert.ok(total1 < alone.ranged, `파티 전체 피해가 줄어야 한다 (${alone.ranged} → ${total1})`);
+  assert.ok(BALANCE.TANK.shareMax <= 1 && BALANCE.TANK.reduceMax < 1);
+});

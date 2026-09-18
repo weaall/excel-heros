@@ -276,7 +276,7 @@ export class Renderer {
     const sx = Math.round(h.x + dash - 32 + knock + (h.shake ? (Math.random() - 0.5) * 3 * h.shake : 0)), sy = Math.round(h.y - 60 + bob);
     this.#shadow(h.x + dash, h.y + 2, 18);
     if (!h.alive) {
-      const k = Math.min(1, (BALANCE.HERO_REVIVE_SEC - h.reviveT) * 4);
+      const k = 1; // 자동 부활이 없어졌다 — 쓰러진 모습 그대로 (부활 스킬만이 일으킨다)
       ctx.save(); ctx.globalAlpha = 0.35 + 0.35 * (1 - k); ctx.translate(h.x - 8, h.y); ctx.rotate(-Math.PI / 2 * k); ctx.drawImage(img, -24, -60); ctx.restore();
       ctx.fillStyle = '#bdc3c7'; ctx.font = 'bold 12px "Segoe UI", Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(`${Math.ceil(h.reviveT)}s`, h.x, h.y + 16);

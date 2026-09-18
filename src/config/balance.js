@@ -80,7 +80,11 @@ export const BALANCE = Object.freeze({
   RESPAWN_DELAY: 1.0,
   MONSTER_SPEED: 60,        // px / s (64px sprites)
   HERO_SPEED: 100,
-  HERO_REVIVE_SEC: 8,
+  // 쓰러진 영웅은 그 스테이지 동안 일어나지 못한다(부활 스킬만 예외). 자동 부활이 있으면 탱커 하나로
+  // 영원히 전진할 수 있어서 파티를 짤 이유가 사라진다. 전원이 쓰러지면 직전 스테이지로 후퇴한다.
+  // 탱커 상시 '대신 맞기': 아군이 맞을 피해의 share 만큼을 앞선 탱커가 대신 받고, 그 몫은 reduce 만큼 줄어든다.
+  // 둘 다 ★로 오른다 — 좋은 탱커일수록 더 많이, 더 싸게 막는다.
+  TANK: { share: 0.35, sharePerStar: 0.06, shareMax: 0.65, reduce: 0.25, reducePerStar: 0.05, reduceMax: 0.5 },
   HERO_REGEN_PCT: 0.02,     // fraction of max HP regenerated per second while alive
   MELEE_ADVANCE_CELLS: 3,   // how far (cells) a melee hero may leave formation
   ELITE: { hp: 2.5, atk: 1.5, gold: 3 },

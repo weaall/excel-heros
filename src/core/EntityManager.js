@@ -199,11 +199,7 @@ export class EntityManager {
     // --- heroes ---------------------------------------------------------
     for (const h of this.heroes) {
       h.shake = Math.max(0, h.shake - dt * 8); h.flash = Math.max(0, h.flash - dt);
-      if (!h.alive) {
-        h.reviveT -= dt;
-        if (h.reviveT <= 0) { h.alive = true; h.hp = h.maxHp; this.fx('sparkle', { x: h.x, y: h.y, color: '#2ecc71', n: 8 }); this.game.log(`${h.def.name} 병가 복귀`, 'info'); }
-        continue;
-      }
+      if (!h.alive) continue; // 쓰러지면 이 스테이지 동안 일어나지 못한다 — 부활 스킬만이 예외다
       if (this.traveling) continue;
       h.animT += dt;
       h.hp = Math.min(h.maxHp, h.hp + h.maxHp * (BALANCE.HERO_REGEN_PCT + (h.trait === 'regen' ? tv(h, 'regen') : 0) + (this.perks?.regen ?? 0)) * dt);
@@ -302,7 +298,7 @@ export class EntityManager {
           const tgt = this.heroes.find((h) => h.id === p.targetId);
           const taunting = this.taunt && this.taunt.until >= this.time ? this.heroes.find((a) => a.id === this.taunt.heroId && a.alive) : null;
           const hit = taunting ?? tgt;
-          if (hit?.alive) { this.#damage(hit, p.dmg * (taunting ? 1 - this.taunt.reduce : 1) * (hit.trait === 'sturdy' ? 1 - tv(hit, 'sturdy') : 1), false); this.fx('puff', { x: hit.x, y: hit.y - 10, color: p.color, life: 0.25 }); }
+          if (hit?.alive) { this.#splitToTank(hit, p.dmg * (taunting ? 1 - this.taunt.reduce : 1) * (hit.trait === 'sturdy' ? 1 - tv(hit, 'sturdy') : 1), false); this.fx('puff', { x: hit.x, y: hit.y - 10, color: p.color, life: 0.25 }); }
         } else if (p.onHit) p.onHit();
       }
     }
@@ -384,11 +380,39 @@ export class EntityManager {
     return true;
   }
 
+  /**
+   * 앞선 탱커가 대신 받을 몫. 탱커 본인이나 탱커가 없을 때는 0이다.
+   * 비율은 ★로 오른다 — 탱킹이 '스킬 하나'가 아니라 **탱커라는 직무**가 되게 하는 부분이다.
+   */
+  #tankGuard(target) {
+    if (!target || target.role === 'tank') return null;
+    const T = BALANCE.TANK;
+    const tank = this.heroes.filter((h) => h.alive && h.role === 'tank' && h !== target).sort((a, b) => b.x - a.x)[0];
+    if (!tank) return null;
+    const star = Math.max(1, tank.star ?? 1);
+    return {
+      tank,
+      share: Math.min(T.shareMax, T.share + T.sharePerStar * (star - 1)),
+      reduce: Math.min(T.reduceMax, T.reduce + T.reducePerStar * (star - 1)),
+    };
+  }
+  /** 대신 맞기를 적용해 실제로 피해를 나눈다. 아군 몫은 줄고, 나머지를 탱커가 감면된 채로 받는다. */
+  #splitToTank(target, dmg, crit) {
+    const g = this.#tankGuard(target);
+    if (!g) { this.#damage(target, dmg, crit); return; }
+    const taken = dmg * g.share;
+    this.#damage(target, dmg - taken, crit);
+    this.#damage(g.tank, taken * (1 - g.reduce), false);
+    this.fx('puff', { x: g.tank.x, y: g.tank.y - 14, color: '#5dade2', life: 0.22 });
+  }
+  /** 테스트 전용 통로: 몬스터 한 대를 그 자리에서 때린다(비공개 메서드라 밖에서 못 부른다). */
+  __testHit(m, target, mult = 1) { return this.#monsterHit(m, target, mult); }
+
   #monsterHit(m, target, mult = 1) {
     // 도발: while it is up, the taunting hero takes the hit instead — and takes less of it
     const t = this.taunt && this.taunt.until >= this.time ? this.heroes.find((a) => a.id === this.taunt.heroId && a.alive) : null;
     if (t) { target = t; mult *= 1 - this.taunt.reduce; }
-    this.#damage(target, m.atk * mult * (target.trait === 'sturdy' ? 1 - tv(target, 'sturdy') : 1), false);
+    this.#splitToTank(target, m.atk * mult * (target.trait === 'sturdy' ? 1 - tv(target, 'sturdy') : 1), false);
     this.fx('puff', { x: target.x + 10, y: target.y - 12, color: '#e74c3c', life: 0.22 });
     if (m.isBoss) this.shake = Math.max(this.shake, 5);
   }
@@ -446,9 +470,10 @@ export class EntityManager {
         else this.game.emit('sfx', 'kill');
         this.game.onMonsterKilled(target);
       } else {
-        target.reviveT = BALANCE.HERO_REVIVE_SEC * (1 - (this.perks?.revive ?? 0));
+        target.reviveT = 0;
         this.fx('puff', { x: target.x, y: target.y, color: '#95a5a6', life: 0.4 });
-        this.game.log(`${target.def.name} 쓰러짐 (${Math.round(target.reviveT)}초 후 복귀)`, 'warn');
+        const left = this.heroes.filter((h) => h.alive).length;
+        this.game.log(`${target.def.name} 쓰러짐 (남은 인원 ${left}명 — 부활 스킬로만 복귀)`, 'warn');
       }
     }
     return dealt;
