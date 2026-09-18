@@ -116,7 +116,11 @@ test('야근 모드: once a day, 60 s of kills pay gems without touching stage p
   for (let i = 0; i < (BALANCE.OVERTIME.duration + 2) * 10; i++) g.tick(0.1);
   assert.ok(ended, 'run ended by the clock'); assert.equal(g.overtime, null);
   assert.ok(ended.kills > 0, `killed something (${ended.kills})`);
-  assert.equal(g.state.gems - gems0 - ((g.state.stats.gemDrops ?? 0) - drops0), Math.min(BALANCE.OVERTIME.maxGems, ended.kills * BALANCE.OVERTIME.gemsPerKill + ended.elites * BALANCE.OVERTIME.gemsPerElite)); // random 보석 드롭 excluded
+  // 보석은 페이즈 배수를 탄다(6-118) — 깊이 갈수록 한 마리 잡기가 어려우니 한 마리의 값을 올린다
+  const otPhase = Math.floor(((12 + BALANCE.OVERTIME.stageOffset) - 1) / BALANCE.BOSS_EVERY);   // 야근은 maxStage + offset 에서 돈다
+  const expected = Math.min(BALANCE.OVERTIME.maxGems, Math.round((ended.kills * BALANCE.OVERTIME.gemsPerKill + ended.elites * BALANCE.OVERTIME.gemsPerElite) * (1 + otPhase * BALANCE.OVERTIME.gemsPerPhase)));
+  assert.equal(g.state.gems - gems0 - ((g.state.stats.gemDrops ?? 0) - drops0), expected); // random 보석 드롭 excluded
+  assert.equal(ended.gems, expected);
   assert.equal(g.state.kills, kills0, 'stage kill counter untouched'); assert.equal(g.state.maxCleared, cleared0); assert.equal(g.state.stage, 5);
   assert.equal(g.state.daily.overtimeDone, true); assert.equal(g.canOvertime(), false); assert.equal(g.startOvertime(), false);
   assert.equal(g.state.stats.overtimes, 1); assert.equal(g.state.stats.overtimeBest, ended.kills);

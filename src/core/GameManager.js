@@ -1036,7 +1036,11 @@ export class GameManager extends Emitter {
   }
   #endOvertime() {
     const o = this.overtime; if (!o) return null; const O = BALANCE.OVERTIME;
-    const gems = Math.min(O.maxGems, o.kills * O.gemsPerKill + o.elites * O.gemsPerElite);
+    // 깊이 갈수록 한 마리를 잡기 어려우므로 **한 마리의 값**을 올린다. 안 그러면 하루 한 번짜리
+    // 보상이 진행할수록 줄어든다(6-118: 20단계 238보석 → 90단계 114보석). 보석 드롭과 같은 규칙이다.
+    const phase = Math.floor((Math.max(1, o.stage) - 1) / BALANCE.BOSS_EVERY);
+    const perPhase = 1 + phase * O.gemsPerPhase;
+    const gems = Math.min(O.maxGems, Math.round((o.kills * O.gemsPerKill + o.elites * O.gemsPerElite) * perPhase));
     const cards = (Math.floor((o.stage - 1) / BALANCE.BOSS_EVERY) + 1) * O.cardsPerPhase;
     this.state.gems += gems; this.state.cards += cards; this.state.daily.overtimeDone = true;
     this.state.stats.overtimes = (this.state.stats.overtimes ?? 0) + 1; this.state.stats.overtimeBest = Math.max(this.state.stats.overtimeBest ?? 0, o.kills);

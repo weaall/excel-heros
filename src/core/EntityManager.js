@@ -140,7 +140,14 @@ export class EntityManager {
     this.wave++;
     if (this.game.overtime) { // 야근 모드: dense wave, high elite rate, no chests, short travel
       const O = BALANCE.OVERTIME;
-      for (let i = 0; i < O.count; i++) { const m = this.#spawnMonster(stage, false, i, null, O.elite); m.speed *= 1.15; }
+      // 야근은 **처치 수**로 값을 매기는 모드다. 그런데 적 체력이 그대로면 깊이 갈수록 덜 잡힌다 —
+      // 6-118 측정: 20단계에서 29마리(130보석), 50·90단계에서 12~18마리(54보석). 하루 한 번짜리
+      // 보상이 진행할수록 **줄어드는** 건 거꾸로다. 체력을 깎아 '많이 잡는 맛'을 단계와 무관하게 둔다.
+      for (let i = 0; i < O.count; i++) {
+        const m = this.#spawnMonster(stage, false, i, null, O.elite);
+        m.speed *= 1.15;
+        m.hp = m.maxHp = Math.max(1, Math.round(m.maxHp * O.hpMult));
+      }
       return;
     }
     if (this.game.bossActive()) {

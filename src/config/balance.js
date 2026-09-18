@@ -47,7 +47,10 @@ export const BALANCE = Object.freeze({
     setSame: { D: 4, C: 7, B: 11, A: 16, S: 24 },
   },
   // 야근 모드: once a day, 60 s of dense waves from (max stage + offset) with a high elite rate; gems per kill, no stage progress
-  OVERTIME: { duration: 60, stageOffset: 3, count: 7, elite: 0.35, gemsPerKill: 2, gemsPerElite: 6, maxGems: 400, cardsPerPhase: 2, travel: 0.4 },
+  // `hpMult` — 야근에서 적 체력 배수. 1이면 깊이 갈수록 처치 수가 줄어 보상이 거꾸로 간다(6-118).
+  // `hpMult` — 야근에서 적 체력 배수 · `gemsPerPhase` — 페이즈당 보석 배수 가산.
+  // 둘 다 6-118에서 붙였다: 그냥 두면 깊이 갈수록 처치 수가 줄어 보상이 거꾸로 간다.
+  OVERTIME: { duration: 60, stageOffset: 3, count: 7, elite: 0.35, hpMult: 0.35, gemsPerKill: 2, gemsPerElite: 6, gemsPerPhase: 0.15, maxGems: 400, cardsPerPhase: 2, travel: 0.4 },
 
   // --- Derived (not in GDD) ---------------------------------------------
   MONSTER_ATK_BASE: 1,     MONSTER_ATK_GROWTH: 1.13,
