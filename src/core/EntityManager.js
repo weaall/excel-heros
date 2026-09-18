@@ -284,16 +284,21 @@ export class EntityManager {
         // 상시 회복(기본 재생 + 힐러 오라 + 힐러의 능동 치유)이 그 아래로 안 내려가게 붙잡는다.
         // 게다가 ★ 보너스가 "넘친 회복량이 보호막이 된다"인데 — **만피일 때 못 쓰게 막아 놔서 그 보너스는
         // 영영 발동하지 않았다.** 문턱을 올리고, ★가 붙었으면 보호막이 없을 때도 쓴다.
-        const worth = type === 'heal' ? (heroes.some((a) => a.hp < a.maxHp * 0.9) || (this.#starStep(h) > 0 && this.barrier.hp <= 0))
+        const worth = type === 'heal' ? (heroes.some((a) => a.hp < a.maxHp * BALANCE.SKILL_STAR.healWorth) || (BALANCE.SKILL_STAR.healIdleShield && this.#starStep(h) > 0 && this.barrier.hp <= 0))
           : type === 'buff' || type === 'haste' ? (monsters.length >= 2 || !!this.boss)
           : type === 'barrier' ? (this.barrier.hp <= 0 && (heroes.some((a) => a.hp < a.maxHp * 0.9) || monsters.length >= 3 || !!this.boss))
           : type === 'strike' || type === 'execute' ? true : monsters.some((m) => m.arrived) || !!this.boss;
+        // **채우기용 시전은 진짜 시전을 막으면 안 된다.** 웰니스 데이를 보호막 목적으로만 쓰는 경우
+        // (아무도 안 다쳤을 때)에도 `castLock` 1.1초가 걸려서 파티의 다른 스킬이 그만큼 밀렸고,
+        // 그 손해가 보호막 이득보다 컸다 — 60단계 도달이 64분 → 105분이 됐다(6-124). 잠금을 걸지 않는다.
+        const idleHeal = type === 'heal' && !heroes.some((a) => a.hp < a.maxHp * BALANCE.SKILL_STAR.healWorth);
         if (worth) {
           const skillTarget = type === 'strike' ? (monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? monsters.slice().sort((a, b) => b.hp - a.hp)[0] ?? target)
             : type === 'execute' ? (monsters.find((m) => m.isBoss && m.hp < m.maxHp * 0.3) ?? monsters.filter((m) => m.alive && m.hp < m.maxHp * 0.3).sort((a, b) => b.maxHp - a.maxHp)[0] ?? monsters.find((m) => m.isBoss) ?? monsters.filter((m) => m.elite)[0] ?? target) : target;
           this.castSkill(h, skillTarget, monsters, heroes);
           // 게이지가 얼마나 찼는지 그리려면 **시작값**이 있어야 한다. `skillCd` 는 줄기만 해서 비율을 못 낸다.
           h.skillCd = h.skillCdMax = (SKILLS[type]?.cooldown ?? h.skill.cooldown ?? 10) * (1 - (this.perks?.cooldown ?? 0)) * (h.skillCdMult ?? 1);
+          if (idleHeal) this.castLock = 0;   // 채우기용이었으면 다음 스킬을 막지 않는다
         } else h.skillCd = 0.5; // re-check soon instead of wasting the cast (게이지는 건드리지 않는다 — 찬 채로 대기)
       }
 
