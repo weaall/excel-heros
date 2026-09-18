@@ -42,7 +42,13 @@ test('간식: once per hero per day, costs stage-relative gold, adds giftXp; her
 test('사내 메신저: episodes unlock by phase, first read pays gems once, all speakers exist', () => {
   const ids = new Set([...HEROES.map((h) => h.id), 'main', 'sys']);
   for (const ep of EPISODES) for (const [who] of ep.lines) assert.ok(ids.has(who), `${ep.id}: unknown speaker ${who}`);
-  assert.equal(EPISODES.length, 10);
+  // 편수를 박아 두면 이야기를 더할 때마다 실패한다 — 대신 구조를 본다
+  assert.ok(EPISODES.length >= 10, `${EPISODES.length}편`);
+  EPISODES.forEach((ep, i) => {
+    assert.equal(ep.phase, i + 1, `${ep.id}: phase 가 1부터 빠짐없이 이어져야 한다`);
+    assert.ok(ep.title && ep.room && ep.lines.length >= 5, `${ep.id}: 제목·방·최소 5줄`);
+  });
+  assert.equal(new Set(EPISODES.map((e) => e.id)).size, EPISODES.length, 'id 중복 없음');
   const g = new GameManager({ save: memSave() });
   assert.equal(g.storyUnlocked('ep1'), true); assert.equal(g.storyUnlocked('ep2'), false);
   assert.equal(g.readStory('ep2'), 0, 'locked');
