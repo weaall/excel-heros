@@ -56,6 +56,9 @@ button:disabled { cursor: default; opacity: .55; }
 .rb-stack { display: flex; flex-direction: column; gap: 3px; }
 .rb-group-label { text-align: center; font-size: 11px; color: var(--muted); padding: 2px 0 0; }
 .rb-btn small { font-size: 10.5px; color: var(--muted); }
+/* 자리를 먼저 정하고 내용을 맞춘다. '승산 100% · 유리 · 예상 3초' 와 '승산 0% · 불리 · 예상 3분 14초'
+   는 폭이 127 ↔ 174px 로 달라서 그대로 두면 도전 버튼이 매초 들썩인다(6-105에서 같은 이유로 넘어졌다). */
+.rb-forecast { display: inline-block; width: 176px; text-align: center; white-space: nowrap; overflow: hidden; }
 .rb-forecast.good { color: var(--xl-green); } .rb-forecast.mid { color: #9a6700; } .rb-forecast.bad { color: #b03a2e; }
 .ribbon-group { display: flex; align-items: center; gap: 4px; }
 .ribbon-group.right { margin-left: auto; gap: 18px; }
@@ -115,10 +118,13 @@ button:disabled { cursor: default; opacity: .55; }
    고정 높이면 창이 720 미만일 때 페이지 전체가 세로로 스크롤된다 — 그건 위장에도 어울리지 않는다. */
 .cell-area { width: 832px; max-width: 100%; height: 416px; max-height: calc(100% - 22px); aspect-ratio: 832 / 416; position: relative; background: #fff; box-shadow: 0 0 0 1px var(--line-dark); }
 .ws-row { display: flex; height: 22px; }
-.ws-row .cell { flex: none; width: var(--cell-w); height: 22px; line-height: 21px; padding: 0 5px; font-size: 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; }
+/* 창이 832px 보다 좁으면 `.cell-area` 가 같이 좁아지는데, 셀이 `flex: none` 이라 줄어들지 않아서
+   남는 자리를 먹는 힌트 칸이 **10px 로 짜부라져 사라졌다**(측정: 581px 폭에서). 셀을 줄어들 수 있게
+   하고 힌트에 최소 폭을 준다 — 자리가 모자라면 라벨이 줄고, 마지막까지 남는 건 설명이다. */
+.ws-row .cell { flex: 0 1 var(--cell-w); width: var(--cell-w); min-width: 24px; height: 22px; line-height: 21px; padding: 0 5px; font-size: 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #fff; }
 .ws-row .cell.k { background: #f3f3f3; color: #555; font-size: 11.5px; }
-.ws-row .cell.w2 { width: calc(var(--cell-w) * 2); }
-.ws-row .cell.hint { flex: 1; color: var(--muted); font-size: 11.5px; }
+.ws-row .cell.w2 { flex-basis: calc(var(--cell-w) * 2); width: calc(var(--cell-w) * 2); }
+.ws-row .cell.hint { flex: 1 0 150px; min-width: 150px; color: var(--muted); font-size: 11.5px; }
 .ws-row .cell.stage-label { color: var(--xl-green); font-weight: 700; }
 .ws-row .cell.stage-monster { color: #444; }
 .ws-row .cell.stage-mode { font-weight: 700; color: #9a6700; }

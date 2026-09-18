@@ -165,9 +165,22 @@ export class GameManager extends Emitter {
     // 벽 판정은 **재정비한 파티**로 한다. 지금 두 명이 쓰러져 있다는 건 벽이 아니라 상처다 —
     // 그걸 벽으로 읽으면 후퇴 한 번으로 넘을 단계에서 회사 이전을 권하게 된다(측정: 6-95).
     const fc = this.challengeForecast(this.state.stage + (this.isChallenging() ? 0 : 1), { regrouped: true });
+    // **벽은 '못 이긴다'가 아니라 '오래 걸린다'로 온다.** 승산 문턱(35%)은 97%의 시간 100%라 거의 안
+    // 걸린다 — 그 규칙만 믿으면 이전을 한참 늦게 하게 된다. 8시간 × 3판으로 규칙을 나란히 재 봤다:
+    //
+    //   규칙            150단계     이전 횟수  최고   영구 지분
+    //   승산 < 35%      213분33초      8.7     172      346
+    //   예상 > 20초     287분02초     15.3     186      440
+    //   예상 > 30초     202분01초     11.3     196      469   ← 모든 장기 지표에서 앞선다
+    //   예상 > 45초     230분04초      7.3     173      340
+    //
+    // 초반 관문(60단계)만 늦다(58분 vs 37분) — 더 일찍 이전하니 당연하다. 대신 8시간이면 도달 단계도
+    // 지분도 앞선다. 방치형은 하루 단위로 도는 게임이므로 **장기 지표를 따른다.**
+    const slow = Number.isFinite(fc.eta) && fc.eta > BALANCE.PRESTIGE.adviseEta;
     const stalled = fc.prob < BALANCE.SAFE_ADVANCE.min;
-    if (!stalled) return null;
-    return { ...info, stalled: true, text: `다음 단계 승산 ${Math.round(fc.prob * 100)}% — 지금 회사를 이전하면 지분 +${info.gain} (파티 ATK·골드 +${Math.round(info.gain * info.perShare * 100)}%)을 영구히 얻고, 다시 올라오는 속도는 처음보다 훨씬 빠릅니다.` };
+    if (!slow && !stalled) return null;
+    const why = stalled ? `다음 단계 승산 ${Math.round(fc.prob * 100)}%` : `다음 단계에 ${Math.round(fc.eta)}초`;
+    return { ...info, stalled: true, text: `${why} — 지금 회사를 이전하면 지분 +${info.gain} (파티 ATK·골드 +${Math.round(info.gain * info.perShare * 100)}%)을 영구히 얻고, 다시 올라오는 속도는 처음보다 훨씬 빠릅니다.` };
   }
 
   /**

@@ -217,7 +217,9 @@ export const BALANCE = Object.freeze({
   // 그 한 방이 약해진다. 전투 중 유일한 조작이고, 안 쳐도 예전과 똑같으므로 방치 플레이에는 손해가 없다.
   // 읽고 더하고 치는 데 드는 시간이 limit 이다 — 짧으면 운, 길면 의미가 없다.
   BRACE: { limit: 4.0, reduce: 0.6, max: 89 },
-  PRESTIGE: { minCleared: 30, bonusPerShare: 0.03 },
+  // `adviseEta` — 한 단계에 이 시간(초)보다 오래 걸리기 시작하면 회사 이전을 권한다. 8시간 훑기에서
+  // 30초가 도달 단계·영구 지분 모두 최고였다(6-119). 눈금을 바꾸면 다시 잴 것.
+  PRESTIGE: { minCleared: 30, bonusPerShare: 0.03, adviseEta: 30 },
   // 각성 (awakening): a ★5 card can be awakened with 강화 카드 — permanent +25% ATK/HP, trait ×1.5, skill ×1.25, gold frame
   AWAKEN: { star: 5, cards: { D: 60, C: 100, B: 160, A: 260, S: 400 }, atk: 0.25, hp: 0.25, trait: 1.5, skill: 1.25 },
   COMBO: { perHit: 0.005, max: 0.25, decay: 3 },

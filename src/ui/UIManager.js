@@ -561,7 +561,12 @@ export class UIManager {
     this.#refreshNowDoing();
     // 승산은 거의 늘 100%라 그것만으론 아무것도 못 읽는다 — **예상 소요**를 같이 적는다(6-117).
     const fcEl = $('#qa-forecast');
-    const eta = fc.eta && Number.isFinite(fc.eta) ? ` · 예상 ${fc.eta < 90 ? `${Math.round(fc.eta)}초` : `${Math.floor(fc.eta / 60)}분 ${Math.round(fc.eta % 60)}초`}` : '';
+    // 99분을 넘으면 숫자를 적지 않는다 — 200단계에서 '예상 1977926분 29초' 가 나왔다. 읽을 수 없는
+    // 숫자는 정보가 아니라 잡음이고, 폭도 제멋대로가 된다.
+    const eta = !fc.eta || !Number.isFinite(fc.eta) ? ''
+      : fc.eta >= 5940 ? ' · 예상 99분+'
+      : fc.eta < 90 ? ` · 예상 ${Math.round(fc.eta)}초`
+      : ` · 예상 ${Math.floor(fc.eta / 60)}분 ${Math.round(fc.eta % 60)}초`;
     fcEl.textContent = `승산 ${Math.round(fc.prob * 100)}% · ${fc.label}${eta}`;
     fcEl.className = `rb-forecast ${fc.prob >= 0.7 ? 'good' : fc.prob >= BALANCE.SAFE_ADVANCE.min ? 'mid' : 'bad'}`;
     if (!stealth && !challenging && g.waitingAdvance) $('#stage-hint').textContent = `자동 진행 대기: ${stageLabel(next)} 승산 ${Math.round(fc.prob * 100)}% (강화하면 자동 재개)`;
