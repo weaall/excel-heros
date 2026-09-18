@@ -113,6 +113,7 @@
             <label class="rb-check" title="전투 화면 위에 셀 눈금선 표시"><input type="checkbox" id="qa-gridlines"> 눈금선</label>
             <label class="rb-check" title="수식 입력줄 표시"><input type="checkbox" checked disabled> 수식 입력줄</label>
             <label class="rb-check" title="알림 소리 (페이지 레이아웃 보기에서는 항상 무음)"><input type="checkbox" id="qa-sound"> 소리</label>
+            <label class="rb-check" title="작업 창의 신입 사원 교육 목록을 켜고 끕니다"><input type="checkbox" id="qa-tutorial"> 신입 사원 교육</label>
           </div>
         </div>
         <div class="rb-group-label">표시</div>
@@ -384,7 +385,7 @@
     <!-- Right task pane (Excel "작업 창"): party management -------------------->
     <aside class="task-pane">
         <div id="tutorial" class="tutorial" hidden>
-          <div class="tut-head"><b>신입 사원 교육</b><span id="tut-count" class="muted small"></span><button id="tut-hide" class="xl-btn small" title="교육 목록 숨기기">✕</button></div>
+          <div class="tut-head"><b id="tut-head-title">신입 사원 교육</b><span id="tut-count" class="muted small"></span><button id="tut-hide" class="xl-btn small" title="교육 목록 숨기기">✕</button></div>
           <ol id="tut-list"></ol>
         </div>
         <div id="promo-hint" class="prestige-hint promo" hidden><b id="promo-hint-title">직급 승진</b><p id="promo-hint-text"></p><button id="promo-hint-go" class="xl-btn small primary">승진 보기</button><button id="promo-hint-hide" class="xl-btn small">나중에</button></div>

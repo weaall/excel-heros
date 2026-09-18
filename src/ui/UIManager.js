@@ -13,7 +13,7 @@ import { extraOf } from '../data/profilesExtra.js';
 import { PROLOGUE } from '../data/prologue.js';
 import { artVersion } from '../data/cardArt.js';
 import { SLOT_ORDER, gradeColor } from '../data/equipment.js';
-import { STEALTH_TEXT, STEALTH_HIDE, stealthStatus } from '../data/stealthLabels.js';
+import { STEALTH_TEXT, STEALTH_HIDE, STEALTH_TUTORIAL, stealthStatus } from '../data/stealthLabels.js';
 import { TUTORIAL_BONUS } from '../data/tutorial.js';
 import { MANUAL, skillRows } from '../data/manual.js';
 import { EPISODES, episodeUnlocked } from '../data/story.js';
@@ -166,6 +166,8 @@ export class UIManager {
     // 코드 등록은 **삽입 › 보석 코드 등록… 한 곳에서만** 한다. 뽑기 시트에 있던 입력란은 뺐다 —
     // 픽업 카드와 뽑기 버튼 사이에 끼여 흐름을 끊었고, 같은 기능이 두 곳에 있으면 한쪽은 잊혀진다.
     $('#qa-code')?.addEventListener('click', () => this.#openCodeDialog());
+    // 교육 목록 켜고 끄기. ✕ 로 숨기면 되돌릴 입구가 없었다 — 이제 보기 › 표시에서 다시 켠다.
+    $('#qa-tutorial')?.addEventListener('change', (e) => this.game.hideTutorial(!e.target.checked));
     $('#tut-hide')?.addEventListener('click', () => this.game.hideTutorial(true));
     $('#qa-manual')?.addEventListener('click', () => this.showManual());
     // 수식 대응: Enter 로 제출. 입력 칸이 자동으로 포커스를 받으므로 손을 옮길 필요가 없다.
@@ -1416,6 +1418,7 @@ export class UIManager {
   #refreshSettings() {
     const st = this.game.state.settings;
     $('#qa-auto').checked = st.autoAdvance; $('#set-auto').checked = st.autoAdvance; $('#set-stealth').checked = st.excel;
+    const tut = $('#qa-tutorial'); if (tut) tut.checked = !(this.game.state.tutorial?.hidden ?? false);
     $('#qa-gridlines').checked = st.gridlines !== false; $('#set-gridlines').checked = st.gridlines !== false; $('#qa-sound').checked = !!st.sound;
     $('#set-safe').checked = st.safeAdvance !== false;
     $('#cloud-url').value = st.cloud?.url ?? ''; $('#cloud-name').value = st.cloud?.name ?? ''; this.#refreshCloud();
@@ -1512,8 +1515,23 @@ export class UIManager {
   #refreshTutorial() {
     const box = $('#tutorial'); if (!box) return;
     const t = this.game.tutorialState();
+    // 보기 › 표시 체크박스를 여기서 맞춘다. ✕ 는 'tutorial' 만 emit 하므로 설정 갱신에만 두면 갈라진다.
+    const cb = $('#qa-tutorial'); if (cb) cb.checked = !t.hidden;
     if (t.hidden || (t.allDone && t.bonusPaid)) { box.hidden = true; this.#tutorialTarget(null); return; }
     box.hidden = false;
+    // 위장 모드에서는 **같은 자리에 문서 검사 결과**를 그린다. 창을 지우면 아래 「파티 관리」가
+    // 322px 올라가 레이아웃이 뒤집힌다(6-101). 높이는 CSS 로 고정돼 있어 어느 쪽이든 같다.
+    if (this.game.state.settings.excel) {
+      $('#tut-head-title').textContent = STEALTH_TUTORIAL.title;
+      $('#tut-count').textContent = `${STEALTH_TUTORIAL.steps.length} / ${STEALTH_TUTORIAL.steps.length}`;
+      const sl = $('#tut-list'); sl.innerHTML = '';
+      for (const [title, text] of STEALTH_TUTORIAL.steps) {
+        sl.append(el('li', { class: 'done' }, el('span', { class: 'mark' }, '✔'), el('span', { class: 't' }, title), el('span', { class: 'd' }, text)));
+      }
+      this.#tutorialTarget(null);
+      return;
+    }
+    $('#tut-head-title').textContent = '신입 사원 교육';
     $('#tut-count').textContent = `${t.steps.filter((x) => x.ok).length} / ${t.steps.length}`;
     const list = $('#tut-list'); list.innerHTML = '';
     for (const st of t.steps) {
@@ -1673,6 +1691,7 @@ export class UIManager {
     $('#set-stealth').checked = on;
     $('#qa-stealth').classList.toggle('active', on); $('#qa-normal').classList.toggle('active', !on);
     if (on) this.closeBackstage();
+    this.#refreshTutorial();  // 교육 창 ↔ 문서 검사 — 자리는 그대로, 말만 바뀐다
     this.#refreshFormulaBar();
     if (on) { this.#refreshStealth(); this.closeModal(); }
     if (!silent) this.toast(on ? '페이지 레이아웃 보기 (Esc: 기본 보기)' : '기본 보기');

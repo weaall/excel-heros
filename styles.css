@@ -742,6 +742,10 @@ body.stealth .stealth-hidden { display: none !important; }
 
 /* 신입 사원 교육: 읽고 닫는 안내가 아니라, 직접 해야 지워지는 목록 */
 .tutorial { margin: 0 0 8px; border: 1px solid var(--xl-green); background: #fff; }
+/* 높이를 고정한다 — 내용이 늘거나 위장 모드로 바뀌어도 아래의 「파티 관리」가 움직이지 않는다.
+   고정 전에는 314px 까지 자라 작업 창 본문을 259px 로 밀어냈다. */
+.tutorial { height: 208px; display: flex; flex-direction: column; box-sizing: border-box; }
+.tutorial > ol { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
 .tutorial[hidden] { display: none; }
 .tut-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--xl-green-light); border-bottom: 1px solid var(--line); }
 .tut-head b { color: #1b5e3a; font-size: 12.5px; } .tut-head .xl-btn { margin-left: auto; padding: 0 5px; }
@@ -753,7 +757,9 @@ body.stealth .stealth-hidden { display: none !important; }
 .tutorial li .r { grid-column: 2; color: #b7950b; font-size: 11px; }
 .tutorial li.now { background: #fffbe8; box-shadow: inset 3px 0 0 #d4a017; }
 .tutorial li.done .d, .tutorial li.done .r { display: none; }
-body.stealth .tutorial { display: none; }
+/* 위장 모드에서 교육 창을 **지우지 않는다.** 지우면 「파티 관리」가 322px 올라가 레이아웃이 뒤집힌다
+   (계측 6-101). 대신 안쪽 말만 「문서 검사」로 바꾼다 — 리본 수치가 visibility 로 자리를 지키는 것과 같은 규칙. */
+body.stealth .tutorial .r { visibility: hidden; }   /* '보상 보석 N' 만 가린다 */
 
 /* 한계 돌파 가능 표시: 엑셀 조건부 서식(아이콘 집합 + 데이터 막대)과 같은 어휘로 */
 .card-star-up { position: absolute; left: 3px; bottom: 3px; z-index: 3; padding: 0 4px; height: 15px; line-height: 15px;
