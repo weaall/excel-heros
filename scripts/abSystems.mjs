@@ -43,6 +43,14 @@ const SYSTEMS = {
   traitStar: { name: '특성 ★ 배율',    off: () => { BALANCE.TRAIT_STAR.perStar = 0; } },
   combo:   { name: '콤보',             off: () => { BALANCE.COMBO.max = 0; BALANCE.COMBO.perHit = 0; } },
   attrition: { name: '전진 소모전',    off: (g) => { const real = g.entities.startStage.bind(g.entities); g.entities.startStage = () => real(true); } },
+  // --- 여기서부터는 6-100에서 추가. 재지 않던 시스템은 죽어 있어도 모른다.
+  equip:   { name: '비품',             off: (g) => { g.autoEquipParty = () => 0; for (const e of Object.values(g.state.heroes)) e.equip = {}; } },
+  affection: { name: '호감도',         off: () => { BALANCE.AFFECTION.bonusPerLevel = 0; } },
+  synergy: { name: '부문 시너지',      off: (g) => { const real = g.synergy.bind(g); g.synergy = () => ({ ...real(), perks: { gold: 0, regen: 0, revive: 0, boss: 0, cooldown: 0, crit: 0, skill: 0 } }); g.entities.refreshHeroStats(); } },
+  skillLv: { name: '스킬 레벨',        off: () => { BALANCE.SKILL_LEVEL.powerPerLevel = 0; BALANCE.SKILL_LEVEL.cooldownPerLevel = 0; } },
+  collection: { name: '도감 보너스',   off: () => { BALANCE.COLLECTION.atkPerHero = 0; BALANCE.COLLECTION.atkPerStar = 0; BALANCE.COLLECTION.goldPerHero = 0; } },
+  // 하니스는 늘 수식을 맞힌다. 끄면 '한 번도 안 맞히는 플레이' = 방치 플레이어가 잃는 양이 나온다.
+  brace:   { name: '수식 대응',        off: (g) => { g.__skipBrace = true; } },
 };
 
 /** 한 판을 HOURS 시간 돌리고 결과 지표를 낸다. 플레이어 행동은 모든 판에서 동일하다. */
@@ -71,7 +79,7 @@ function run(seed, mutate) {
   while (t < HOURS * 3600) {
     g.tick(DT); t += DT; act += DT;
     if (g.state.maxCleared > peak) { peak = g.state.maxCleared; for (const gate of GATES) if (peak >= gate && !reached.has(gate)) reached.set(gate, t); }
-    if (g.braceFormula) { const f = g.braceInfo(); g.submitBraceFormula(f.a + f.b); } // 항상 맞힌다 (변인 고정)
+    if (g.braceFormula && !g.__skipBrace) { const f = g.braceInfo(); g.submitBraceFormula(f.a + f.b); } // 기본은 항상 맞힌다 (변인 고정)
     if (act >= 30) { act = 0;
       if (!g.state.settings.autoAdvance) g.setAutoAdvance(true); // 전멸하면 게임이 자동 진행을 끈다 — 사람은 다시 켠다 (상태를 직접 건드리면 도전이 다시 시작되지 않는다)
       let n = 0; while (g.state.gems >= 900 && n++ < 30) { if (!g.pull(10)) break; }
@@ -87,19 +95,40 @@ function run(seed, mutate) {
   const score = boardScore(boardEntry(g.state, '감사', g.partyDPS()));
   const cap = HOURS * 3600;
   const out = { score: Math.round(score), shares: g.state.prestige?.shares ?? 0, stage: peak, kills: g.state.stats.totalKills ?? 0, bosses: g.state.stats.bossKills ?? 0, deaths, wipes };
-  for (const gate of GATES) out[`t${gate}`] = Math.round(reached.get(gate) ?? cap); // 못 가면 최악값
+  // 도달하지 못한 관문은 **자료가 아니다.** 상한으로 채우면 기준선과 변종이 같은 값이 되어 차이가 0이
+  // 되고, 그 0이 평균을 희석해 '기여가 없다'로 읽힌다 — 측정하지 못한 것을 좋은 소식으로 바꾸는 짓이다.
+  for (const gate of GATES) { const at = reached.get(gate); out[`t${gate}`] = at === undefined ? null : Math.round(at); }
+  out.cap = cap;
   return out;
 }
 
 // BALANCE 는 Object.freeze 이므로 **최상위 스칼라는 A/B 로 못 끈다**(대입이 조용히 무시된다).
 // 중첩 객체(TANK, ROLE_PASSIVE …)는 얼어 있지 않아 끌 수 있다. 스칼라를 재려면 값을 직접 고쳐 두 번 돌려야 한다.
-const snapshot = () => JSON.parse(JSON.stringify({ TANK: BALANCE.TANK, ROLE_PASSIVE: BALANCE.ROLE_PASSIVE, SKILL_STAR: BALANCE.SKILL_STAR, TRAIT_STAR: BALANCE.TRAIT_STAR, COMBO: BALANCE.COMBO }));
+const snapshot = () => JSON.parse(JSON.stringify({
+  TANK: BALANCE.TANK, ROLE_PASSIVE: BALANCE.ROLE_PASSIVE, SKILL_STAR: BALANCE.SKILL_STAR, TRAIT_STAR: BALANCE.TRAIT_STAR,
+  COMBO: BALANCE.COMBO, AFFECTION: BALANCE.AFFECTION, SKILL_LEVEL: BALANCE.SKILL_LEVEL, COLLECTION: BALANCE.COLLECTION,
+}));
 const restore = (snap) => { for (const [k, v] of Object.entries(snap)) Object.assign(BALANCE[k], v); };
 
 // 시드를 짝지었으므로 판별 차이를 평균한다(중앙값보다 민감하고, 짝 비교라 뽑기 운이 상쇄된다).
 const mean = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
-const avg = (runs, key) => Math.round(mean(runs.map((r) => r[key])) * 10) / 10;
-const paired = (runs, base, key) => Math.round(mean(runs.map((r, i) => r[key] - base[i][key])) * 10) / 10;
+const avg = (runs, key) => { const v = runs.map((r) => r[key]).filter((x) => x !== null && x !== undefined); return v.length ? Math.round(mean(v) * 10) / 10 : null; };
+/**
+ * 짝 비교. 기준선이 도달한 관문만 본다.
+ *  · 양쪽 도달 → 실제 차이
+ *  · 기준선만 도달 → **하한**: 관측 상한까지 못 갔으므로 최소 (상한 − 기준선)만큼 느리다. 버리면
+ *    강한 효과가 '판정 불가'로 사라진다 — 도감 보너스를 끈 판이 60단계에 아예 못 갔다(6-100).
+ *  · 기준선이 못 도달 → 비교할 바탕이 없다(그 관문은 usable 에서 이미 빠진다).
+ */
+const paired = (runs, base, key) => {
+  const d = []; let bounded = 0;
+  runs.forEach((r, i) => {
+    const b2 = base[i][key]; if (b2 === null || b2 === undefined) return;
+    if (r[key] === null || r[key] === undefined) { d.push(r.cap - b2); bounded++; }  // 하한
+    else d.push(r[key] - b2);
+  });
+  return d.length ? { d: Math.round(mean(d) * 10) / 10, n: d.length, bounded } : null;
+};
 
 const want = process.argv.slice(2).filter((a) => SYSTEMS[a]);
 const keys = want.length ? want : Object.keys(SYSTEMS);
@@ -107,8 +136,12 @@ const snap = snapshot();
 
 console.log(`시스템 A/B 감사 — ${HOURS}시간 × ${RUNS}판 · 시드 고정 짝비교\n`);
 const base = Array.from({ length: RUNS }, (_, i) => run(i));
-const mmss = (x) => { const sec = Math.round(x); return `${Math.floor(sec / 60)}분${String(sec % 60).padStart(2, '0')}초`; };
-console.log('기준선   60단계', mmss(avg(base, 't60')), '· 90단계', mmss(avg(base, 't90')), '· 120단계', mmss(avg(base, 't120')), '· 지분', String(avg(base, 'shares')).padStart(4), '· 최고', String(avg(base, 'stage')).padStart(4), '· 쓰러짐', String(avg(base, 'deaths')).padStart(4));
+const mmss = (x) => { if (x === null) return '미도달'; const sec = Math.round(x); return `${Math.floor(sec / 60)}분${String(sec % 60).padStart(2, '0')}초`; };
+const GATE_KEYS = ['t60', 't90', 't120'];
+// 기준선이 못 간 관문은 아예 쓰지 않는다 — 비교할 바탕이 없다.
+const usable = GATE_KEYS.filter((k) => base.every((r) => r[k] !== null));
+console.log('기준선  ', GATE_KEYS.map((k) => `${k.slice(1)}단계 ${mmss(avg(base, k))}`).join(' · '), '· 지분', String(avg(base, 'shares')).padStart(4), '· 최고', String(avg(base, 'stage')).padStart(4), '· 쓰러짐', String(avg(base, 'deaths')).padStart(4));
+if (usable.length < GATE_KEYS.length) console.log(`※ 기준선이 ${GATE_KEYS.filter((k) => !usable.includes(k)).map((k) => k.slice(1) + '단계').join(', ')}에 못 갔다 — 그 관문은 평균에서 뺀다. HOURS 를 늘려라.`);
 console.log('-'.repeat(84));
 
 const rows = [];
@@ -117,21 +150,25 @@ for (const k of keys) {
   const sys = SYSTEMS[k];
   const runs = Array.from({ length: RUNS }, (_, i) => run(i, (g) => sys.off(g))); // 기준선 i판과 같은 시드
   restore(snap);
-  const d = (key) => paired(runs, base, key);
-  // 시스템을 끄면 관문 도달이 **늦어져야** 한다. 세 관문의 지연을 평균해 한 숫자로 본다(+ = 느려졌다).
-  const delays = ['t60', 't90', 't120'].map((k) => (avg(base, k) ? (d(k) / avg(base, k)) * 100 : 0));
-  const pct = delays.reduce((a2, b2) => a2 + b2, 0) / delays.length;
-  rows.push({ k, name: sys.name, pct, deaths: avg(runs, 'deaths') });
+  // 시스템을 끄면 관문 도달이 **늦어져야** 한다. 쓸 수 있는 관문의 지연만 평균한다(+ = 느려졌다).
+  const delays = []; let bounded = 0;
+  for (const key of usable) { const p = paired(runs, base, key); const b2 = avg(base, key); if (p && b2) { delays.push((p.d / b2) * 100); bounded += p.bounded; } }
+  const pct = delays.length ? delays.reduce((a2, b2) => a2 + b2, 0) / delays.length : null;
+  rows.push({ k, name: sys.name, pct, deaths: avg(runs, 'deaths'), gates: delays.length, bounded });
   console.log(
     `끔: ${sys.name}`.padEnd(22),
-    '60', mmss(avg(runs, 't60')).padStart(8), '· 90', mmss(avg(runs, 't90')).padStart(8), '· 120', mmss(avg(runs, 't120')).padStart(8),
-    `평균 ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`.padStart(13),
+    ...GATE_KEYS.map((key) => `${key.slice(1)} ${mmss(avg(runs, key)).padStart(8)}`),
+    (pct === null ? '평균 판정불가' : `평균 ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%${bounded ? '↑' : ''}`).padStart(15),
+    `(관문 ${delays.length}/${GATE_KEYS.length}${bounded ? `, 하한 ${bounded}` : ''})`,
     '· 지분', String(avg(runs, 'shares')).padStart(4),
   );
 }
 console.log('-'.repeat(84));
-const dead = rows.filter((r) => Math.abs(r.pct) < 3);
-const wrong = rows.filter((r) => r.pct < -3);
+const dead = rows.filter((r) => r.pct !== null && Math.abs(r.pct) < 3);
+const wrong = rows.filter((r) => r.pct !== null && r.pct < -3);
+const unknown = rows.filter((r) => r.pct === null);
+if (unknown.length) console.log(`판정 불가(기준선도 그 관문에 못 감): ${unknown.map((r) => r.name).join(', ')} — '기여가 없다'가 아니라 '재지 못했다'다. HOURS 를 늘려라.`);
+if (rows.some((r) => r.bounded)) console.log('↑ 표시는 변종이 관문에 아예 도달하지 못해 **하한**으로 계산한 값이다 — 실제 지연은 이보다 크다.');
 console.log(dead.length
   ? `꺼도 3% 미만으로만 움직이는 시스템: ${dead.map((r) => r.name).join(', ')} — 밸런스에 기여하지 않는다는 신호다.`
   : '모든 시스템이 꺼면 티가 난다.');
