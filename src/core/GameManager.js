@@ -846,6 +846,35 @@ export class GameManager extends Emitter {
     return true;
   }
 
+  /**
+   * 강화를 `n` 단계 되돌리고 쓴 카드를 환급한다(레벨의 `downgradeHero` 와 같은 규칙, 100%).
+   * 되돌릴 수 없으면 낮은 등급에 부은 카드가 묶인다 — 골드에서 이미 고친 문제다(6-88).
+   * @returns 되돌린 단계 수
+   */
+  downgradeEnhance(id, n = 1) {
+    const entry = this.state.heroes[id]; if (!entry?.owned) return 0;
+    let removed = 0, refund = 0;
+    for (let i = 0; i < n && (entry.enhance | 0) > 0; i++) {
+      entry.enhance -= 1;
+      refund += Math.floor(enhanceCost(entry.enhance) * BALANCE.ENHANCE_REFUND);
+      removed++;
+    }
+    if (removed) {
+      this.state.cards += refund;
+      this.entities.refreshHeroStats();
+      this.log(`${this.heroDef(id).name} 강화 -${removed} (강화 카드 +${refund}장 환급)`, 'info');
+      this.emit('cards'); this.emit('roster');
+    }
+    return removed;
+  }
+  /** 강화를 0으로 되돌리고 전액 환급. @returns 환급한 카드 수 */
+  resetHeroEnhance(id) {
+    const entry = this.state.heroes[id]; if (!entry?.owned) return 0;
+    const before = this.state.cards;
+    this.downgradeEnhance(id, entry.enhance | 0);
+    return this.state.cards - before;
+  }
+
   /** Convert a hero's shards into 강화 카드 (grade-weighted). n = all by default. */
   convertShards(id, n) {
     const v = this.heroView(id); const e = v.entry;

@@ -164,15 +164,15 @@ button:disabled { cursor: default; opacity: .55; }
 #hero-table th:nth-child(1), #hero-table td:nth-child(1) { width: auto; }          /* 이름 — 남는 폭 */
 #hero-table th:nth-child(2), #hero-table td:nth-child(2) { width: 38px; }          /* Lv */
 #hero-table th:nth-child(3), #hero-table td:nth-child(3) { width: 58px; }          /* ATK — '8,027만' */
-#hero-table th:nth-child(4), #hero-table td:nth-child(4) { width: 38px; }          /* 비품 — '4/4' */
-#hero-table th:nth-child(5), #hero-table td:nth-child(5) { width: 64px; }          /* 비용 */
-#hero-table th:nth-child(6), #hero-table td:nth-child(6) { width: 66px; }          /* +1 / +10 */
+#hero-table th:nth-child(4), #hero-table td:nth-child(4) { width: 64px; }          /* 비용 */
+#hero-table th:nth-child(5), #hero-table td:nth-child(5) { width: 66px; }          /* +1 / +10 */
 #team-table th:nth-child(1), #team-table td:nth-child(1) { width: auto; }
-#team-table th:nth-child(2), #team-table td:nth-child(2) { width: 48px; }  /* '0/100' */
-#team-table th:nth-child(3), #team-table td:nth-child(3) { width: 64px; }
-#team-table th:nth-child(4), #team-table td:nth-child(4) { width: 64px; }  /* '구매' 버튼 */
+#team-table th:nth-child(2), #team-table td:nth-child(2) { width: 48px; }  /* '7/100' */
+#team-table th:nth-child(3), #team-table td:nth-child(3) { width: 56px; }
+#team-table th:nth-child(4), #team-table td:nth-child(4) { width: 46px; }  /* '구매' — 버튼을 작게 해서 설명에 폭을 넘긴다 */
 /* 조작 칸의 작은 버튼 둘이 한 줄에 들어가야 한다 */
-#hero-table td.act, #team-table td.act { padding-left: 2px; padding-right: 4px; white-space: nowrap; }
+#hero-table td.act, #team-table td.act { padding-left: 2px; padding-right: 3px; white-space: nowrap; }
+#team-table td.act .xl-btn { padding: 1px 5px; font-size: 11px; min-width: 0; }
 #hero-table td.act .xl-btn { padding: 1px 4px; font-size: 11px; min-width: 0; }
 /* 이름 칸: 아이콘 + 이름 한 줄, 등급은 아래 줄. 넘치면 이름만 말줄임한다 */
 #hero-table td.name { overflow: hidden; white-space: nowrap; }
@@ -420,7 +420,7 @@ body.stealth #roster-table { display: table; }
 /* ------------------------------------------------------------ dialogs -- */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,.25); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .modal[hidden] { display: none; }
-.dialog { width: min(92vw, 560px); background: #fff; border: 1px solid #888; box-shadow: 0 8px 30px rgba(0,0,0,.3); font-size: 13px; }
+.dialog { width: clamp(300px, 92vw, 560px); background: #fff; border: 1px solid #888; box-shadow: 0 8px 30px rgba(0,0,0,.3); font-size: 13px; }
 .dialog-title { background: var(--panel); border-bottom: 1px solid var(--line-dark); padding: 8px 12px; font-weight: 600; }
 .dialog-body { padding: 12px; max-height: 70vh; overflow: auto; }
 .dialog-body ul { margin: 6px 0 0 16px; padding: 0; } .dialog-body li { margin: 3px 0; }
@@ -431,7 +431,7 @@ body.stealth #roster-table { display: table; }
 
 
 /* ------------------------------------------------------------ card detail (record layout) -- */
-.dialog:has(.dt) { width: min(94vw, 820px); }  /* 조작 버튼과 값이 같은 줄에 들어갈 최소 폭 (6-106) */
+.dialog:has(.dt) { width: clamp(320px, 94vw, 820px); }  /* 조작 버튼과 값이 같은 줄에 들어갈 최소 폭 (6-106) */
 /* 카드 상세는 **높이를 고정한다.** 탭마다 내용이 699~927px 로 달라서, 높이를 내용에 맡기면 탭을 누를
    때마다 창이 튄다(6-96). 스크롤은 오른쪽 정보 열만 하고 일러스트는 제자리에 있는다. */
 .dialog:has(.dt) .dialog-body { height: clamp(360px, 74vh, 560px); overflow: hidden; padding-bottom: 0; }
@@ -960,3 +960,8 @@ body.stealth .task-pane .sub, body.stealth .task-pane .eff, body.stealth .syn-ta
   100% { filter: none; box-shadow: 0 0 0 0 rgba(244, 208, 63, 0); }
 }
 @media (prefers-reduced-motion: reduce) { .dialog.starburst, .dialog.starburst .promo-card { animation: none; } }
+
+/* 주인공 승진 조건 — 네 줄을 충족/미충족으로 나란히 */
+.cond-list { display: flex; flex-direction: column; gap: 2px; font-weight: 400; }
+.cond { font-size: 11.5px; color: #8a6d3b; white-space: nowrap; }
+.cond.ok { color: #1e7a45; font-weight: 600; }

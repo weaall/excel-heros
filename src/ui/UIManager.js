@@ -580,7 +580,8 @@ export class UIManager {
           el('img', { src: heroIconDataURL(v.def), class: 'icon', alt: '' }), el('span', {}, v.def.name),
           // 좁은 칸에서 '★★★★☆' 는 다섯 글자를 쓰면서 별을 세게 만든다. 'S ★4' 가 짧고 바로 읽힌다.
           el('div', { class: 'sub', style: `color:${v.grade.color}`, title: v.isMain ? v.def.title : `${stars(v.star)}` }, v.isMain ? `${v.def.grade} · ${v.def.title}` : `${v.def.grade} ★${v.star}`)),
-        el('td', { class: 'num lvl' }), el('td', { class: 'num atk' }), el('td', { class: 'num eq' }), el('td', { class: 'num cost' }),
+        // 비품 착용 수는 상세의 비품 탭에 있다 — 목록에서 매 행마다 '0/4' 에 38px 을 쓰지 않는다
+        el('td', { class: 'num lvl' }), el('td', { class: 'num atk' }), el('td', { class: 'num cost' }),
         el('td', { class: 'act' }, btn('+1', () => { if (!this.game.upgradeHero(id)) this.toast('골드가 부족합니다'); }, 'up'), btn('+10', () => { const n = this.game.upgradeHeroMany(id, 10); if (!n) this.toast('골드가 부족합니다'); }, 'up10')),
       );
       tbody.append(row); this.heroRows.set(id, row);
@@ -592,7 +593,7 @@ export class UIManager {
     for (const [id, row] of this.heroRows) {
       const v = this.game.heroView(id);
       if (!light) { $('.lvl', row).textContent = v.entry.level; $('.atk', row).textContent = fmt(v.atk); $('.cost', row).textContent = v.atLevelCap ? '상한' : fmt(v.cost); $('.cost', row).classList.toggle('bad', !!v.atLevelCap); $('.cost', row).title = v.atLevelCap ? v.levelCapHint : '';
-        const eqCell = $('.eq', row); if (eqCell) { const n = this.game.equipOf(v.id).filter((x) => x.item).length; eqCell.textContent = `${n}/4`; eqCell.className = `num eq ${n === 4 ? 'ok' : n ? '' : 'bad'}`; eqCell.title = v.equip.setName ? `${v.equip.setName} · 모든 능력치 +${v.equip.setPct}%` : '비품 탭에서 착용하거나 자동 장착을 누르세요'; } }
+ }
       $('.up', row).disabled = gold < v.cost; $('.up10', row).disabled = gold < v.cost; row.classList.toggle('affordable', gold >= v.cost);
     }
     if (light) return;
@@ -899,7 +900,12 @@ export class UIManager {
       if (!v.isMain && v.star < BALANCE.MAX_STAR) { const k = starMult(v.star + 1) / starMult(v.star); table.append(row(`★${v.star + 1} 미리보기`, `ATK ${fmt(Math.floor(v.atk * k))} · HP ${fmt(Math.floor(v.hp * k))}`, null, `한계 돌파 시 ×${k.toFixed(2)} · 강화 한계 ${BALANCE.ENHANCE_CAP_BY_STAR[v.star] ?? v.enhanceCap}`)); }
       table.append(row('공격 속도', `${v.interval}s`));
       table.append(row('강화', `+${e.enhance} / 한계 ${v.enhanceCap}`,
-        sb(v.enhanceMaxed ? 'MAX' : `+1 (카드 ${v.enhanceCost})`, () => { if (!g.enhance(id)) this.toast(v.enhanceMaxed ? `★${v.star} 카드의 강화 한계는 +${v.enhanceCap}입니다. ★승급이나 각성으로 한계를 올리세요` : '강화 카드가 부족합니다'); }, v.canEnhance ? 'primary' : '', !v.canEnhance, '강화 카드로 +4% ATK/HP'),
+        el('div', { class: 'ctl-group' },
+          // 되돌리기는 레벨 줄과 같은 모양 — 강화 카드도 100% 환급된다(6-109)
+          sb('-10', () => { if (!g.downgradeEnhance(id, 10)) this.toast('강화가 0입니다'); }, '', (e.enhance | 0) <= 0, '강화 -10 · 강화 카드 100% 환급'),
+          sb('-1', () => { if (!g.downgradeEnhance(id, 1)) this.toast('강화가 0입니다'); }, '', (e.enhance | 0) <= 0, '강화 -1 · 강화 카드 100% 환급'),
+          sb(v.enhanceMaxed ? 'MAX' : `+1 (카드 ${v.enhanceCost})`, () => { if (!g.enhance(id)) this.toast(v.enhanceMaxed ? `★${v.star} 카드의 강화 한계는 +${v.enhanceCap}입니다. ★승급이나 각성으로 한계를 올리세요` : '강화 카드가 부족합니다'); }, v.canEnhance ? 'primary' : '', !v.canEnhance, '강화 카드로 +4% ATK/HP (단리)'),
+          sb('초기화', () => { const r = g.resetHeroEnhance(id); this.toast(r ? `강화 초기화: 강화 카드 ${fmt(r)}장 환급` : '강화가 0입니다'); }, 'danger', (e.enhance | 0) <= 0, '강화를 0으로 되돌리고 전액 환급')),
         v.isMain ? '한계는 직급 승진으로 상승' : `한계 = ★×10${v.awakened ? ' + 각성 10' : ''} · 보유 강화 카드 ${fmt(s.cards)}장`));
       if (!v.isMain) table.append(row('같은 카드', v.promoteCost !== null ? `여분 ${e.shards}장 / 필요 ${v.promoteCost}장` : `여분 ${e.shards}장 (최대 ★)`,
         el('div', { class: 'ctl-group' },
@@ -913,6 +919,24 @@ export class UIManager {
       if (!v.isMain && v.star >= BALANCE.AWAKEN.star) table.append(row('각성', v.awakened ? '✦ 완료' : '가능',
         v.awakened ? null : sb(`✦ 각성 (카드 ${v.awakenCost})`, () => { if (g.awaken(id)) this.#showAwaken(id); else this.toast('강화 카드가 부족합니다'); }, 'primary', !v.canAwaken),
         `ATK/HP +${Math.round(BALANCE.AWAKEN.atk * 100)}% · 특성 ×${BALANCE.AWAKEN.trait} · 스킬 ×${BALANCE.AWAKEN.skill} · 강화 한계 +${BALANCE.ENHANCE_CAP_AWAKEN}`));
+    }
+    // 주인공은 ★·각성이 없고 **직급 승진**으로 상한이 열린다. 다른 카드의 「같은 카드」·「각성」 줄이
+    // `isMain` 에 걸려 통째로 빠지는 바람에, 주인공만 성장 규칙이 화면에 한 줄도 없었다.
+    if (v.isMain && e.owned) {
+      const mp = g.mainPromotionInfo();
+      if (mp.maxed) {
+        table.append(row('직급 승진', '최고 직급', null, '더 오를 직급이 없습니다. 레벨 상한도 여기가 끝입니다.', true));
+      } else {
+        const mark = (ok, text) => el('span', { class: ok ? 'cond ok' : 'cond' }, `${ok ? '✔' : '□'} ${text}`);
+        table.append(row('직급 승진',
+          el('div', { class: 'cond-list' },
+            mark(mp.hasLevel, `레벨 ${mp.levelNow} / ${mp.level}`),
+            mark(mp.hasEnhance, `강화 +${mp.enhanceNow} / +${mp.enhance}`),
+            mark(mp.hasCards, `강화 카드 ${fmt(s.cards)} / ${fmt(mp.cards)}장`),
+            mark(mp.hasStage, `클리어 ${s.maxCleared} / ${mp.stage}단계`)),
+          null,
+          `주인공은 ★ 한계 돌파와 각성이 없습니다 — 직급 승진이 그 자리를 대신하고, 레벨 상한 ${v.levelCap} → ${BALANCE.MAIN_LEVEL_CAP_BY_TIER[Math.min(mp.tier + 1, BALANCE.MAIN_LEVEL_CAP_BY_TIER.length - 1)]}로 열립니다.`, true));
+      }
     }
     table.append(row('특성', el('span', { class: 'nm-trait' }, v.traitName), null, v.traitDesc, true));
     // --- 스킬 pane: one record per number (name / effect / power / cooldown / level), then the ★ growth ladder
@@ -1038,7 +1062,9 @@ export class UIManager {
 되돌릴 수 없습니다.`, { ok: '방출', danger: true }).then((yes) => { if (yes) g.dismiss(id); }); }, 'danger', !v.canDismiss); if (!v.canDismiss && v.dismissBlockedReason) b.title = v.dismissBlockedReason; return b; })(),
         v.canDismiss || v.isMain ? null : el('span', { class: 'muted small' }, v.dismissBlockedReason)));
     }
-    if (v.isMain) body.append(this.#mainPromoPanel(v.mainPromo));
+    // 승진 패널은 **스크롤되는 열 안**에 붙인다. `.dialog-body` 는 높이가 고정이고 `overflow: hidden`
+    // 이라(6-96), 거기에 붙이면 창 밖으로 잘려 화면에 아예 나오지 않는다 — 실제로 그랬다.
+    if (v.isMain) ($('.dt-info', body) ?? body).append(this.#mainPromoPanel(v.mainPromo));
     $('#modal-actions').innerHTML = ''; $('#modal-actions').append(el('span', { class: 'muted small', style: 'margin-right:auto' }, `골드 ${fmt(s.gold)} · 강화 카드 ${fmt(s.cards)}장`), btn('닫기', () => this.closeModal(), 'primary'));
   }
   /** ★ promotion with a before/after result dialog (card, stars, ATK/HP). */

@@ -69,6 +69,9 @@ export const BALANCE = Object.freeze({
   LEVEL_CAP_AWAKEN: 50,
   MAIN_LEVEL_CAP_BY_TIER: [80, 140, 200, 260, 320], // 주인공은 ★ 대신 직급으로 열린다
   LEVEL_REFUND: 1.0,        // levels can be undone; gold is refunded at this rate so it can move between cards
+  // 강화도 같은 규칙이다. 되돌릴 수 없으면 낮은 등급에 부은 강화 카드가 묶이고, 그건 골드에서 이미
+  // 고친 문제다(6-88). 100%가 아니면 '옮기면 손해' 가 되어 옮기지 않게 된다.
+  ENHANCE_REFUND: 1.0,
   ENHANCE_COST_BASE: 10, ENHANCE_COST_GROWTH: 1.2, // enhance cards
   // 경력직 스카우트: 골드 → **같은 카드 1장**. ★ 사이에서 골드가 할 일을 잃지 않게 하는 유일한 상시 소비처다.
   // 값 = 지금 ★의 레벨 상한을 채우는 누적 골드 × costPct × 등급 배수. 하루 한도가 가챠의 자리를 지킨다.

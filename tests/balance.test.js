@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BALANCE, upgradeCost, monsterHP, baseGold, offlineGold, stageLabel, isBossStage, heroATK, estimateGoldPerSec, starMult, enhanceMult, enhanceCost, relativeGold, atkRamp, monsterATK } from '../src/config/balance.js';
+import { HEROES } from '../src/data/heroes.js';
 
 test('GDD formulas at level/stage 1 return base values', () => {
   assert.equal(upgradeCost(1), 10);
@@ -123,4 +124,45 @@ test('적 화력 유예: 1단계는 그대로, 25단계에서 5배가 되고 그
   const bare = (st) => BALANCE.MONSTER_ATK_BASE * BALANCE.MONSTER_ATK_GROWTH ** (st - 1);
   assert.equal(monsterATK(40), Math.floor(bare(40) * full), '유예가 끝난 뒤에는 정확히 full배');
   assert.ok(monsterATK(25) > Math.floor(bare(25)) * 4, '유예 구간 끝에서 4배는 넘는다');
+});
+
+test('강화 되돌리기: 카드가 100% 환급되고, 강화는 단리 · 레벨은 복리다', async () => {
+  const { GameManager } = await import('../src/core/GameManager.js');
+  const { createInitialState } = await import('../src/core/state.js');
+  const memSave = () => ({ save() {}, load() { return null; }, clear() {}, export: () => '', import: () => createInitialState() });
+  const s = createInitialState();
+  s.heroes.parttime = { owned: true, star: 3, shards: 0, level: 1, enhance: 0, equip: {} };
+  s.cards = 100_000; s.gold = 1e15;
+  const g = new GameManager({ state: s, save: memSave() });
+
+  // 올린 만큼 그대로 돌아온다
+  const before = s.cards;
+  let spent = 0;
+  for (let i = 0; i < 12; i++) { spent += g.heroView('parttime').enhanceCost; assert.ok(g.enhance('parttime')); }
+  assert.equal(s.cards, before - spent, '쓴 만큼 줄었다');
+  assert.equal(s.heroes.parttime.enhance, 12);
+  const back = g.resetHeroEnhance('parttime');
+  assert.equal(back, spent, '100% 환급 — 쓴 것과 같은 장수가 돌아온다');
+  assert.equal(s.cards, before, '원래대로');
+  assert.equal(s.heroes.parttime.enhance, 0);
+
+  // 부분 되돌리기
+  for (let i = 0; i < 5; i++) g.enhance('parttime');
+  assert.equal(g.downgradeEnhance('parttime', 2), 2);
+  assert.equal(s.heroes.parttime.enhance, 3);
+  assert.equal(g.downgradeEnhance('parttime', 99), 3, '0 아래로는 안 내려간다');
+  assert.equal(g.downgradeEnhance('parttime', 1), 0, '0에서는 아무 일도 없다');
+
+  // 강화는 **단리**(1 + 0.04n), 레벨은 **복리**(1.10^(L-1)) — 둘 다 퍼센트지 절대값이 아니다
+  assert.equal(enhanceMult(0), 1);
+  assert.ok(Math.abs(enhanceMult(10) - (1 + BALANCE.ENHANCE_PER_LEVEL * 10)) < 1e-9, '강화는 선형');
+  assert.ok(Math.abs(enhanceMult(20) - (1 + BALANCE.ENHANCE_PER_LEVEL * 20)) < 1e-9);
+  const { GRADES } = await import('../src/data/heroes.js');
+  const baseAtk = GRADES[HEROES.find((h) => h.id === 'parttime').grade].base.atk;
+  const atk = (lv, enh) => heroATK(baseAtk, lv, 3, enh);
+  // floor 양자화가 무시되는 큰 수에서 본다 (낮은 레벨은 기본 ATK 6 → 9 라 오차가 3%까지 난다)
+  const r1 = atk(111, 0) / atk(101, 0), r2 = atk(121, 0) / atk(111, 0);
+  assert.ok(Math.abs(r1 - r2) / r1 < 0.001, `레벨은 등비(복리)라 같은 폭의 두 구간 배수가 같다 (${r1.toFixed(4)} vs ${r2.toFixed(4)})`);
+  assert.ok(Math.abs(r1 - BALANCE.HERO_ATK_GROWTH ** 10) / r1 < 0.001, `그 배수는 성장률^구간 (${r1.toFixed(4)} vs ${(BALANCE.HERO_ATK_GROWTH ** 10).toFixed(4)})`);
+  assert.ok(atk(1, 10) > atk(1, 0), '강화도 능력치를 곱한다 — 절대값 가산이 아니다');
 });
