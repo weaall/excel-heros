@@ -107,7 +107,15 @@ for (const g of gradeKeys) {
     md += `| 팔레트 | 머리 \`${h.palette?.H ?? '—'}\` · 상의 \`${h.palette?.B ?? '—'}\` · 강조 \`${h.palette?.W ?? '—'}\` |\n`;
     md += `| 취미 | ${p.hobby ?? '—'} |\n`;
     md += `| **특징** | **${p.feature ?? '—'}** |\n`;
-    md += `\n> ${p.bio ?? '—'}\n`;
+    // The short line is what the card UI renders — it stays short on purpose, because both
+    // the web panel and the Unity card sheet lay it out in a fixed frame. The long one is for
+    // whoever draws this character and lives only in the document.
+    md += `
+> **${p.bio ?? '—'}**
+`;
+    if (p.story) md += `>
+> ${p.story}
+`;
     if (p.line) md += `>\n> 평소 — "${p.line}"\n`;
     if (p.ult) md += `> EX — "${p.ult}"\n`;
   }
