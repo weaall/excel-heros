@@ -12,6 +12,7 @@ import { HEROES, MAIN_JOBS } from '../src/data/heroes.js';
 import { SKINS } from '../src/data/skins.js';
 import { PROLOGUE } from '../src/data/prologue.js';
 import { PROFILES } from '../src/data/profiles.js';
+import { wingTag, BUILD_EN, height } from '../src/data/design.js';
 
 const SPACE = process.env.SPACE ?? 'asahina2k-animagine-xl-4-0';
 const BASE = `https://${SPACE}.hf.space`;
@@ -30,7 +31,10 @@ const HALO_BY_GRADE = {
   A: 'a radiant golden halo ring floating above the head with a soft inner glow, a thin second ring around it and a few floating light motes',
   S: 'an ornate glowing golden halo above the head made of concentric rings with delicate engraved glyphs, warm light spilling from it and golden light particles drifting around it',
 };
+// Kept only so the halo direction can be compared against the wing on a test image; nothing
+// generates with it. Delete once the wing is confirmed.
 const haloTag = (grade) => HALO_BY_GRADE[grade] ?? HALO_BY_GRADE.C;
+void haloTag;
 
 /**
  * 자세. 전원이 카메라를 정면으로 맞닥뜨리고 있으면 스물네 장이 같은 사진처럼 보인다.
@@ -126,9 +130,12 @@ export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo a
 // which is right for a waist-up card and is exactly what a standing figure requires. Those bans
 // are dropped under CUTOUT and replaced with bans on the SCENERY, because anything painted behind
 // the character is something tools/cutout.py cannot key away.
+const WING_NEG = 'angel wings, feathered wings, bird wings, two wings, pair of wings, wings on both shoulders, huge wings, oversized wings, wings wider than the frame, wings covering the face, wings behind the head, halo, glowing ring above the head';
 const NEG_BASE = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, halo cut off by the frame, close-up, legs, knees, feet, shoes, standing full figure, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw';
 const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, halo cut off by the frame, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw, background details, office background, furniture, desk, window, city, skyline, plants, wall, floor, ground, shadow on the ground, drop shadow, gradient background, textured background, patterned background, scenery, indoors, outdoors';
-const NEG = CUTOUT ? NEG_CUTOUT : NEG_BASE;
+// The wing is ONE, on ONE shoulder, and is not a bird. Every one of those has to be said:
+// 'a single wing' in the positive prompt is routinely answered with a symmetric pair.
+const NEG = (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + WING_NEG;
 /** 낮은 등급에 연출이 붙지 않게 — 긍정 프롬프트가 아니라 네거티브로 막아야 구도가 살아남는다. */
 const PLAIN_NEG = 'glowing aura, magic effects, light particles, sparkles, gold trim, dramatic rim light, neon lights, energy glow, floating holograms';
 export const negFor = (grade) => (grade === 'D' || grade === 'C' ? `${PLAIN_NEG}, ${NEG}` : NEG);
@@ -187,7 +194,11 @@ export function describe(def, profileId, outfitOverride = null) {
   const hair = look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair, ${HAIR[look.hair] ?? 'short hair'}`;
   const outfit = outfitOverride ? `${outfitOverride}, ${GRADE[def.grade]}` : OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${GRADE[def.grade]}` : `${GRADE[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
   const bits = outfitOverride || OUTFIT_BY_ID[def.id] ? '' : [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
-  return `${who}, ${hair}, ${bits ? bits + ', ' : ''}${outfit}, ${ROLE[def.role]}`;
+  // build, feature and hobby were in the data and never reached the model. The feature is the
+  // one thing that makes this character rather than a person in the same job — it goes in.
+  const body = BUILD_EN[def.role] ?? '';
+  const mark = p.feature ? `, ${p.feature}` : '';
+  return `${who}, ${hair}, ${bits ? bits + ', ' : ''}${outfit}, ${body}, ${ROLE[def.role]}${mark}`;
 }
 const SKIN_BG = { casual: 'cafe window close behind him, warm evening lights, bokeh', formal: 'warm party lights close behind him, soft golden bokeh' };
 export function prompt(def, profileId, skin = null) {
@@ -195,13 +206,13 @@ export function prompt(def, profileId, skin = null) {
   const head = 'looking at viewer, face fully visible, eyes visible, whole head in frame with clear empty space above the hair and above the halo, face focus, soft even front lighting, bright face';
 
   if (CUTOUT) {
-    return `${desc}, ${poseTag(def.id, desc)}, ${head}, ${CUTOUT_SHOT}, ${haloTag(def.grade)}, `
+    return `${desc}, ${poseTag(def.id, desc)}, ${head}, ${CUTOUT_SHOT}, ${wingTag(def)}, `
          + `${CUTOUT_BG}, ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
   }
 
   const bg = skin ? SKIN_BG[skin.id] ?? BG_BY_GRADE[def.grade] : BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
   return `${desc}, ${poseTag(def.id, desc)}, ${head}, medium shot, upper body, waist up, `
-       + `${haloTag(def.grade)}, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
+       + `${wingTag(def)}, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
 }
 
 // Optional Hugging Face token (HF_TOKEN env or a .hf_token file next to package.json, git-ignored): a logged-in
