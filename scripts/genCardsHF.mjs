@@ -136,7 +136,10 @@ export const negFor = (grade) => (grade === 'D' || grade === 'C' ? `${PLAIN_NEG}
 // 인턴 민지's twin tails and two ponytails were not merely undescribed, they were drawn as
 // SHORT HAIR. A dictionary with a plausible default fails louder than one that drops the
 // key, because the wrong answer looks like an answer.
-const HAIR = { ponytail: 'ponytail', twin: 'twin tails', short: 'short hair', bob: 'bob cut', grey: 'grey hair', bun: 'hair bun', cap: 'baseball cap', side: 'swept bangs', bald: 'bald', spiky: 'spiked hair', long: 'long hair', curly: 'curly hair' };
+// `grey` and `cap` are gone from the shape slot: grey is a COLOUR that collides
+// with palette.H (CFO came out as "white hair, grey hair") and a cap is headwear.
+// Twelve values were really nine shapes for 55 characters.
+const HAIR = { ponytail: 'ponytail', twin: 'twin tails', braid: 'braided hair', lowbun: 'low bun', undercut: 'undercut', wavy: 'wavy hair', bangs: 'straight bangs', halfup: 'half-up hair', messy: 'messy hair', pixie: 'pixie cut', sidetail: 'side ponytail', hime: 'hime cut', slicked: 'slicked-back hair', shaggy: 'shaggy hair', short: 'short hair', bob: 'bob cut', grey: 'grey hair', bun: 'hair bun', cap: 'baseball cap', side: 'swept bangs', bald: 'bald', spiky: 'spiked hair', long: 'long hair', curly: 'curly hair' };
 // Thirteen keys used by heroes.js were missing from this map and `.filter(Boolean)` threw
 // them away in silence: headband megaphone ribbon notebook cap bag mic whistle book
 // planner gloves boxes stamp. Those characters were generated without the props that
