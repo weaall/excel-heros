@@ -60,7 +60,33 @@ const poseTag = (id, desc) => {
   const angle = ANGLES[h % ANGLES.length];
   return POSED.test(desc) ? angle : `${BODY_POSES[(h >> 3) % BODY_POSES.length]}, ${angle}`;
 };
-const STYLE_TAGS = 'blue archive style, centered composition, character centered in frame, flat color, cel shading, thin clean lineart, consistent line weight, anime coloring, vivid pastel colors, soft blurred background, muted simple background, depth of field, character focus';
+/**
+ * CUTOUT=1 — generate for a TRANSPARENT background instead of a painted one.
+ *
+ * Opt-in, not a replacement. The 198 cards that ship today have their backgrounds painted in and
+ * work; flipping the default would strand the game on a half-finished set. Set CUTOUT=1, generate
+ * a couple, run tools/cutout.py, look at them, and only then decide.
+ *
+ * Three things change together and none of them works alone:
+ *   1. the background becomes one flat bright colour, so there is something uniform to key
+ *   2. the shot becomes full body, because a bust cannot be extended into a standing figure later
+ *   3. the negatives stop banning full body — they currently forbid exactly what this needs
+ */
+const CUTOUT = process.env.CUTOUT === '1';
+
+/** What the character is drawn ON when CUTOUT is set. Near-white rather than chroma: a saturated
+ *  key colour bleeds into hair edges, and this roster has mint, lavender and pink hair. */
+const CUTOUT_BG = 'plain flat white background, solid white backdrop, no scenery, no furniture, no floor, isolated character, studio cutout';
+
+/** Head to feet, with margin. The margin is not styling — tools/cutout.py floods inward from the
+ *  image border, so a character touching an edge lets the fill walk into them. */
+const CUTOUT_SHOT = 'full body, standing, full figure from head to feet, feet visible, clear empty margin on all sides, character fully inside the frame';
+
+const STYLE_TAGS_BASE = 'blue archive style, centered composition, character centered in frame, flat color, cel shading, thin clean lineart, consistent line weight, anime coloring, vivid pastel colors, character focus';
+// `soft blurred background, depth of field` asks for a background to blur; with CUTOUT there is
+// nothing behind the character and those tags only produce a smudge that will not key cleanly.
+const STYLE_TAGS = CUTOUT ? STYLE_TAGS_BASE
+  : `${STYLE_TAGS_BASE}, soft blurred background, muted simple background, depth of field`;
 /** Backgrounds: by character (department flavour), else by grade. Kept bright and readable behind a bust/cowboy shot. */
 const BG_BY_ID = {
   main: 'modern office, cubicles, computer monitors, morning light', intern: 'modern office, cubicles, morning light', staff: 'modern office, desks, window light',
@@ -94,7 +120,15 @@ const HALO_SCENES = new Set(['halo', 'awaken', 'roster']); // the ring only exis
 export const scenePrompt = (id) => `${SCENES[id] ?? id}, ${HALO_SCENES.has(id) ? 'halo, ' : ''}${SCENE_STYLE}`;
 export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo above head, glowing ring above head, ${SCENE_NEG}`);
 
-const NEG = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, halo cut off by the frame, close-up, legs, knees, feet, shoes, standing full figure, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw';
+// The negatives split, because CUTOUT needs the opposite of what the painted cards need.
+//
+// NEG_BASE currently forbids `full body`, `legs`, `feet`, `standing full figure` and `close-up` —
+// which is right for a waist-up card and is exactly what a standing figure requires. Those bans
+// are dropped under CUTOUT and replaced with bans on the SCENERY, because anything painted behind
+// the character is something tools/cutout.py cannot key away.
+const NEG_BASE = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, halo cut off by the frame, close-up, legs, knees, feet, shoes, standing full figure, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw';
+const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, halo cut off by the frame, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw, background details, office background, furniture, desk, window, city, skyline, plants, wall, floor, ground, shadow on the ground, drop shadow, gradient background, textured background, patterned background, scenery, indoors, outdoors';
+const NEG = CUTOUT ? NEG_CUTOUT : NEG_BASE;
 /** 낮은 등급에 연출이 붙지 않게 — 긍정 프롬프트가 아니라 네거티브로 막아야 구도가 살아남는다. */
 const PLAIN_NEG = 'glowing aura, magic effects, light particles, sparkles, gold trim, dramatic rim light, neon lights, energy glow, floating holograms';
 export const negFor = (grade) => (grade === 'D' || grade === 'C' ? `${PLAIN_NEG}, ${NEG}` : NEG);
@@ -154,9 +188,17 @@ export function describe(def, profileId, outfitOverride = null) {
 }
 const SKIN_BG = { casual: 'cafe window close behind him, warm evening lights, bokeh', formal: 'warm party lights close behind him, soft golden bokeh' };
 export function prompt(def, profileId, skin = null) {
-  const bg = skin ? SKIN_BG[skin.id] ?? BG_BY_GRADE[def.grade] : BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
   const desc = describe(def, profileId, skin?.prompt ?? null);
-  return `${desc}, ${poseTag(def.id, desc)}, looking at viewer, face fully visible, eyes visible, whole head in frame with clear empty space above the hair and above the halo, medium shot, upper body, waist up, face focus, soft even front lighting, bright face, ${haloTag(def.grade)}, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
+  const head = 'looking at viewer, face fully visible, eyes visible, whole head in frame with clear empty space above the hair and above the halo, face focus, soft even front lighting, bright face';
+
+  if (CUTOUT) {
+    return `${desc}, ${poseTag(def.id, desc)}, ${head}, ${CUTOUT_SHOT}, ${haloTag(def.grade)}, `
+         + `${CUTOUT_BG}, ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
+  }
+
+  const bg = skin ? SKIN_BG[skin.id] ?? BG_BY_GRADE[def.grade] : BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
+  return `${desc}, ${poseTag(def.id, desc)}, ${head}, medium shot, upper body, waist up, `
+       + `${haloTag(def.grade)}, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
 }
 
 // Optional Hugging Face token (HF_TOKEN env or a .hf_token file next to package.json, git-ignored): a logged-in
