@@ -127,7 +127,8 @@ const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy 
  * generation's tags. And the reference's look is NOT flat colour: soft two-step cel shading, big
  * glossy eyes, bright hair highlights, so "flat color" goes and those go in.
  */
-export const ART = process.env.ART ?? 'ba1';
+// The transparent standing art uses ba2 by default; the old painted cards keep ba1.
+export const ART = process.env.ART ?? (process.env.CUTOUT ? 'ba2' : 'ba1');
 // 'official art, game cg' and a rim light pulled in a grey studio gradient that the flood could
 // not remove; 'white background, simple background' are the tags this model reads for a blank.
 const BA2_STYLE = 'blue archive, white background, simple background, soft cel shading, bright clean colors, large sparkling detailed eyes, glossy hair highlights, clean thin lineart';

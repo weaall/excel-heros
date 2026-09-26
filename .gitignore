@@ -18,3 +18,6 @@ ssheet.png
 dnew.png
 mainskin.png
 dfix.png
+
+# Raw generator output for the transparent art (the checked cut-outs are what ship).
+assets/cards_cutout/*.png
