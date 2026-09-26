@@ -118,7 +118,22 @@ const NEG_BASE = 'thick outlines, heavy lineart, bold black outlines, sketchy li
 const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw, background details, office background, furniture, desk, window, city, skyline, plants, wall, floor, ground, shadow on the ground, drop shadow, gradient background, textured background, patterned background, scenery, indoors, outdoors, cast shadow, ground shadow, shadow under feet, speed lines, motion lines, floor lines';
 // The wing is ONE, on ONE shoulder, and is not a bird. Every one of those has to be said:
 // 'a single wing' in the positive prompt is routinely answered with a symmetric pair.
-const NEG = (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + BACK_NEG;
+/**
+ * ART=ba2 — the prompt in the order and vocabulary Animagine XL 4.0 was trained on:
+ *   count → COPYRIGHT → subject → shot → style → quality.
+ * The copyright tag ("blue archive") near the front is what carries a game's house look; at the
+ * end of a long prompt it was one tag among eighty. Its quality ladder is "high score, great score"
+ * with "newest" for the current style — "best quality, very aesthetic" are the previous
+ * generation's tags. And the reference's look is NOT flat colour: soft two-step cel shading, big
+ * glossy eyes, bright hair highlights, so "flat color" goes and those go in.
+ */
+export const ART = process.env.ART ?? 'ba1';
+// 'official art, game cg' and a rim light pulled in a grey studio gradient that the flood could
+// not remove; 'white background, simple background' are the tags this model reads for a blank.
+const BA2_STYLE = 'blue archive, white background, simple background, soft cel shading, bright clean colors, large sparkling detailed eyes, glossy hair highlights, clean thin lineart';
+const BA2_QUALITY = 'masterpiece, high score, great score, absurdres, newest';
+const BA2_NEG = 'low score, bad score, average score, worst quality, low quality, old, early, sketch, flat color, monochrome, muted colors, realistic, gradient background, grey background, beige background, studio backdrop, vignette, shadow, drop shadow, open shirt, unbuttoned shirt, bare chest, cleavage, navel, midriff';
+const NEG = (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + BACK_NEG + (ART === 'ba2' ? ', ' + BA2_NEG : '');
 /** 낮은 등급에 연출이 붙지 않게 — 긍정 프롬프트가 아니라 네거티브로 막아야 구도가 살아남는다. */
 const PLAIN_NEG = 'glowing aura, magic effects, light particles, sparkles, gold trim, dramatic rim light, neon lights, energy glow, floating holograms';
 export const negFor = (grade) => (grade === 'D' || grade === 'C' ? `${PLAIN_NEG}, ${NEG}` : NEG);
@@ -159,7 +174,10 @@ export function describe(def, profileId, outfitOverride = null) {
   // hair descriptions in one prompt make the model pick one or blend them — the hacker came out
   // with an undercut AND a bob — so the hand-written one wins and the derived one steps aside.
   const outfitNamesHair = /\b(hair|bob|ponytail|twin tails|bun|braid|bald|pixie|undercut)\b/i.test(outfitText);
-  const hair = outfitNamesHair ? '' : look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair, ${HAIR[look.hair] ?? 'short hair'}`;
+  const outfitNamesHairColor = /\b(black|white|silver|grey|gray|brown|blonde|blond|red|pink|blue|green|purple|lavender|mint|platinum|orange|navy)\b[\w\s-]{0,14}\b(hair|bob|ponytail|twin tails|bun|braid)\b/i.test(outfitText);
+  const hairColor = look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair`;
+  const hair = outfitNamesHairColor ? '' : outfitNamesHair ? hairColor
+             : look.hair === 'bald' ? 'bald' : `${hairColor}, ${HAIR[look.hair] ?? 'short hair'}`;
   const outfit = outfitOverride ? `${outfitOverride}, ${TIER[def.grade]}` : OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${TIER[def.grade]}` : `${TIER[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
   const bits = outfitOverride || OUTFIT_BY_ID[def.id] ? '' : [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
   // build, feature and hobby were in the data and never reached the model. The feature is the
@@ -180,6 +198,14 @@ export function prompt(def, profileId, skin = null) {
     // No 'face focus' here: it pulls the camera in while 'full body' pushes it out, and the
     // model settles the argument by cutting the head off (the first CFO test did exactly that).
     const headFull = head.replace(', face focus', '');
+    if (ART === 'ba2') {
+      // Split the count tags off the front of the description so the copyright can sit behind them.
+      const m = desc.match(/^(1girl, solo|1boy, solo, male focus)(, )?/);
+      const who = m ? m[1] : '';
+      const rest = m ? desc.slice(m[0].length) : desc;
+      return `${who}, ${BA2_STYLE}, ${rest}, ${poseTag(def.id, desc)}, ${headFull}, ${CUTOUT_SHOT}, `
+           + `${BACK_CLEAR}, ${CUTOUT_BG}, ${BA2_QUALITY}`;
+    }
     return `${desc}, ${poseTag(def.id, desc)}, ${headFull}, ${CUTOUT_SHOT}, ${BACK_CLEAR}, `
          + `${CUTOUT_BG}, ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
   }
@@ -287,7 +313,7 @@ if (isMain && process.argv.includes('--manifest')) {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   let ok = 0;
   for (const [id, def, pid, skin = null] of defs) {
-    const file = `${id}.png`; const target = new URL(file, outDir);
+    const file = `${id}${process.env.OUT_SUFFIX ?? ''}.png`; const target = new URL(file, outDir);
     if (!force && fs.existsSync(target)) { console.log(`skip ${id}`); ok++; continue; } // (manifest entries may be { file, thumb } objects)
     const text = sceneMode ? scenePrompt(id) : prompt(def, pid, skin);
     // ZeroGPU quota: the Space answers "You have exceeded your free ZeroGPU quota (90s requested vs. Ns left). Try again in H:MM:SS" — wait that long.
@@ -296,7 +322,8 @@ if (isMain && process.argv.includes('--manifest')) {
     let soonestReset = Infinity; // ms until the first pool refills, across the pools tried in this rotation
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const buf = await callGenerate(text, seed + id.length, sceneMode ? { width: 1216, height: 832, neg: sceneNeg(id) } : { neg: negFor(def?.grade) });
+        const size = CUTOUT && ART === 'ba2' ? { width: 768, height: 1344 } : {};
+        const buf = await callGenerate(text, seed + id.length, sceneMode ? { width: 1216, height: 832, neg: sceneNeg(id) } : { ...size, neg: negFor(def?.grade) });
         fs.writeFileSync(target, buf);
         if (!sceneMode && !CUTOUT) { manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n'); }
         console.log(`ok   ${id} ${(buf.length / 1024).toFixed(0)} KB  ${new Date().toLocaleTimeString()}`); ok++; break;
