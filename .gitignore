@@ -24,3 +24,5 @@ assets/cards_cutout/*.png
 assets/cards_cutout/alpha/
 assets/cards_cutout/rejected/
 __pycache__/
+assets/sd_cutout/
+assets/sd_monsters/

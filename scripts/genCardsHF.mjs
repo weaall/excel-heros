@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import { HEROES, MAIN_JOBS } from '../src/data/heroes.js';
 import { SKINS } from '../src/data/skins.js';
 import { PROLOGUE } from '../src/data/prologue.js';
+import { MONSTER_TYPES, BOSSES } from '../src/data/monsters.js';
 import { PROFILES } from '../src/data/profiles.js';
 import { BACK_CLEAR, BACK_NEG, BUILD_EN, height, OUTFIT_BY_ID } from '../src/data/design.js';
 
@@ -57,7 +58,10 @@ const poseTag = (id, desc) => {
  *   2. the shot becomes full body, because a bust cannot be extended into a standing figure later
  *   3. the negatives stop banning full body — they currently forbid exactly what this needs
  */
-const CUTOUT = process.env.CUTOUT === '1';
+// SD=1 — the battle/line-up sprite: a 2.5-head chibi, full body, on white, for the cutout pass.
+// Its own folder (assets/sd_cutout/), its own negatives (the chibi bans come off).
+const SD = process.env.SD === '1';
+const CUTOUT = process.env.CUTOUT === '1' || SD;
 
 /** What the character is drawn ON when CUTOUT is set. Near-white rather than chroma: a saturated
  *  key colour bleeds into hair edges, and this roster has mint, lavender and pink hair. */
@@ -107,6 +111,31 @@ const SCENES = {
 const SCENE_STYLE = 'blue archive style, anime key visual, flat color, cel shading, clean lineart, anime coloring, vivid pastel colors, depth of field, cinematic composition, soft even front lighting, bright face, masterpiece, best quality, very aesthetic, absurdres';
 const SCENE_NEG = 'lowres, bad anatomy, bad hands, extra digit, text, watermark, signature, username, worst quality, low quality, jpeg artifacts, 3d, realistic, photo, retro poster, woodblock print, monochrome, empty room, no people, faceless, back view, gore, blood, nsfw';
 const HALO_SCENES = new Set(); // no scene has a halo any more (see SCENES.sheet)
+// --monsters: the spreadsheet errors as SD mascots, one per bestiary type and boss, for the 3D
+// field. Built from the type's shape and face; hex colours from its palette become colour words.
+const MON_SHAPE = {
+  blob: 'a round jelly slime creature', cube: 'a living cube-shaped block creature', diamond: 'a floating diamond crystal creature',
+  spike: 'a round spiky ball creature', sheet: 'a living sheet of paper creature with a grid printed on it', ghost: 'a little ghost creature',
+  chart: 'a living bar chart creature', hourglass: 'a living hourglass creature', lock: 'a living padlock creature', bug: 'a small beetle bug creature',
+  cloud: 'a small grumpy cloud creature', cursor: 'a living mouse pointer arrow creature', monkey: 'a small mischievous monkey creature',
+  bull: 'a small angry bull creature', ticket: 'a living paper ticket creature with a torn edge',
+};
+const MON_EYES = { round: 'big round eyes', sleepy: 'sleepy half-closed eyes', angry: 'angry slanted eyes', one: 'a single big eye', dot: 'small dot eyes' };
+const MON_MOUTH = { smile: 'a sly grin', flat: 'a flat mouth', teeth: 'a toothy snarl', zigzag: 'a zigzag mouth', o: 'an open round mouth' };
+const hue = (hex) => {
+  if (!hex) return '';
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  if (d < 0.08) return mx > 0.75 ? 'white' : mx < 0.3 ? 'black' : 'grey';
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360;
+  return h < 15 ? 'red' : h < 40 ? 'orange' : h < 65 ? 'yellow' : h < 160 ? 'green' : h < 200 ? 'cyan' : h < 255 ? 'blue' : h < 290 ? 'purple' : h < 340 ? 'pink' : 'red';
+};
+export const monsterPrompt = (t, boss) => `no humans, chibi mascot monster, ${MON_SHAPE[t.shape] ?? MON_SHAPE.blob}, ${hue(t.palette?.M) ? hue(t.palette.M) + ' body, ' : ''}`
+  + `${MON_EYES[t.face?.eyes] ?? 'angry slanted eyes'}, ${MON_MOUTH[t.face?.mouth] ?? 'a toothy snarl'}, cute but mischievous enemy, ${boss ? 'big boss monster, a small crown of red warning signs, ' : ''}`
+  + `full body, standing on the ground, facing left, simple background, white background, blue archive style, soft cel shading, clean thin lineart, bright clean colors, game character sprite, `
+  + `${CUTOUT_BG}, masterpiece, high score, great score, absurdres, newest`;
+const MON_NEG = 'humans, 1girl, 1boy, person, text, letters, numbers, watermark, realistic, 3d, gradient background, shadow, multiple monsters, cropped, lowres, worst quality, low quality';
+
 export const scenePrompt = (id) => `${SCENES[id] ?? id}, ${HALO_SCENES.has(id) ? 'halo, ' : ''}${SCENE_STYLE}`;
 export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo above head, glowing ring above head, ${SCENE_NEG}`);
 
@@ -139,7 +168,11 @@ const BA2_BODY = 'adult, office worker, normal body proportions, about six and a
 const BA2_STYLE = 'blue archive, white background, simple background, soft cel shading, bright clean colors, large sparkling detailed eyes, glossy hair highlights, clean thin lineart';
 const BA2_QUALITY = 'masterpiece, high score, great score, absurdres, newest';
 const BA2_NEG = 'low score, bad score, average score, worst quality, low quality, old, early, sketch, flat color, monochrome, muted colors, realistic, gradient background, grey background, beige background, studio backdrop, vignette, shadow, drop shadow, open shirt, unbuttoned shirt, bare chest, cleavage, navel, midriff, latex, bodysuit, leotard, skin tight, shiny clothes, armor, mecha, robot, close-up, portrait, upper body, cowboy shot, greyscale, monochrome, bent over, leaning forward, distorted face, chibi, child, loli, petite, toddler, big head, oversized head, short legs, short torso, long legs, elongated legs, elongated body, very tall';
-const NEG = (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + BACK_NEG + (ART === 'ba2' ? ', ' + BA2_NEG : '');
+const SD_NEG = 'low score, bad score, worst quality, low quality, sketch, monochrome, realistic, 3d, gradient background, grey background, shadow, drop shadow, '
+  + 'tall, long legs, realistic proportions, adult proportions, four heads tall, six heads tall, open shirt, cleavage, nsfw, weapon, gun, sword, multiple views, cropped, cropped feet, feet out of frame, '
+  + 'beige background, brown background, tan background, wall, floor, room, objects on the floor, chain, large object, oversized prop, papers on the floor';
+const NEG = SD ? NEG_CUTOUT.replace(/stiff symmetrical frontal pose, /, '') + ', ' + BACK_NEG + ', ' + SD_NEG
+  : (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + BACK_NEG + (ART === 'ba2' ? ', ' + BA2_NEG : '');
 /** 낮은 등급에 연출이 붙지 않게 — 긍정 프롬프트가 아니라 네거티브로 막아야 구도가 살아남는다. */
 const PLAIN_NEG = 'glowing aura, magic effects, light particles, sparkles, gold trim, dramatic rim light, neon lights, energy glow, floating holograms';
 export const negFor = (grade) => (grade === 'D' || grade === 'C' ? `${PLAIN_NEG}, ${NEG}` : NEG);
@@ -196,10 +229,19 @@ export function describe(def, profileId, outfitOverride = null) {
   return `${who}, ${hair ? hair + ', ' : ''}${bits ? bits + ', ' : ''}${outfit}, ${body}, ${ROLE[def.role]}${mark}`;
 }
 const SKIN_BG = { casual: 'cafe window close behind him, warm evening lights, bokeh', formal: 'warm party lights close behind him, soft golden bokeh' };
+const SD_PROP = { tank: 'holding a small clipboard', melee: 'holding a pen', ranged: 'holding a small tablet', healer: 'holding a small coffee cup' };
 export function prompt(def, profileId, skin = null) {
   const desc = describe(def, profileId, skin?.prompt ?? null);
   const head = 'looking at viewer, face fully visible, eyes visible, whole head in frame with clear empty space above the hair, face focus, soft even front lighting, bright face';
 
+  if (SD) {
+    const m = desc.match(/^(1girl, solo|1boy, solo, male focus)(, )?/);
+    const who = m ? m[1] : '';
+    const rest = (m ? desc.slice(m[0].length) : desc).replace(/, (slim|slender|athletic|broad sturdy) build/g, '');
+    const prop = SD_PROP[def?.role] ?? 'holding a clipboard';
+    return `${who}, chibi, sd character, super deformed, white background, simple background, blue archive, ${rest}, ${prop}, full body, standing, feet visible, three-quarter view, body turned to the right, looking at viewer, `
+         + `chibi proportions, very big head, tiny body, short arms and legs, two and a half heads tall, cute, clean thin lineart, soft cel shading, bright clean colors, ${CUTOUT_BG}, ${BA2_QUALITY}`;
+  }
   if (CUTOUT) {
     // No 'face focus' here: it pulls the camera in while 'full body' pushes it out, and the
     // model settles the argument by cutting the head off (the first CFO test did exactly that).
@@ -305,33 +347,37 @@ if (isMain && process.argv.includes('--manifest')) {
   const args = process.argv.slice(2); const force = args.includes('--force'); const ids = args.filter((a) => !a.startsWith('--'));
   const seed = Number(process.env.SEED ?? 1);
   const sceneMode = args.includes('--scene');
+  const monMode = args.includes('--monsters');
   const skinMode = args.includes('--skin');
   const baseDefs = [...HEROES.map((h) => [h.id, h, h.id]), ...Object.values(MAIN_JOBS).map((j) => [j.id, j, 'main'])];
-  const defs = sceneMode
+  const monDefs = [...MONSTER_TYPES.map((t) => [t.id, t, false]), ...BOSSES.map((b) => [b.id, b, true])];
+  const defs = monMode
+    ? monDefs.map(([id, t, boss]) => [id, t, boss, null]).filter(([id]) => !ids.length || ids.includes(id))
+    : sceneMode
     ? PROLOGUE.map((sc) => [sc.id, null, null, null]).filter(([id]) => !ids.length || ids.includes(id))
     : skinMode
     ? baseDefs.filter(([id, , pid]) => ids.length ? ids.includes(id) : pid !== 'main').flatMap(([id, def, pid]) => (SKINS[id] ?? []).map((sk) => [`${id}__${sk.id}`, def, pid, sk])) // heroes only by default (main jobs: pass ids)
     : baseDefs.filter(([id]) => !ids.length || ids.includes(id));
   // Cutout art goes to its own folder and never touches the live cards or their manifest: it is
   // the replacement being built, and the game keeps showing the old art until it is complete.
-  const outDir = new URL(sceneMode ? '../assets/story/' : CUTOUT ? '../assets/cards_cutout/' : '../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', new URL('../assets/cards/', import.meta.url));
-  if (sceneMode || CUTOUT) fs.mkdirSync(outDir, { recursive: true });
+  const outDir = new URL(monMode ? '../assets/sd_monsters/' : sceneMode ? '../assets/story/' : SD ? '../assets/sd_cutout/' : CUTOUT ? '../assets/cards_cutout/' : '../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', new URL('../assets/cards/', import.meta.url));
+  if (sceneMode || CUTOUT || monMode) fs.mkdirSync(outDir, { recursive: true });
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   let ok = 0;
   for (const [id, def, pid, skin = null] of defs) {
     const file = `${id}${process.env.OUT_SUFFIX ?? ''}.png`; const target = new URL(file, outDir);
     if (!force && fs.existsSync(target)) { console.log(`skip ${id}`); ok++; continue; } // (manifest entries may be { file, thumb } objects)
-    const text = sceneMode ? scenePrompt(id) : prompt(def, pid, skin);
+    const text = monMode ? monsterPrompt(def, pid) : sceneMode ? scenePrompt(id) : prompt(def, pid, skin);
     // ZeroGPU quota: the Space answers "You have exceeded your free ZeroGPU quota (90s requested vs. Ns left). Try again in H:MM:SS" — wait that long.
     // Each image needs 90 s of quota; the account quota and the anonymous per-IP quota (HF_ANON=1) are separate pools.
     const maxAttempts = Number(process.env.MAX_ATTEMPTS ?? 12), quotaWait = Number(process.env.QUOTA_WAIT_MS ?? 240000);
     let soonestReset = Infinity; // ms until the first pool refills, across the pools tried in this rotation
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const size = CUTOUT && ART === 'ba2' ? { width: 768, height: 1344 } : {};
-        const buf = await callGenerate(text, seed + id.length, sceneMode ? { width: 1216, height: 832, neg: sceneNeg(id) } : { ...size, neg: negFor(def?.grade) });
+        const size = SD ? { width: 896, height: 1152 } : CUTOUT && ART === 'ba2' ? { width: 768, height: 1344 } : {};
+        const buf = await callGenerate(text, seed + id.length, monMode ? { width: 1024, height: 1024, neg: MON_NEG } : sceneMode ? { width: 1216, height: 832, neg: sceneNeg(id) } : { ...size, neg: negFor(def?.grade) });
         fs.writeFileSync(target, buf);
-        if (!sceneMode && !CUTOUT) { manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n'); }
+        if (!sceneMode && !CUTOUT && !monMode) { manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n'); }
         console.log(`ok   ${id} ${(buf.length / 1024).toFixed(0)} KB  ${new Date().toLocaleTimeString()}`); ok++; break;
       } catch (e) { const quota = /quota|event error/i.test(e.message); const congested = /No GPU was available/i.test(e.message); const m = e.message.match(/Try again in (\d+):(\d\d):(\d\d)/); const asked = m ? ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) + 30) * 1000 : 0; if (asked) soonestReset = Math.min(soonestReset, asked); const rotated = (quota || congested) && rotatePool(); const wait = rotated ? 2000 : quota ? (Number.isFinite(soonestReset) ? soonestReset : quotaWait) : 15000; if (!rotated) soonestReset = Infinity; console.log(`retry ${id} (${attempt}): ${e.message}${rotated ? ` — switching to ${poolName()}` : quota ? ` — every pool is short of the 90 s an image costs; waiting ${(wait / 60000).toFixed(0)} min for the first one to refill` : congested ? ' — every pool is congested; waiting 15 s' : ''}`); if (quota && !rotated) poolIdx = 0, AUTH = TOKEN_POOL[0] ? { authorization: `Bearer ${TOKEN_POOL[0]}` } : {}; await new Promise((r) => setTimeout(r, wait)); } // (was: 15000)); }
     }

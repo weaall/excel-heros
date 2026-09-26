@@ -132,11 +132,14 @@ def process(path, out_dir, report_only=False):
             verdict = f'fail (space unavailable: {str(e)[:60]})'
     ok = keep is not None and COVER_MIN <= cover <= COVER_MAX
     heads = None
-    if ok:
+    if ok and MONSTER:
+        verdict += '  | monster (no head check)'
+    elif ok:
         # Proportions (tools/proportions.py): a clean cut of a three-head child is still a redo.
         import proportions
         heads, _, _ = proportions.measure(keep)
-        if heads is None or not (proportions.HEADS_MIN <= heads <= proportions.HEADS_MAX):
+        lo, hi = (SD_HEADS if SD else (proportions.HEADS_MIN, proportions.HEADS_MAX))
+        if heads is None or not (lo <= heads <= hi):
             ok = False
             verdict += f'  | proportions {("%.1f heads" % heads) if heads else "no head found"} → redo'
         else:
@@ -152,6 +155,18 @@ def process(path, out_dir, report_only=False):
 # a giant beside a child. Canvas 768x1344, figure 1240px tall, soles at y=1318, centred.
 CANVAS = (768, 1344)
 FIG_H, FLOOR = 1240, 1318
+
+# SD=1 (the chibi sprites): a big-headed band instead, and a squarer canvas.
+SD = os.environ.get('SD') == '1'
+SD_HEADS = (1.8, 3.4)
+# MONSTER=1: the SD error mascots — square canvas, no head check
+MONSTER = os.environ.get('MONSTER') == '1'
+if MONSTER:
+    CANVAS = (768, 768)
+    FIG_H, FLOOR = 700, 752
+elif SD:
+    CANVAS = (768, 960)
+    FIG_H, FLOOR = 900, 944
 
 def normalise(cut):
     a = cut.split()[3].point(lambda v: 255 if v > 20 else 0)

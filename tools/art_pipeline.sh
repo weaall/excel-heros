@@ -12,7 +12,8 @@
 set -u
 cd "$(dirname "$0")/.."
 ROUNDS=${ROUNDS:-3}
-RAW=assets/cards_cutout
+# SD=1: the chibi battle sprites (assets/sd_cutout), same checks with the SD head band.
+if [ -n "${SD:-}" ]; then RAW=assets/sd_cutout; else RAW=assets/cards_cutout; fi
 OUT=$RAW/alpha
 mkdir -p "$OUT"
 
@@ -29,7 +30,7 @@ for round in $(seq 1 "$ROUNDS"); do
   seed=$(( ${SEED_BASE:-1} + (round - 1) * 7919 ))
   echo "[pipeline] round $round: generating ${#todo[@]} (seed $seed)"
   force=""; { [ "$round" -gt 1 ] || [ -n "${FORCE:-}" ]; } && force="--force"
-  CUTOUT=1 ART=ba2 SEED=$seed node scripts/genCardsHF.mjs $force "${todo[@]}" 2>&1 | grep -E "^(ok|retry|done|skip)"
+  CUTOUT=1 ART=ba2 SD=${SD:-} SEED=$seed node scripts/genCardsHF.mjs $force "${todo[@]}" 2>&1 | grep -E "^(ok|retry|done|skip)"
   files=(); for id in "${todo[@]}"; do [ -f "$RAW/$id.png" ] && files+=("$RAW/$id.png"); done
   rm -f "$OUT/_regenerate.txt"
   python -W ignore tools/cutout_ai.py "${files[@]}" --out "$OUT" 2>&1 | grep -v "%|"
