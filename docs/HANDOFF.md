@@ -175,3 +175,11 @@ console.log(hits.length, hits);
 - **어휘집(`STEALTH_TEXT`)은 정적 라벨만 담는다.** `textContent = …` 로 매 프레임 다시 쓰는 문구는 곧 덮어쓰이므로 만드는 자리에서 갈라야 한다(`STEALTH_DYN`).
 - **같은 내용을 그리는 곳이 둘이면 둘 다 고쳐야 한다** — 로그 표가 위장 표와 홈 시트 표로 둘이었다.
 - **숨길 때는 `visibility: hidden`.** `display: none` 은 레이아웃을 움직인다(교육 창이 322px 움직였다).
+
+## 8. 유니티 포팅 진행 상황 (2026-09-27 기준)
+- 본편은 **유니티**(`C:\Users\user\excel-heros-unity`, 브랜치 master). 웹 저장소는 데이터 원본 + 일러 파이프라인.
+- 유니티 쪽 기록은 그쪽 `docs/HANDOFF.md`(패스별 절)와 `docs/design/BA_REFERENCE.md`(블루아카 스샷 실측).
+- 일러 파이프라인: `CUTOUT=1 node scripts/genCardsHF.mjs <id…>` → `python tools/cutout_ai.py assets/cards_cutout/*.png --out assets/cards_cutout/alpha`
+  → `_review.png` 눈 검수 → 통과본을 유니티 `Assets/ExcelHeroes/Resources/Art/Standing/`로 복사.
+- 재생성 재개: 스크래치 `rerun.sh`와 같은 절차 — 전체 재검사 후 `_regenerate.txt` + 눈 탈락 9장을 `FORCE=1 SEED_BASE=211 bash tools/art_pipeline.sh …`.
+

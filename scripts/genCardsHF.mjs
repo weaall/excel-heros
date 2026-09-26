@@ -131,9 +131,12 @@ const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy 
 export const ART = process.env.ART ?? (process.env.CUTOUT ? 'ba2' : 'ba1');
 // 'official art, game cg' and a rim light pulled in a grey studio gradient that the flood could
 // not remove; 'white background, simple background' are the tags this model reads for a blank.
+// Proportions: the cast are adults at work, drawn to one body — about 6.5 heads, as the
+// reference's standing art is. Left open, the model drew 3-head children and 8-head models.
+const BA2_BODY = 'adult, office worker, normal body proportions, about six and a half heads tall';
 const BA2_STYLE = 'blue archive, white background, simple background, soft cel shading, bright clean colors, large sparkling detailed eyes, glossy hair highlights, clean thin lineart';
 const BA2_QUALITY = 'masterpiece, high score, great score, absurdres, newest';
-const BA2_NEG = 'low score, bad score, average score, worst quality, low quality, old, early, sketch, flat color, monochrome, muted colors, realistic, gradient background, grey background, beige background, studio backdrop, vignette, shadow, drop shadow, open shirt, unbuttoned shirt, bare chest, cleavage, navel, midriff';
+const BA2_NEG = 'low score, bad score, average score, worst quality, low quality, old, early, sketch, flat color, monochrome, muted colors, realistic, gradient background, grey background, beige background, studio backdrop, vignette, shadow, drop shadow, open shirt, unbuttoned shirt, bare chest, cleavage, navel, midriff, latex, bodysuit, leotard, skin tight, shiny clothes, armor, mecha, robot, close-up, portrait, upper body, cowboy shot, greyscale, monochrome, bent over, leaning forward, distorted face, chibi, child, loli, petite, toddler, big head, oversized head, short legs, short torso, long legs, elongated legs, elongated body, very tall';
 const NEG = (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + BACK_NEG + (ART === 'ba2' ? ', ' + BA2_NEG : '');
 /** 낮은 등급에 연출이 붙지 않게 — 긍정 프롬프트가 아니라 네거티브로 막아야 구도가 살아남는다. */
 const PLAIN_NEG = 'glowing aura, magic effects, light particles, sparkles, gold trim, dramatic rim light, neon lights, energy glow, floating holograms';
@@ -204,7 +207,7 @@ export function prompt(def, profileId, skin = null) {
       const m = desc.match(/^(1girl, solo|1boy, solo, male focus)(, )?/);
       const who = m ? m[1] : '';
       const rest = m ? desc.slice(m[0].length) : desc;
-      return `${who}, ${BA2_STYLE}, ${rest}, ${poseTag(def.id, desc)}, ${headFull}, ${CUTOUT_SHOT}, `
+      return `${who}, ${BA2_STYLE}, ${BA2_BODY}, ${rest}, ${poseTag(def.id, desc)}, ${headFull}, ${CUTOUT_SHOT}, `
            + `${BACK_CLEAR}, ${CUTOUT_BG}, ${BA2_QUALITY}`;
     }
     return `${desc}, ${poseTag(def.id, desc)}, ${headFull}, ${CUTOUT_SHOT}, ${BACK_CLEAR}, `

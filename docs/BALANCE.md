@@ -3123,3 +3123,18 @@ blue-utils 학생 페이지(이름·생일·나이·키·취미·소개, 학원�
   최대 3회전.
 - 통과한 결과는 파란 바탕 한 장(`_review.png`)으로 모아 눈으로도 본다 — 합의는 일관성을 증명할 뿐 취향은 아니다.
 - 시험 5장: 전부 합의(IoU 0.970~0.994). 컷아웃 기본 그림체는 ba2.
+
+## 6-140. 156차: 비율 검사와 정규화 — 대두·롱다리·꼬마 금지
+
+- 사용자 지적: 컷아웃 일러에 대두·지나친 롱다리·작게 선 인물이 섞여 있음. 블루아카이브 스탠딩은 **약 6.5등신, 발끝 한 줄, 같은 키**.
+- **프롬프트**: `BA2_BODY = 'adult, office worker, normal body proportions, about six and a half heads tall'`,
+  네거티브에 chibi/child/petite/big head/long legs/elongated body 등. 힐러 체형 `petite build` → `slim build`(아이 몸으로 읽힘).
+- **검사**(`tools/proportions.py`): deepghs `imgutils.detect.detect_heads`로 머리 상자를 찾고 `등신 = 인물 높이 / 머리 상자 높이`.
+  머리 상자는 머리카락까지 포함해 실제 등신보다 약 0.7 낮게 나오므로 허용 대역 **5.3~6.9**. 실루엣(어깨선) 방식은 긴 머리와 큰 머리를 구별 못 해 폐기.
+- **정규화**(`cutout_ai.normalise`): 통과한 컷아웃을 768×1344 캔버스, 인물 키 1240px, 발끝 y=1318, 가운데 정렬로 다시 앉힌다.
+  넓은 포즈는 폭에 맞춘다.
+- `cutout_ai.py`: 마스크 합의 뒤 비율 검사 → 불통과는 `_regenerate.txt`. `art_pipeline.sh`: 재생성 목록의 `\r` 제거(2회전이 0장을 다시
+  뽑고 성공으로 보고하던 버그), `FORCE` 전달, 마지막에 빠진 장 목록 출력.
+- 첫 전체 실행: 51장 컷아웃 중 약 30장이 대두로 측정 — 재생성 대상. 눈 검수 탈락 9장(pivot, macro, dev_lead, union_chief, mail_cho,
+  secretary_yun, acct_lead, cco, parttime)도 함께 `SEED_BASE=211`로 재생성(진행 중에 중단됨 → HANDOFF 참고).
+

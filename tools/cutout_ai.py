@@ -39,6 +39,7 @@ Exit status is the number of files that failed every step; their ids go to
 """
 import io, json, os, sys, time, urllib.request, urllib.error, uuid
 from PIL import Image
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 AGREE_MIN = 0.96
 COVER_MIN, COVER_MAX = 0.06, 0.75
@@ -130,10 +131,42 @@ def process(path, out_dir, report_only=False):
         except Exception as e:
             verdict = f'fail (space unavailable: {str(e)[:60]})'
     ok = keep is not None and COVER_MIN <= cover <= COVER_MAX
+    heads = None
+    if ok:
+        # Proportions (tools/proportions.py): a clean cut of a three-head child is still a redo.
+        import proportions
+        heads, _, _ = proportions.measure(keep)
+        if heads is None or not (proportions.HEADS_MIN <= heads <= proportions.HEADS_MAX):
+            ok = False
+            verdict += f'  | proportions {("%.1f heads" % heads) if heads else "no head found"} → redo'
+        else:
+            verdict += f'  | {heads:.1f} heads'
     print(f'  {name}: isnet/biref IoU {agree:.3f}  cover {cover:5.1%}  {verdict}  ({time.time() - t:.1f}s)')
     if ok and not report_only:
-        keep.save(os.path.join(out_dir, name))
+        normalise(keep).save(os.path.join(out_dir, name))
     return ok
+
+
+# Every accepted figure is scaled to one height with its feet on one line, as the reference's
+# standing art is: before this a figure the model drew small stayed small, and the lobby showed
+# a giant beside a child. Canvas 768x1344, figure 1240px tall, soles at y=1318, centred.
+CANVAS = (768, 1344)
+FIG_H, FLOOR = 1240, 1318
+
+def normalise(cut):
+    a = cut.split()[3].point(lambda v: 255 if v > 20 else 0)
+    bbox = a.getbbox()
+    if not bbox:
+        return cut
+    fig = cut.crop(bbox)
+    k = FIG_H / fig.height
+    fig = fig.resize((max(1, round(fig.width * k)), FIG_H), Image.LANCZOS)
+    if fig.width > CANVAS[0]:            # a very wide pose: fit the width instead
+        k2 = CANVAS[0] / fig.width
+        fig = fig.resize((CANVAS[0], max(1, round(fig.height * k2))), Image.LANCZOS)
+    out = Image.new('RGBA', CANVAS, (0, 0, 0, 0))
+    out.paste(fig, ((CANVAS[0] - fig.width) // 2, FLOOR - fig.height), fig)
+    return out
 
 
 def review_sheet(out_dir, names):

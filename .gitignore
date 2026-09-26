@@ -21,3 +21,6 @@ dfix.png
 
 # Raw generator output for the transparent art (the checked cut-outs are what ship).
 assets/cards_cutout/*.png
+assets/cards_cutout/alpha/
+assets/cards_cutout/rejected/
+__pycache__/

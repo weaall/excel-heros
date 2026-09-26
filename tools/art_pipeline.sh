@@ -26,14 +26,17 @@ todo=("${ids[@]}")
 for round in $(seq 1 "$ROUNDS"); do
   [ ${#todo[@]} -eq 0 ] && break
   # Round 1 keeps the base seed; each later round moves every failed id to a fresh one.
-  seed=$(( 1 + (round - 1) * 7919 ))
+  seed=$(( ${SEED_BASE:-1} + (round - 1) * 7919 ))
   echo "[pipeline] round $round: generating ${#todo[@]} (seed $seed)"
-  force=""; [ "$round" -gt 1 ] && force="--force"
+  force=""; { [ "$round" -gt 1 ] || [ -n "${FORCE:-}" ]; } && force="--force"
   CUTOUT=1 ART=ba2 SEED=$seed node scripts/genCardsHF.mjs $force "${todo[@]}" 2>&1 | grep -E "^(ok|retry|done|skip)"
   files=(); for id in "${todo[@]}"; do [ -f "$RAW/$id.png" ] && files+=("$RAW/$id.png"); done
   rm -f "$OUT/_regenerate.txt"
   python -W ignore tools/cutout_ai.py "${files[@]}" --out "$OUT" 2>&1 | grep -v "%|"
-  if [ -f "$OUT/_regenerate.txt" ]; then mapfile -t todo < "$OUT/_regenerate.txt"; else todo=(); fi
+  # Written by Python on Windows, so every line ends in \r — which made every id miss and round
+  # 2 "regenerate" nothing and then report success. Strip it.
+  if [ -f "$OUT/_regenerate.txt" ]; then mapfile -t todo < <(tr -d '\r' < "$OUT/_regenerate.txt" | grep -v '^$'); else todo=(); fi
 done
 
-if [ ${#todo[@]} -eq 0 ]; then echo "[pipeline] every character cut cleanly"; else echo "[pipeline] still failing: ${todo[*]}"; fi
+missing=(); for id in "${ids[@]}"; do [ -f "$OUT/$id.png" ] || missing+=("$id"); done
+if [ ${#missing[@]} -eq 0 ]; then echo "[pipeline] every character has a checked cut-out"; else echo "[pipeline] no cut-out yet: ${missing[*]}"; fi

@@ -91,7 +91,7 @@ export const SHEET_ATTACK = {
 
 /** 체형 — role first, because that is what the silhouette has to say at 128px. */
 export const BUILD = { tank: '다부진 체격', melee: '탄탄한 체격', ranged: '호리호리한 체격', healer: '아담한 체격' };
-export const BUILD_EN = { tank: 'broad sturdy build', melee: 'athletic build', ranged: 'slender build', healer: 'petite build' };
+export const BUILD_EN = { tank: 'broad sturdy build', melee: 'athletic build', ranged: 'slender build', healer: 'slim build' };
 
 /** 키 — a band per role, and the id picks a spot inside it. A tank is always tall; no two tanks
  *  are the same tall. */
