@@ -18,12 +18,12 @@ const OUTLINE = '#1b1d25'; // same near-black 1px edge as the 0x72 / Tiny Creatu
 export const DOLLS = {
   staff_park: { hair: 'short', hairColor: '#7a5230', skin: 'light', outfit: 'suit', top: '#f2f2f2', shirt: '#8fb8e8', bottom: 'pants', bottomColor: '#2c3345', acc: ['tie:#2f3d5c', 'badge'], halo: '#f4e9c8' },
   parttime:   { hair: 'bob', hairColor: '#8a5a3b', skin: 'fair', outfit: 'cardigan', top: '#f0a640', shirt: '#2ec4a5', bottom: 'skirt', bottomColor: '#2ec4a5', acc: [], halo: '#d8e6ff' },
-  guard:      { hair: 'short', hairColor: '#cfd3d8', skin: 'light', outfit: 'suit', top: '#2b3a5c', shirt: '#dfe9f3', bottom: 'pants', bottomColor: '#2b3a5c', acc: ['mustache', 'badge'], halo: '#bfe0ff' },
+  guard:      { hair: 'short', hairColor: '#cfd3d8', skin: 'light', outfit: 'suit', top: '#2b3a5c', shirt: '#dfe9f3', bottom: 'pants', bottomColor: '#2b3a5c', acc: ['badge'], halo: '#bfe0ff' },
   barista:    { hair: 'bun', hairColor: '#f28a2e', skin: 'fair', outfit: 'apron', top: '#6d4c41', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#2d2d2d', acc: [], halo: '#f7e6b5' },
   courier:    { hair: 'short', hairColor: '#2b2b2b', skin: 'light', outfit: 'hoodie', top: '#f39c12', shirt: '#f39c12', bottom: 'pants', bottomColor: '#2f2f2f', acc: ['cap:#3b5bd6'], halo: '#f9e79f' },
   contract:   { hair: 'bob', hairColor: '#dcdcdc', skin: 'fair', outfit: 'suit', top: '#9aa0a6', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#9aa0a6', acc: ['badge'], halo: '#ffd6e0' },
   vlookup:    { hair: 'short', hairColor: '#1f2f5f', skin: 'light', outfit: 'suit', top: '#26b8b0', shirt: '#1f2a44', bottom: 'pants', bottomColor: '#2c3e50', acc: ['glasses', 'lanyard:#ff7eb6'], halo: '#c9e8ff' },
-  pivot:      { hair: 'bald', hairColor: '#4a3b2a', skin: 'light', outfit: 'shirt', top: '#9fd8ff', shirt: '#9fd8ff', bottom: 'pants', bottomColor: '#2f3a4a', acc: ['beard', 'tie:#111111', 'suspenders'], halo: '#ffffff' },
+  pivot:      { hair: 'bun', hairColor: '#4a3b2a', skin: 'light', outfit: 'shirt', top: '#9fd8ff', shirt: '#9fd8ff', bottom: 'pants', bottomColor: '#2f3a4a', acc: ['tie:#111111', 'suspenders'], halo: '#ffffff' },
   // artHair:false — 검은 머리가 헤드폰·역광에 섞여 회색(#817e8d)으로 뽑힌다
   macro:      { hair: 'spiky', hairColor: '#151515', artHair: false, skin: 'light', outfit: 'hoodie', top: '#33cfe0', shirt: '#e6ff4d', bottom: 'pants', bottomColor: '#2a2a3a', acc: ['headphones:#2ad4e0'], halo: '#8be9ff' },
   hr_jung:    { hair: 'long', hairColor: '#6b4a2f', skin: 'fair', outfit: 'suit', top: '#3cb389', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#3cb389', acc: ['badge'], halo: '#fff3b0' },
@@ -36,7 +36,7 @@ export const DOLLS = {
   cto:        { hair: 'spiky', hairColor: '#111111', skin: 'light', outfit: 'suit', top: '#1f2438', shirt: '#1a1a22', bottom: 'pants', bottomColor: '#1a1d2a', acc: ['sunglasses', 'trim:#2ad4e0'], halo: '#8fb8ff' }, // art: spiky black hair, charcoal blazer with cyan accents
   coo:        { hair: 'bob', hairColor: '#8fd3f4', skin: 'fair', outfit: 'suit', top: '#2456c8', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#1f2a44', acc: ['badge', 'trim:#d4a017'], halo: '#dfe9f7' }, // art: light-blue bob, royal-blue suit with gold
   ceo:        { hair: 'long', hairColor: '#f2f2f2', skin: 'fair', outfit: 'suit', top: '#111111', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#111111', acc: ['sunglasses', 'trim:#d4a017'], halo: '#ffe9a8' },
-  chairman:   { hair: 'short', hairColor: '#d0d0d0', skin: 'light', outfit: 'suit', top: '#151515', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#151515', acc: ['beard', 'crown', 'trim:#d4a017'], halo: '#ffd76a' },
+  chairman:   { hair: 'short', hairColor: '#d0d0d0', skin: 'light', outfit: 'suit', top: '#151515', shirt: '#f4f4f4', bottom: 'pants', bottomColor: '#151515', acc: ['crown', 'trim:#d4a017'], halo: '#ffd76a' },
   // artHair:false — 검은 단발이 헤드셋·역광 때문에 회색(#93a0a9)으로 뽑힌다
   helpdesk:   { hair: 'bob', hairColor: '#152238', artHair: false, skin: 'fair', outfit: 'suit', top: '#2f7fd6', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#2f7fd6', acc: ['headset'], halo: '#d6e9ff' },
   cleaner:    { hair: 'bun', hairColor: '#8d99a6', skin: 'light', outfit: 'cardigan', top: '#c0392b', shirt: '#f4f4f4', bottom: 'skirt', bottomColor: '#222222', acc: [], halo: '#ffffff' },

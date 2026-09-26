@@ -94,7 +94,7 @@ test('auto-upgrade spends gold on the cheapest party upgrade every second while 
 test('skills recast after their cooldown (cooldown comes from SKILLS[type])', () => {
   const s = createInitialState(); s.heroes.guard = { owned: true, star: 2, shards: 0, level: 10, enhance: 0 }; s.party = [MAIN_ID, 'guard']; s.heroes[MAIN_ID].level = 10;
   const g = new GameManager({ state: s, save: memSave() });
-  let casts = 0; g.on('log', (row) => { if (row.kind === 'skill' && row.text.startsWith('경비 아저씨')) casts++; });
+  let casts = 0; g.on('log', (row) => { if (row.kind === 'skill' && row.text.startsWith('경비 반장')) casts++; });
   run(g, 60);
   assert.ok(casts >= 3, `guard cast its skill ${casts} times in 60s`);
   const guard = g.entities.heroes.find((h) => h.heroId === 'guard');
