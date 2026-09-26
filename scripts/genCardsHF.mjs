@@ -98,13 +98,15 @@ const SCENES = {
   meteor: '1boy, close up portrait of a young office worker in a white shirt, looking up with wide shocked eyes, his face lit orange from above, streaks of falling fire reflected in his glasses and in the dark office window behind him, night, face fully visible',
   impact: '1girl, an office worker crouching behind an overturned desk with one arm raised to shield her face, papers and shattered glass flying past her, a white shockwave and orange fire rising from the street far behind the window, detailed office interior, face fully visible',
   errors: '1girl, close up portrait of an office worker in a blouse, terrified expression with one hand over her mouth, red glowing error symbols and broken grid fragments reflected in her wide eyes and floating around her, dark street at dawn, red rim light, face fully visible',
-  halo: '1boy, a young office worker in a white shirt looking up in wonder as a glowing golden halo ring forms above his head, soft golden light on his face, dust drifting in dawn light, ruined street behind him, upper body, face fully visible',
-  awaken: '1boy, a young man in a white shirt and lanyard with a golden halo above his head, holding a glowing sword of light made from a keyboard, determined expression, golden energy aura, bright rim light, upper body, face fully visible',
-  roster: '1boy, a young man with short black hair in a white shirt and lanyard, a golden halo above his head, holding a printed roster sheet with both hands, determined expression, bright office lobby with morning light behind him, upper body, face fully visible',
+  // No halo anywhere: the grade device is the translucent sheet on the back, and the game draws
+  // it over the panel. The art only carries its light — a cyan glow from behind the shoulders.
+  sheet: '1boy, a young office worker with short black hair in a white shirt looking back over his shoulder in wonder, soft cyan light glowing from behind his back, dust drifting in dawn light, ruined street behind him, upper body, face fully visible',
+  awaken: '1boy, a young man with short black hair in a white shirt and lanyard, holding a glowing sword of light made from a keyboard, determined expression, cyan light glowing from behind his shoulders, bright rim light, upper body, face fully visible',
+  roster: '1boy, a young man with short black hair in a white shirt and lanyard, holding a printed roster sheet with both hands, determined expression, faint cyan glow behind his shoulders, bright office lobby with morning light behind him, upper body, face fully visible',
 };
 const SCENE_STYLE = 'blue archive style, anime key visual, flat color, cel shading, clean lineart, anime coloring, vivid pastel colors, depth of field, cinematic composition, soft even front lighting, bright face, masterpiece, best quality, very aesthetic, absurdres';
 const SCENE_NEG = 'lowres, bad anatomy, bad hands, extra digit, text, watermark, signature, username, worst quality, low quality, jpeg artifacts, 3d, realistic, photo, retro poster, woodblock print, monochrome, empty room, no people, faceless, back view, gore, blood, nsfw';
-const HALO_SCENES = new Set(['halo', 'awaken', 'roster']); // the ring only exists from the fifth panel on
+const HALO_SCENES = new Set(); // no scene has a halo any more (see SCENES.sheet)
 export const scenePrompt = (id) => `${SCENES[id] ?? id}, ${HALO_SCENES.has(id) ? 'halo, ' : ''}${SCENE_STYLE}`;
 export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo above head, glowing ring above head, ${SCENE_NEG}`);
 
