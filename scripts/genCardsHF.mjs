@@ -12,29 +12,10 @@ import { HEROES, MAIN_JOBS } from '../src/data/heroes.js';
 import { SKINS } from '../src/data/skins.js';
 import { PROLOGUE } from '../src/data/prologue.js';
 import { PROFILES } from '../src/data/profiles.js';
-import { wingTag, BUILD_EN, height } from '../src/data/design.js';
+import { BACK_CLEAR, BACK_NEG, BUILD_EN, height, OUTFIT_BY_ID } from '../src/data/design.js';
 
 const SPACE = process.env.SPACE ?? 'asahina2k-animagine-xl-4-0';
 const BASE = `https://${SPACE}.hf.space`;
-/** 후광은 등급을 말한다 — 도트의 HALO_TIER(D/C 0 · B 1 · A 2 · S 3)와 같은 사다리. 단 항상 '머리 위의 고리'다. */
-// 낮은 등급도 **분명히 보여야 한다.** 'faint / small' 만 쓰면 NEG 의 크기 억제 태그가 이겨서 고리가
-// 아예 사라진다 — D급 다섯 장이 그렇게 날아갔다(6-96). 작게 만드는 건 'thin'·'small' 로 충분하고,
-// 존재는 'clearly visible' 로 못 박는다.
-//
-// 그리고 사다리가 **눈에 보여야 한다.** 형용사만 바꾸면(thin → clean → radiant) S가 D보다 멋있다는 게
-// 그림에서 드러나지 않는다. 그래서 등급마다 **고리 수와 장식**이 달라진다. 크기 제약은 그대로 —
-// 얼굴을 덮지 않고 어깨보다 넓지 않다(6-84).
-const HALO_BY_GRADE = {
-  D: 'a single thin but clearly visible pale glowing halo ring floating above the head, small halo',
-  C: 'a single clearly visible glowing halo ring floating above the head with a faint soft glow, small halo',
-  B: 'a bright glowing halo ring floating above the head with a soft inner glow and a thin outer ring',
-  A: 'a radiant golden halo ring floating above the head with a soft inner glow, a thin second ring around it and a few floating light motes',
-  S: 'an ornate glowing golden halo above the head made of concentric rings with delicate engraved glyphs, warm light spilling from it and golden light particles drifting around it',
-};
-// Kept only so the halo direction can be compared against the wing on a test image; nothing
-// generates with it. Delete once the wing is confirmed.
-const haloTag = (grade) => HALO_BY_GRADE[grade] ?? HALO_BY_GRADE.C;
-void haloTag;
 
 /**
  * 자세. 전원이 카메라를 정면으로 맞닥뜨리고 있으면 스물네 장이 같은 사진처럼 보인다.
@@ -130,12 +111,11 @@ export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo a
 // which is right for a waist-up card and is exactly what a standing figure requires. Those bans
 // are dropped under CUTOUT and replaced with bans on the SCENERY, because anything painted behind
 // the character is something tools/cutout.py cannot key away.
-const WING_NEG = 'angel wings, feathered wings, bird wings, two wings, pair of wings, wings on both shoulders, huge wings, oversized wings, wings wider than the frame, wings covering the face, wings behind the head, halo, glowing ring above the head';
-const NEG_BASE = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, halo cut off by the frame, close-up, legs, knees, feet, shoes, standing full figure, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw';
-const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, huge halo, oversized halo, giant glowing ring, halo wider than shoulders, halo in front of the face, ring covering face, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, halo cut off by the frame, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw, background details, office background, furniture, desk, window, city, skyline, plants, wall, floor, ground, shadow on the ground, drop shadow, gradient background, textured background, patterned background, scenery, indoors, outdoors';
+const NEG_BASE = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, close-up, legs, knees, feet, shoes, standing full figure, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw';
+const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw, background details, office background, furniture, desk, window, city, skyline, plants, wall, floor, ground, shadow on the ground, drop shadow, gradient background, textured background, patterned background, scenery, indoors, outdoors';
 // The wing is ONE, on ONE shoulder, and is not a bird. Every one of those has to be said:
 // 'a single wing' in the positive prompt is routinely answered with a symmetric pair.
-const NEG = (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + WING_NEG;
+const NEG = (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + BACK_NEG;
 /** 낮은 등급에 연출이 붙지 않게 — 긍정 프롬프트가 아니라 네거티브로 막아야 구도가 살아남는다. */
 const PLAIN_NEG = 'glowing aura, magic effects, light particles, sparkles, gold trim, dramatic rim light, neon lights, energy glow, floating holograms';
 export const negFor = (grade) => (grade === 'D' || grade === 'C' ? `${PLAIN_NEG}, ${NEG}` : NEG);
@@ -153,31 +133,11 @@ const HAIR = { ponytail: 'ponytail', twin: 'twin tails', braid: 'braided hair', 
 // define them, and the model filled the gap with whatever it liked.
 const ACC = { headband: 'headband', megaphone: 'holding megaphone', ribbon: 'hair ribbon', notebook: 'holding notebook', cap: 'baseball cap', bag: 'shoulder bag', mic: 'holding microphone', whistle: 'whistle', book: 'holding book', planner: 'holding planner', gloves: 'gloves', boxes: 'stack of boxes', stamp: 'holding stamp', tie: 'necktie', headset: 'headset', mustache: 'mustache', hardhat: 'hardhat', coffee: 'holding coffee cup', badge: 'name tag', lanyard: 'lanyard', glasses: 'glasses', beard: 'beard', clipboard: 'holding clipboard', earring: 'earrings', sunglasses: 'sunglasses', flower: 'hair flower', scarf: 'scarf', crown: 'crown', files: 'holding folder', apron: 'apron', radio: 'walkie-talkie', parcel: 'holding box', phone: 'holding phone', pen: 'holding pen', suspenders: 'suspenders', hoodie: 'hoodie', magnifier: 'magnifying glass', calculator: 'calculator', ledger: 'holding book', watch: 'wristwatch', briefcase: 'briefcase', cane: 'cane', laptop: 'laptop', mop: 'holding mop', tablet: 'drawing tablet' };
 const ROLE = { tank: 'confident, arms crossed', melee: 'energetic, clenched hand, sleeves rolled up', ranged: 'playful, one hand up', healer: 'gentle smile, hands together' };
+/** Rank through the clothes, not through light in the air — see GRADE_CUTOUT below. */
 const GRADE = { D: 'plain everyday office wear, neat and simple, natural daylight, calm friendly expression, beautiful detailed face', C: 'business casual, id card, neat and tidy, soft daylight, beautiful detailed face', B: 'team leader look, refined details, soft light particles, beautiful detailed face', A: 'executive, luxurious details, gold accents, sparkles, light particles, beautiful detailed face', S: 'legendary executive, gold trim, sparkles, light particles, glowing, beautiful detailed face' };
-/** Per-character outfits so the roster does not read as 34 copies of one suit (women especially). */
-const OUTFIT_BY_ID = {
-  parttime: 'reception uniform, vest, ribbon tie', barista: 'striped shirt, brown barista apron, rolled sleeves, hair tied', contract: 'oversized beige cardigan over a blouse',
-  hr_jung: 'teal blazer over a white blouse, earrings', acct_lead: 'black turtleneck, high-waist trousers, glasses', welfare: 'pastel knit sweater, scarf', coo: 'elegant tailored navy pantsuit with gold buttons and a thin gold chain, silk blouse, sleek side-swept bob, sharp confident smile, holding a slim tablet, gold accents, light particles, sparkles, beautiful detailed face',
-  ceo: 'white long coat over black dress, gold accents, small sunglasses, pale skin, brightly lit face, confident smile', helpdesk: 'hoodie over a collared shirt, headset around the neck', cleaner: 'work jumpsuit, headscarf, rubber gloves', legal_yoon: 'black long coat, white collar, thin glasses',
-  pm_lead: 'crisp denim jacket over a white blouse, neat bob, lanyard, holding a fanned stack of planning documents, confident bright smile, sticky notes floating around her', design_lead: 'oversized artist smock over a striped tee, curly pink hair under a beret, holding a drawing tablet and a stylus, bright cheerful smile, a few paint smudges on the smock', cmo: 'stylish scarlet blazer over white top, long wavy hair, sunglasses pushed up on head, statement gold earrings, playful wink, confetti and bokeh light particles, sparkles, beautiful detailed face',
-  intern_seo: 'oversized cardigan, lanyard, holding a tablet', pr_yoo: 'bomber jacket over a top, press badge', nurse_han: 'white nurse uniform, nurse cap, clipboard', lab_park: 'white lab coat over sweater, glasses, laptop',
-  intern_min: 'pastel pink cardigan over white blouse, twin tails with ribbons, notebook hugged to chest, bright cheerful smile', security_yang: 'navy security uniform, black ponytail, radio on shoulder, serious but kind eyes', mail_cho: 'blue postal jacket over a grey tee, backwards cap, a mail bag strap across the chest, a bundle of envelopes in one hand, bright grin', qa_lee: 'dark purple hoodie, navy bob, round glasses, laptop covered in stickers, deadpan', reception_go: 'coral blazer, long brown hair, headset, holding a microphone, warm smile', trainer_seok: 'orange coach vest over white shirt, whistle, clipboard, energetic', translator_ji: 'beige trench coat, long silver-blue hair, book, elegant', secretary_yun: 'charcoal pencil suit, black hair bun, gold earrings, leather planner, composed', logistics_bae: 'grey work jacket, orange gloves, stacked boxes, sturdy, friendly', cdo: 'black suit with cyan accents and a gold pin, long black hair with a bright blue streak tucked behind her ear, bright cyan eyes, calm confident smile, one hand resting on a slim tablet, a few small holographic charts faint and far behind her', cco: 'coral suit, pink bob, headset phone, radiant smile, flowers', chief_of_staff: 'white and gold executive suit with a thin gold chain, platinum long ponytail, an approval stamp in one hand, sharp confident smile',
-  cso: 'white and navy executive suit dress, lavender long wavy hair, star earrings, holographic tablet, serene confident smile', ai_lead: 'white and gold lab coat over a mint blouse, very long mint hair, round glasses, a slim holographic panel held at her side, serene commanding presence', union_chief: 'crimson and gold leader coat with a white armband over a dark shirt, blond spiked hair, a union pin on the lapel, broad confident grin', hacker: 'long black techwear coat open over a hooded top, glowing cyan circuit lines running through the fabric, neon cyan headset, short black bob with a bright cyan streak, floating holographic code panels orbiting her, confident smirk, dramatic rim light',
-  chro: 'elegant mauve suit dress with pearl earrings and a gold brooch, long wavy hair, warm reassuring smile, one hand resting lightly over her heart with fingers together, soft petals drifting, warm rim light', chairwoman: 'black formal gown-style suit, silver hair, small crown, cane',
-  staff_park: 'white shirt sleeves rolled, loosened tie, lanyard', guard: 'navy security uniform, cap, radio', courier: 'cheerful young man in a delivery worker jacket with an orange collar, baseball cap, name tag, hands on the strap of a shoulder bag', vlookup: 'vest over shirt, glasses, pen',
-  pivot: 'suspenders, shirt, bald, beard', macro: 'charcoal zip hoodie over a plain tee, headphones around the neck, a laptop tucked under one arm, messy black hair, tired but pleased half smile', audit_han: 'trench coat, sunglasses, magnifying glass', dev_lead: 'flannel shirt, headset, coffee cup', ga_lead: 'grey work vest, gloves, boxes',
-  cro: 'charcoal double-breasted suit with a gold pin, dark hair in a neat bun, thin glasses, calm unshakeable gaze, faint red warning glyphs deflected around her, protective aura',
-  cpo: 'teal shirt with rolled sleeves, headset around neck, short brown hair, holding a tablet showing a product roadmap, floating connected nodes of light, focused smile',
-  ir_lead: 'deep purple three-piece suit, swept black hair, gold tie pin, holding a leather ledger, floating golden charts rising behind him, composed confident smile',
-  labor_atty: 'ivory pantsuit over a soft blouse, long brown wavy hair, thin glasses, arms loosely folded, warm reassuring smile, soft white light',
-  bd_lead: 'orange blazer over a white shirt, spiked black hair, wristwatch, three business cards fanned between his fingers, energetic grin, motion lines',
-  cfo: 'deep purple three-piece suit with a gold pocket watch chain, silver hair swept back, thin gold-rimmed glasses, sharp calculating smile, floating golden numbers and charts around him', cto: 'black turtleneck under a tailored charcoal blazer, spiky black hair, tinted glasses pushed up on his head, confident smirk, holographic cyan code panels floating around him', chairman: 'golden formal suit, cane, crown, beard', founder: 'white and gold founder coat worn open over a fitted black turtleneck, long silver hair, thin gold-rimmed glasses, arms loosely crossed, calm visionary gaze, thin gold embroidery on the collar and cuffs of the coat, pale bright skin, clearly lit face, a few small glowing startup icons faint in the distance behind her', sales_kang: 'sharp navy suit, red tie, briefcase',
-  // main hero: the SAME young man in every job (short black hair, light skin, clean-shaven) — only the outfit climbs with the tier
-  intern: 'young man, short black hair, white shirt, lanyard, files', staff: 'young man, short black hair, light blue shirt, tie, phone',
-  sales_senior: 'young man, short black hair, white shirt with rolled sleeves, red necktie, red lanyard, holding phone, confident grin', sales_manager: 'young man, short black hair, dark red blazer over white shirt, red necktie, briefcase, confident', sales: 'young man, short black spiky hair, red suit, sunglasses, briefcase',
-  finance_senior: 'young man, short black hair, navy vest over mint shirt, teal necktie, glasses, holding calculator, calm', finance_manager: 'young man, short black hair, teal suit, glasses, tablet with charts, composed', finance: 'young man, short black hair, teal suit, glasses, calculator',
-  admin_senior: 'young man, short black hair, orange work vest over white shirt, work gloves, clipboard, friendly', admin_manager: 'young man, short black hair, orange work jacket, yellow hardhat, walkie-talkie, reliable', admin: 'young man, short black hair, orange and gold executive work coat, yellow hardhat under arm, walkie-talkie, steady smile',
-};
+/** Cutout mode: the same ladder with every off-body effect removed. Tailoring carries the rank. */
+const GRADE_CUTOUT = { D: 'plain everyday office wear, neat and simple, calm friendly expression, beautiful detailed face', C: 'business casual, id card, neat and tidy, beautiful detailed face', B: 'team leader look, refined tailoring, crisp collar and cuffs, beautiful detailed face', A: 'executive tailoring, luxurious fabric, gold trim on the collar and cuffs, ornate buttons, beautiful detailed face', S: 'legendary executive tailoring, gold embroidery on collar and cuffs, gold trim, ornate buttons, beautiful detailed face' };
+const TIER = CUTOUT ? GRADE_CUTOUT : GRADE;
 
 function colorName(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
@@ -192,7 +152,7 @@ export function describe(def, profileId, outfitOverride = null) {
   const p = PROFILES[profileId] ?? {}; const look = def.look ?? {}; const pal = def.palette ?? {};
   const who = p.gender === 'F' ? '1girl, solo' : '1boy, solo, male focus';
   const hair = look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair, ${HAIR[look.hair] ?? 'short hair'}`;
-  const outfit = outfitOverride ? `${outfitOverride}, ${GRADE[def.grade]}` : OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${GRADE[def.grade]}` : `${GRADE[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
+  const outfit = outfitOverride ? `${outfitOverride}, ${TIER[def.grade]}` : OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${TIER[def.grade]}` : `${TIER[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
   const bits = outfitOverride || OUTFIT_BY_ID[def.id] ? '' : [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
   // build, feature and hobby were in the data and never reached the model. The feature is the
   // one thing that makes this character rather than a person in the same job — it goes in.
@@ -203,16 +163,16 @@ export function describe(def, profileId, outfitOverride = null) {
 const SKIN_BG = { casual: 'cafe window close behind him, warm evening lights, bokeh', formal: 'warm party lights close behind him, soft golden bokeh' };
 export function prompt(def, profileId, skin = null) {
   const desc = describe(def, profileId, skin?.prompt ?? null);
-  const head = 'looking at viewer, face fully visible, eyes visible, whole head in frame with clear empty space above the hair and above the halo, face focus, soft even front lighting, bright face';
+  const head = 'looking at viewer, face fully visible, eyes visible, whole head in frame with clear empty space above the hair, face focus, soft even front lighting, bright face';
 
   if (CUTOUT) {
-    return `${desc}, ${poseTag(def.id, desc)}, ${head}, ${CUTOUT_SHOT}, ${wingTag(def)}, `
+    return `${desc}, ${poseTag(def.id, desc)}, ${head}, ${CUTOUT_SHOT}, ${BACK_CLEAR}, `
          + `${CUTOUT_BG}, ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
   }
 
   const bg = skin ? SKIN_BG[skin.id] ?? BG_BY_GRADE[def.grade] : BG_BY_ID[def.id] ?? BG_BY_ID[profileId] ?? BG_BY_GRADE[def.grade];
   return `${desc}, ${poseTag(def.id, desc)}, ${head}, medium shot, upper body, waist up, `
-       + `${wingTag(def)}, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
+       + `${BACK_CLEAR}, ${bg} (soft, out of focus), ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
 }
 
 // Optional Hugging Face token (HF_TOKEN env or a .hf_token file next to package.json, git-ignored): a logged-in

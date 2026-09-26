@@ -11,7 +11,7 @@
 // ----------------------------------
 // Stored in profiles.js / heroes.js: the things that cannot be computed — nickname, department,
 // bio, hobby, feature, look, palette.
-// Derived here: height, build, eye colour, wing side, wing tier. They come from data the character
+// Derived here: height, build, eye colour, sheet side, sheet tier. They come from data the character
 // already has, so they cannot drift from it, and every consumer (this doc, the prompts, the pixel
 // dolls, a future codex screen) reads the SAME function rather than its own guess.
 //
@@ -19,10 +19,11 @@
 import fs from 'node:fs';
 import { HEROES, MAIN_JOBS, GRADES, ROLES } from '../src/data/heroes.js';
 import { PROFILES } from '../src/data/profiles.js';
-// One source for the derived design. charSheet had its own copies of wingSide,
-// WING_BY_GRADE, height and colorName — two implementations of the same rule, which is
+// One source for the derived design. charSheet had its own copies of the side rule,
+// the grade ladder, height and colorName — two implementations of the same rule, which is
 // the drift this very document warns about.
-import { wingSideKo, WING_BY_GRADE, BUILD, height, colorName } from '../src/data/design.js';
+import { sheetSideKo, SHEET_BY_GRADE, SHEET_TRAIT, SHEET_ATTACK, SHEET_ROWS_MAX, BUILD, height, colorName, outfit } from '../src/data/design.js';
+import { TRAITS } from '../src/data/heroes.js';
 
 const HAIR = {
   short: '짧은 머리', bob: '단발', bun: '쪽진 머리', side: '가르마', bald: '민머리',
@@ -50,8 +51,8 @@ let md = `# 캐릭터 설정
 
 | | |
 |---|---|
-| **저장** | 별명 · 부서 · 성별 · 소개 · 취미 · 특징 · 머리/소품 · 팔레트 |
-| **파생** | 키 · 체형 · 눈색 · 날개 방향 · 날개 등급 |
+| **저장** | 별명 · 부서 · 성별 · 소개 · 설정 · 취미 · 특징 · 의상 · 머리/소품 · 팔레트 |
+| **파생** | 키 · 체형 · 눈색 · 시트 방향 · 시트 구조 · 시트 무늬 · 공격 방식 |
 
 파생값은 캐릭터가 이미 가진 데이터에서 나온다. 그래서 **데이터와 어긋날 수가 없고**, 이 문서·프롬프트·
 도트·도감이 전부 같은 함수를 읽는다. 따로 적어 두면 언젠가 갈라진다.
@@ -67,7 +68,7 @@ md += hairs.map(([k, n]) => `${HAIR[k] ?? k} ${n}`).join(' · ') + `\n\n`;
 const accs = count(rows, (r) => [r.look.acc, r.look.acc2, r.look.prop]);
 md += `**소품 ${accs.length}종** · `;
 md += `**성별** ` + count(rows, (r) => r.p.gender ?? '?').map(([k, n]) => `${k === 'F' ? '여' : '남'} ${n}`).join(' · ');
-md += ` · **날개** ` + count(rows, (r) => wingSideKo(r.h.id)).map(([k, n]) => `${k} ${n}`).join(' · ') + `\n\n`;
+md += ` · **시트** ` + count(rows, (r) => sheetSideKo(r.h.id)).map(([k, n]) => `${k} ${n}`).join(' · ') + `\n\n`;
 
 const gradeKeys = [...new Set(HEROES.map((h) => h.grade))];
 const roleKeys = [...new Set(HEROES.map((h) => h.role))];
@@ -78,21 +79,27 @@ for (const g of gradeKeys) {
   md += `| **${g}** | ${cells.join(' | ')} |\n`;
 }
 
-// ---------------------------------------------------------------- wing ladder
-md += `\n## 날개 사다리\n\n`;
-md += `한쪽만. 깃털이 아니라 **셀·막대그래프 모양의 빛 조각**. 크기가 아니라 **조각 수와 층**으로 오른다.\n\n`;
-md += `| 등급 | 조각 | 층 | 폭 | 빛 |\n|---|---|---|---|---|\n`;
+// ---------------------------------------------------------------- sheet ladder
+md += `\n## 등 뒤의 시트\n\n`;
+md += `캐릭터 등 뒤에 반투명 엑셀 시트가 비스듬히 떠 있다. **일러스트가 그리지 않고 게임이 그린다** — 배경 없는 일러 아래에 깔리는 별도 레이어.\n`;
+md += `머리 위로는 절대 올라가지 않는다(윗변은 어깨~귀 사이). 등급은 **크기가 아니라 구조**로 오른다.\n\n`;
+md += `| 등급 | 열 | 구조 | 추가 |\n|---|---|---|---|\n`;
 for (const g of gradeKeys) {
-  const w = WING_BY_GRADE[g];
-  md += `| **${g}** | ${w.seg} | ${w.layer} | ${w.spanKo} | ${w.light} |\n`;
+  const t = SHEET_BY_GRADE[g];
+  md += `| **${g}** | ${t.cols} | ${t.chrome} | ${t.extra} |\n`;
 }
-md += `\n색은 각 캐릭터의 \`palette.W\`를 쓴다 — 55명이 전부 다른 강조색을 가지고 있으므로 날개도 55종이 된다.\n`;
+md += `\n**칸이 차는 규칙** — 행 = ★(최대 ${SHEET_ROWS_MAX}행) · 채운 칸 = 레벨 ÷ 레벨 상한(왼쪽→오른쪽, 위→아래) · 각성 = 채운 칸이 금색 + 수식 입력줄에 수식 · 스킬 레벨 = 차트 막대 높이(A 이상).\n\n`;
+md += `**특성 → 셀 무늬** (엑셀 기능 하나씩이라 툴팁 없이 읽힌다)\n\n| 특성 | 무늬 | 엑셀 기능 |\n|---|---|---|\n`;
+for (const [k, v] of Object.entries(SHEET_TRAIT)) md += `| ${TRAITS[k]?.name ?? k} | ${v.ko} | ${v.excel} |\n`;
+md += `\n**역할 → 시트로 공격하는 방식**\n\n| 역할 | 기본 공격 | 스킬 |\n|---|---|---|\n`;
+for (const [k, v] of Object.entries(SHEET_ATTACK)) md += `| ${ROLES[k]?.name ?? k} | ${v.ko} | ${v.skill} |\n`;
+md += `\n시트 색은 각 캐릭터의 \`palette.W\`. 같은 등급 안에서도 **색 × 특성 무늬 × 방향**이 달라 카드마다 다른 시트가 된다.\n`;
 
 // ---------------------------------------------------------------- per-character blocks
 md += `\n---\n\n## 사원 명단\n`;
 for (const g of gradeKeys) {
   const inGrade = rows.filter((r) => r.h.grade === g);
-  const w = WING_BY_GRADE[g];
+  const w = SHEET_BY_GRADE[g];
   md += `\n### ${g} · ${GRADES[g]?.label ?? ''} — ${inGrade.length}명\n`;
   for (const { h, p, look } of inGrade) {
     const props = [look.acc, look.acc2, look.prop].filter(Boolean).join(' · ') || '—';
@@ -103,7 +110,10 @@ for (const g of gradeKeys) {
     md += `| 머리 | ${HAIR[look.hair] ?? look.hair ?? '—'} · \`${h.palette?.H ?? '—'}\` |\n`;
     md += `| 눈 | ${colorName(h.palette?.W, true)} 눈 |\n`;
     md += `| 소품 | ${props} |\n`;
-    md += `| 날개 | **${wingSideKo(h.id)}** · 조각 ${w.seg}개 ${w.layer}층 · \`${h.palette?.W ?? '—'}\` |\n`;
+    const tr = SHEET_TRAIT[h.trait];
+    md += `| 시트 | **${sheetSideKo(h.id)}**으로 기울어짐 · ${w.cols}열 · \`${h.palette?.W ?? '—'}\` · ${tr ? tr.ko : '—'} |\n`;
+    md += `| 공격 | ${SHEET_ATTACK[h.role]?.ko ?? '—'} |\n`;
+    md += `| 의상 | ${outfit(h.id) ?? '—'} |\n`;
     md += `| 팔레트 | 머리 \`${h.palette?.H ?? '—'}\` · 상의 \`${h.palette?.B ?? '—'}\` · 강조 \`${h.palette?.W ?? '—'}\` |\n`;
     md += `| 취미 | ${p.hobby ?? '—'} |\n`;
     md += `| **특징** | **${p.feature ?? '—'}** |\n`;
@@ -124,16 +134,16 @@ for (const g of gradeKeys) {
 // ---------------------------------------------------------------- main hero
 md += `\n---\n\n## 주인공 (김인턴) — 승진 트랙\n\n`;
 md += `한 사람이다. 승진해도 같은 인물 — **남성, 검은 단발**, 11개 직급 전부 동일. 바뀌는 것은 복장의\n`;
-md += `격과 날개뿐이고, 얼굴·머리·체형은 고정이다. 트랙(영업·재무·총무)은 **소품과 색**으로 구별한다.\n\n`;
-md += `| id | 직급 | 트랙 | 등급 | 역할 | 날개 | 다음 |\n|---|---|---|---|---|---|---|\n`;
+md += `격과 시트뿐이고, 얼굴·머리·체형은 고정이다. 트랙(영업·재무·총무)은 **소품과 색**으로 구별한다.\n\n`;
+md += `| id | 직급 | 트랙 | 등급 | 역할 | 시트 | 다음 |\n|---|---|---|---|---|---|---|\n`;
 for (const j of Object.values(MAIN_JOBS)) {
-  const w = WING_BY_GRADE[j.grade] ?? WING_BY_GRADE.D;
+  const w = SHEET_BY_GRADE[j.grade] ?? SHEET_BY_GRADE.D;
   md += `| \`${j.id}\` | ${j.title ?? j.name} | ${j.track ?? '—'} | ${j.grade} | ${ROLES[j.role]?.name ?? j.role} `
-      + `| ${wingSideKo('main')} · 조각 ${w.seg} | ${(j.next ?? []).join(', ') || '—'} |\n`;
+      + `| ${sheetSideKo('main')} · ${w.cols}열 | ${(j.next ?? []).join(', ') || '—'} |\n`;
 }
-md += `\n주인공의 날개는 **${wingSideKo('main')}** 고정이다 — 승진해도 방향은 바뀌지 않는다.\n`;
+md += `\n주인공의 시트는 **${sheetSideKo('main')}** 고정이다 — 승진해도 방향은 바뀌지 않고, 직급이 오르면 열이 늘어난다.\n`;
 
 fs.writeFileSync(new URL('../docs/CHARACTERS.md', import.meta.url), md);
 console.log(`docs/CHARACTERS.md: ${rows.length} heroes + ${Object.keys(MAIN_JOBS).length} jobs`);
 console.log(`  hair ${hairs.length} styles, busiest ${hairs[0][0]} x${hairs[0][1]}`);
-console.log(`  wings: ` + count(rows, (r) => wingSideKo(r.h.id)).map(([k, n]) => `${k} ${n}`).join(', '));
+console.log(`  sheets: ` + count(rows, (r) => sheetSideKo(r.h.id)).map(([k, n]) => `${k} ${n}`).join(', '));

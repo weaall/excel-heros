@@ -8,8 +8,8 @@
 
 | | |
 |---|---|
-| **저장** | 별명 · 부서 · 성별 · 소개 · 취미 · 특징 · 머리/소품 · 팔레트 |
-| **파생** | 키 · 체형 · 눈색 · 날개 방향 · 날개 등급 |
+| **저장** | 별명 · 부서 · 성별 · 소개 · 설정 · 취미 · 특징 · 의상 · 머리/소품 · 팔레트 |
+| **파생** | 키 · 체형 · 눈색 · 시트 방향 · 시트 구조 · 시트 무늬 · 공격 방식 |
 
 파생값은 캐릭터가 이미 가진 데이터에서 나온다. 그래서 **데이터와 어긋날 수가 없고**, 이 문서·프롬프트·
 도트·도감이 전부 같은 함수를 읽는다. 따로 적어 두면 언젠가 갈라진다.
@@ -20,7 +20,7 @@
 
 짧은 머리 4 · 샤기컷 4 · 올백 4 · 단발 3 · 쪽진 머리 3 · 가르마 3 · 뻗친 머리 3 · 웨이브 3 · 낮은 쪽머리 3 · 긴 머리 3 · 포니테일 3 · 투블럭 2 · 민머리 2 · 곱슬 2 · 히메컷 2 · 일자 앞머리 2 · 반묶음 2 · 한쪽 묶음 2 · 땋은 머리 2 · 숏컷 1 · 부스스한 머리 1 · 트윈테일 1
 
-**소품 45종** · **성별** 여 35 · 남 20 · **날개** 왼쪽 31 · 오른쪽 24
+**소품 45종** · **성별** 여 35 · 남 20 · **시트** 왼쪽 31 · 오른쪽 24
 
 | 등급＼역할 | 근접 | 원거리 | 탱커 | 힐러 |
 |---|---|---|---|---|
@@ -30,19 +30,46 @@
 | **A** | 2 | 5 | 2 | 3 |
 | **S** | 3 | 2 | 3 | 1 |
 
-## 날개 사다리
+## 등 뒤의 시트
 
-한쪽만. 깃털이 아니라 **셀·막대그래프 모양의 빛 조각**. 크기가 아니라 **조각 수와 층**으로 오른다.
+캐릭터 등 뒤에 반투명 엑셀 시트가 비스듬히 떠 있다. **일러스트가 그리지 않고 게임이 그린다** — 배경 없는 일러 아래에 깔리는 별도 레이어.
+머리 위로는 절대 올라가지 않는다(윗변은 어깨~귀 사이). 등급은 **크기가 아니라 구조**로 오른다.
 
-| 등급 | 조각 | 층 | 폭 | 빛 |
-|---|---|---|---|---|
-| **D** | 3 | 1 | 어깨 너비의 1/3 | 없음, 반투명 |
-| **C** | 4 | 1 | 어깨 너비의 절반 이하 | 옅은 발광 |
-| **B** | 5 | 2 | 어깨 너비의 절반 | 안쪽 발광 |
-| **A** | 6 | 2 | 어깨 너비의 2/3 | 금빛 테두리, 빛 알갱이 |
-| **S** | 7 | 3 | 어깨 너비의 4/5 (상한) | 금빛이 흘러내리고 숫자가 스침 |
+| 등급 | 열 | 구조 | 추가 |
+|---|---|---|---|
+| **D** | 3 | 선만 있는 격자 | — |
+| **C** | 4 | 격자 + 머리글 행(A, B, C…) | — |
+| **B** | 5 | 머리글 행·열 + 수식 입력줄 | 조건부 서식 색 |
+| **A** | 6 | 머리글 + 수식 입력줄 + 금색 테두리 | 작은 막대 차트 |
+| **S** | 7 | 시트 탭 세 장이 겹침 + 금색 테두리 | 차트 + 셀에서 숫자가 흘러내림 |
 
-색은 각 캐릭터의 `palette.W`를 쓴다 — 55명이 전부 다른 강조색을 가지고 있으므로 날개도 55종이 된다.
+**칸이 차는 규칙** — 행 = ★(최대 5행) · 채운 칸 = 레벨 ÷ 레벨 상한(왼쪽→오른쪽, 위→아래) · 각성 = 채운 칸이 금색 + 수식 입력줄에 수식 · 스킬 레벨 = 차트 막대 높이(A 이상).
+
+**특성 → 셀 무늬** (엑셀 기능 하나씩이라 툴팁 없이 읽힌다)
+
+| 특성 | 무늬 | 엑셀 기능 |
+|---|---|---|
+| 날카로운 지적 | 빨간 강조 셀이 드문드문 | 조건부 서식: 상위 10% |
+| 빠른 손놀림 | 셀마다 → 화살표 아이콘 | 아이콘 집합 |
+| 영업 마인드 | ₩ 통화 서식, 금색 숫자 | 통화 표시 형식 |
+| 철벽 멘탈 | 굵은 바깥 테두리, 틀 고정선 | 굵은 테두리 + 틀 고정 |
+| 커피 수혈 | 커피색 데이터 막대 | 데이터 막대 |
+| 보고서 특화 | 모서리의 빨간 메모 삼각형 | 메모 표시 |
+| 팀 리더십 | 맨 아래 굵은 합계 행 | 요약 행 (=SUM) |
+| 행운의 셀 | 별 아이콘이 흩어진 셀 | 아이콘 집합 (별) |
+| 점심 시간 | 초록 데이터 막대가 차오름 | 데이터 막대 (녹색) |
+| 전체 회신 | 가로로 병합된 넓은 셀 | 셀 병합 |
+
+**역할 → 시트로 공격하는 방식**
+
+| 역할 | 기본 공격 | 스킬 |
+|---|---|---|
+| 탱커 | 시트가 앞으로 나와 셀 격자 벽이 된다 | 틀 고정 — 격자가 굳어 피해를 막는다 |
+| 근접 | 행 하나가 뜯겨 나와 칼날처럼 벤다 | 행 삭제 — 한 줄이 통째로 적을 긋는다 |
+| 원거리 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 | 채우기 핸들 — 셀이 줄지어 연사된다 |
+| 힐러 | 초록 =SUM 셀이 아군에게 날아가 붙는다 | 자동 합계 — 파티 전원에게 초록 셀 |
+
+시트 색은 각 캐릭터의 `palette.W`. 같은 등급 안에서도 **색 × 특성 무늬 × 방향**이 달라 카드마다 다른 시트가 된다.
 
 ---
 
@@ -60,7 +87,9 @@
 | 머리 | 짧은 머리 · `#3b2a1a` |
 | 눈 | 푸른 눈 |
 | 소품 | tie · files |
-| 날개 | **오른쪽** · 조각 3개 1층 · `#9aa5b1` |
+| 시트 | **오른쪽**으로 기울어짐 · 3열 · `#9aa5b1` · 셀마다 → 화살표 아이콘 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | white shirt sleeves rolled, loosened tie, lanyard |
 | 팔레트 | 머리 `#3b2a1a` · 상의 `#dfe6e9` · 강조 `#9aa5b1` |
 | 취미 | 기계식 키보드 수집, 타자 속도 측정 |
 | **특징** | **책상에 마우스가 없다. 손목에 스프링 밴드** |
@@ -82,7 +111,9 @@
 | 머리 | 단발 · `#6b3e1e` |
 | 눈 | 푸른 눈 |
 | 소품 | headset · apron |
-| 날개 | **왼쪽** · 조각 3개 1층 · `#4b6584` |
+| 시트 | **왼쪽**으로 기울어짐 · 3열 · `#4b6584` · ₩ 통화 서식, 금색 숫자 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | reception uniform, vest, ribbon tie |
 | 팔레트 | 머리 `#6b3e1e` · 상의 `#f8c291` · 강조 `#4b6584` |
 | 취미 | 드라마 정주행, 네일 아트 |
 | **특징** | **이름표를 매번 조금 삐뚤게 단다** |
@@ -104,7 +135,9 @@
 | 머리 | 짧은 머리 · `#9e9e9e` |
 | 눈 | 푸른 눈 |
 | 소품 | mustache · hardhat · radio |
-| 날개 | **오른쪽** · 조각 3개 1층 · `#8395a7` |
+| 시트 | **오른쪽**으로 기울어짐 · 3열 · `#8395a7` · 굵은 바깥 테두리, 틀 고정선 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | navy security uniform, cap, radio |
 | 팔레트 | 머리 `#9e9e9e` · 상의 `#1f2a44` · 강조 `#8395a7` |
 | 취미 | 아침 등산, 바둑 |
 | **특징** | **20년 된 무전기. 안테나가 테이프로 감겨 있다** |
@@ -126,7 +159,9 @@
 | 머리 | 쪽진 머리 · `#c97b4a` |
 | 눈 | 밝은 주황 눈 |
 | 소품 | coffee · badge · apron |
-| 날개 | **왼쪽** · 조각 3개 1층 · `#ffcc80` |
+| 시트 | **왼쪽**으로 기울어짐 · 3열 · `#ffcc80` · 초록 데이터 막대가 차오름 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | striped shirt, brown barista apron, rolled sleeves, hair tied |
 | 팔레트 | 머리 `#c97b4a` · 상의 `#6d4c41` · 강조 `#ffcc80` |
 | 취미 | 원두 블렌딩, 라떼 아트 연습 |
 | **특징** | **앞치마 끈을 앞으로 묶는다. 손등에 스팀 화상 자국** |
@@ -148,7 +183,9 @@
 | 머리 | 샤기컷 · `#2b2b2b` |
 | 눈 | 은 눈 |
 | 소품 | badge · cap · parcel |
-| 날개 | **오른쪽** · 조각 3개 1층 · `#95a5a6` |
+| 시트 | **오른쪽**으로 기울어짐 · 3열 · `#95a5a6` · 빨간 강조 셀이 드문드문 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | cheerful young man in a delivery worker jacket with an orange collar, baseball cap, name tag, hands on the strap of a shoulder bag |
 | 팔레트 | 머리 `#2b2b2b` · 상의 `#f39c12` · 강조 `#95a5a6` |
 | 취미 | 계단 오르기, 러닝 |
 | **특징** | **모자를 뒤로 쓴다. 계단만 다녀 닳은 신발 뒤축** |
@@ -170,7 +207,9 @@
 | 머리 | 가르마 · `#7f8c8d` |
 | 눈 | 은 눈 |
 | 소품 | lanyard · phone |
-| 날개 | **왼쪽** · 조각 3개 1층 · `#bdc3c7` |
+| 시트 | **왼쪽**으로 기울어짐 · 3열 · `#bdc3c7` · 별 아이콘이 흩어진 셀 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | oversized beige cardigan over a blouse |
 | 팔레트 | 머리 `#7f8c8d` · 상의 `#95a5a6` · 강조 `#bdc3c7` |
 | 취미 | 경품 응모, 운세 보기 |
 | **특징** | **사원증 줄에 뽑기 경품 키링이 다섯 개** |
@@ -192,7 +231,9 @@
 | 머리 | 일자 앞머리 · `#2d3436` |
 | 눈 | 흰 눈 |
 | 소품 | headset · laptop |
-| 날개 | **왼쪽** · 조각 3개 1층 · `#dfe6e9` |
+| 시트 | **왼쪽**으로 기울어짐 · 3열 · `#dfe6e9` · 셀마다 → 화살표 아이콘 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | hoodie over a collared shirt, headset around the neck |
 | 팔레트 | 머리 `#2d3436` · 상의 `#74b9ff` · 강조 `#dfe6e9` |
 | 취미 | 조립 PC, 인디게임 |
 | **특징** | **헤드셋을 한쪽만 걸친다. 케이블 타이를 팔찌처럼** |
@@ -214,7 +255,9 @@
 | 머리 | 낮은 쪽머리 · `#636e72` |
 | 눈 | 밝은 황금 눈 |
 | 소품 | badge · mop |
-| 날개 | **왼쪽** · 조각 3개 1층 · `#ffeaa7` |
+| 시트 | **왼쪽**으로 기울어짐 · 3열 · `#ffeaa7` · 별 아이콘이 흩어진 셀 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | work jumpsuit, headscarf, rubber gloves |
 | 팔레트 | 머리 `#636e72` · 상의 `#fab1a0` · 강조 `#ffeaa7` |
 | 취미 | 새벽 라디오, 화분 가꾸기 |
 | **특징** | **고무장갑을 손목까지 접어 올린다. 주머니의 손전등** |
@@ -236,7 +279,9 @@
 | 머리 | 반묶음 · `#4a2c2a` |
 | 눈 | 밝은 붉은 눈 |
 | 소품 | lanyard · tablet |
-| 날개 | **왼쪽** · 조각 3개 1층 · `#fd79a8` |
+| 시트 | **왼쪽**으로 기울어짐 · 3열 · `#fd79a8` · 별 아이콘이 흩어진 셀 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | oversized cardigan, lanyard, holding a tablet |
 | 팔레트 | 머리 `#4a2c2a` · 상의 `#ffeaa7` · 강조 `#fd79a8` |
 | 취미 | 다꾸, 카페 투어 |
 | **특징** | **사원증 줄이 아직 신입용 파란색. 손에 늘 수첩** |
@@ -258,7 +303,9 @@
 | 머리 | 트윈테일 · `#c98a7a` |
 | 눈 | 흰 눈 |
 | 소품 | ribbon · notebook |
-| 날개 | **오른쪽** · 조각 3개 1층 · `#ffffff` |
+| 시트 | **오른쪽**으로 기울어짐 · 3열 · `#ffffff` · 별 아이콘이 흩어진 셀 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | pastel pink cardigan over white blouse, twin tails with ribbons, notebook hugged to chest, bright cheerful smile |
 | 팔레트 | 머리 `#c98a7a` · 상의 `#f7d6e0` · 강조 `#ffffff` |
 | 취미 | 이모티콘 만들기, 응원 구호 짓기 |
 | **특징** | **리본. 사원증에 붙인 이모티콘 스티커가 계속 늘어난다** |
@@ -280,7 +327,9 @@
 | 머리 | 포니테일 · `#1f1f2a` |
 | 눈 | 밝은 푸른 눈 |
 | 소품 | badge · radio |
-| 날개 | **왼쪽** · 조각 3개 1층 · `#8fb8e8` |
+| 시트 | **왼쪽**으로 기울어짐 · 3열 · `#8fb8e8` · 굵은 바깥 테두리, 틀 고정선 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | navy security uniform, black ponytail, radio on shoulder, serious but kind eyes |
 | 팔레트 | 머리 `#1f1f2a` · 상의 `#1f2a44` · 강조 `#8fb8e8` |
 | 취미 | 검도, 근력 운동 |
 | **특징** | **머리끈을 손목에 세 개. 무전기를 어깨에** |
@@ -302,7 +351,9 @@
 | 머리 | 샤기컷 · `#6b4a2f` |
 | 눈 | 흰 눈 |
 | 소품 | cap · bag |
-| 날개 | **왼쪽** · 조각 3개 1층 · `#f5f6fa` |
+| 시트 | **왼쪽**으로 기울어짐 · 3열 · `#f5f6fa` · 셀마다 → 화살표 아이콘 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | blue postal jacket over a grey tee, backwards cap, a mail bag strap across the chest, a bundle of envelopes in one hand, bright grin |
 | 팔레트 | 머리 `#6b4a2f` · 상의 `#3f8fd6` · 강조 `#f5f6fa` |
 | 취미 | 우표 수집, 자전거 정비 |
 | **특징** | **어깨에 멘 우편 가방. 손가락에 고무 골무** |
@@ -326,7 +377,9 @@
 | 머리 | 투블럭 · `#1b3a6b` |
 | 눈 | 청록 눈 |
 | 소품 | glasses · pen |
-| 날개 | **왼쪽** · 조각 4개 1층 · `#00b894` |
+| 시트 | **왼쪽**으로 기울어짐 · 4열 · `#00b894` · 빨간 강조 셀이 드문드문 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | vest over shirt, glasses, pen |
 | 팔레트 | 머리 `#1b3a6b` · 상의 `#55efc4` · 강조 `#00b894` |
 | 취미 | 스도쿠, 표 정리 |
 | **특징** | **펜을 귀에 꽂는다. 소매에 수식이 적힌 포스트잇** |
@@ -348,7 +401,9 @@
 | 머리 | 민머리 · `#4a3b2a` |
 | 눈 | 밝은 초록 눈 |
 | 소품 | beard · tie · suspenders |
-| 날개 | **왼쪽** · 조각 4개 1층 · `#a3ffd6` |
+| 시트 | **왼쪽**으로 기울어짐 · 4열 · `#a3ffd6` · 맨 아래 굵은 합계 행 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | suspenders, shirt, bald, beard |
 | 팔레트 | 머리 `#4a3b2a` · 상의 `#00b894` · 강조 `#a3ffd6` |
 | 취미 | 가계부 쓰기, 분재 |
 | **특징** | **멜빵. 표를 읽을 때 양손 검지로 짚는 버릇** |
@@ -370,7 +425,9 @@
 | 머리 | 뻗친 머리 · `#1a1a1a` |
 | 눈 | 청록 눈 |
 | 소품 | headset · hoodie |
-| 날개 | **왼쪽** · 조각 4개 1층 · `#00cec9` |
+| 시트 | **왼쪽**으로 기울어짐 · 4열 · `#00cec9` · 가로로 병합된 넓은 셀 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | charcoal zip hoodie over a plain tee, headphones around the neck, a laptop tucked under one arm, messy black hair, tired but pleased half smile |
 | 팔레트 | 머리 `#1a1a1a` · 상의 `#1abc9c` · 강조 `#00cec9` |
 | 취미 | 자동화 스크립트, 심야 게임 |
 | **특징** | **후드 주머니에 늘 USB 세 개** |
@@ -392,7 +449,9 @@
 | 머리 | 웨이브 · `#5c2e0a` |
 | 눈 | 밝은 붉은 눈 |
 | 소품 | clipboard · earring |
-| 날개 | **오른쪽** · 조각 4개 1층 · `#ff7675` |
+| 시트 | **오른쪽**으로 기울어짐 · 4열 · `#ff7675` · 초록 데이터 막대가 차오름 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | teal blazer over a white blouse, earrings |
 | 팔레트 | 머리 `#5c2e0a` · 상의 `#7bed9f` · 강조 `#ff7675` |
 | 취미 | 베이킹, 반려견 산책 |
 | **특징** | **클립보드에 붙인 강아지 스티커** |
@@ -414,7 +473,9 @@
 | 머리 | 가르마 · `#3d3d3d` |
 | 눈 | 흰 눈 |
 | 소품 | sunglasses · tie · magnifier |
-| 날개 | **오른쪽** · 조각 4개 1층 · `#dcdde1` |
+| 시트 | **오른쪽**으로 기울어짐 · 4열 · `#dcdde1` · 모서리의 빨간 메모 삼각형 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | trench coat, sunglasses, magnifying glass |
 | 팔레트 | 머리 `#3d3d3d` · 상의 `#2ecc71` · 강조 `#dcdde1` |
 | 취미 | 추리소설, 사격 연습 |
 | **특징** | **실내에서도 선글라스. 빨간 펜을 세 자루 꽂고 다닌다** |
@@ -436,7 +497,9 @@
 | 머리 | 올백 · `#1e272e` |
 | 눈 | 주황 눈 |
 | 소품 | tie · briefcase |
-| 날개 | **왼쪽** · 조각 4개 1층 · `#fdcb6e` |
+| 시트 | **왼쪽**으로 기울어짐 · 4열 · `#fdcb6e` · ₩ 통화 서식, 금색 숫자 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | sharp navy suit, red tie, briefcase |
 | 팔레트 | 머리 `#1e272e` · 상의 `#e17055` · 강조 `#fdcb6e` |
 | 취미 | 골프, 맛집 지도 만들기 |
 | **특징** | **명함집이 늘 반쯤 비어 있다. 구두만은 늘 새것** |
@@ -458,7 +521,9 @@
 | 머리 | 낮은 쪽머리 · `#2c2c54` |
 | 눈 | 흰 눈 |
 | 소품 | glasses · files |
-| 날개 | **오른쪽** · 조각 4개 1층 · `#dfe6e9` |
+| 시트 | **오른쪽**으로 기울어짐 · 4열 · `#dfe6e9` · 모서리의 빨간 메모 삼각형 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | black long coat, white collar, thin glasses |
 | 팔레트 | 머리 `#2c2c54` · 상의 `#a29bfe` · 강조 `#dfe6e9` |
 | 취미 | 필사, 요가 |
 | **특징** | **형광펜 네 색을 손가락 사이에 끼고 쓴다** |
@@ -480,7 +545,9 @@
 | 머리 | 한쪽 묶음 · `#e17055` |
 | 눈 | 분홍 눈 |
 | 소품 | earring · phone |
-| 날개 | **왼쪽** · 조각 4개 1층 · `#e84393` |
+| 시트 | **왼쪽**으로 기울어짐 · 4열 · `#e84393` · 셀마다 → 화살표 아이콘 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | bomber jacket over a top, press badge |
 | 팔레트 | 머리 `#e17055` · 상의 `#ffffff` · 강조 `#e84393` |
 | 취미 | 단거리 달리기, 팟캐스트 |
 | **특징** | **녹음기를 목에 건다. 정장에 운동화** |
@@ -502,7 +569,9 @@
 | 머리 | 반묶음 · `#6c5ce7` |
 | 눈 | 청록 눈 |
 | 소품 | badge · clipboard |
-| 날개 | **오른쪽** · 조각 4개 1층 · `#00cec9` |
+| 시트 | **오른쪽**으로 기울어짐 · 4열 · `#00cec9` · 초록 데이터 막대가 차오름 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | white nurse uniform, nurse cap, clipboard |
 | 팔레트 | 머리 `#6c5ce7` · 상의 `#dfe6e9` · 강조 `#00cec9` |
 | 취미 | 약초차, 스트레칭 |
 | **특징** | **가운 주머니가 늘 불룩하다. 손목의 작은 시계** |
@@ -524,7 +593,9 @@
 | 머리 | 일자 앞머리 · `#1f2f5f` |
 | 눈 | 밝은 초록 눈 |
 | 소품 | glasses · laptop |
-| 날개 | **오른쪽** · 조각 4개 1층 · `#9ae6b4` |
+| 시트 | **오른쪽**으로 기울어짐 · 4열 · `#9ae6b4` · 빨간 강조 셀이 드문드문 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | dark purple hoodie, navy bob, round glasses, laptop covered in stickers, deadpan |
 | 팔레트 | 머리 `#1f2f5f` · 상의 `#4a4e69` · 강조 `#9ae6b4` |
 | 취미 | 방탈출, 버그 리포트 쓰기 |
 | **특징** | **노트북에 붙인 버그 스티커. 폰을 늘 두 대** |
@@ -546,7 +617,9 @@
 | 머리 | 포니테일 · `#7a4a2f` |
 | 눈 | 흰 눈 |
 | 소품 | headset · mic |
-| 날개 | **왼쪽** · 조각 4개 1층 · `#ffffff` |
+| 시트 | **왼쪽**으로 기울어짐 · 4열 · `#ffffff` · 초록 데이터 막대가 차오름 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | coral blazer, long brown hair, headset, holding a microphone, warm smile |
 | 팔레트 | 머리 `#7a4a2f` · 상의 `#ffb7a1` · 강조 `#ffffff` |
 | 취미 | 발성 연습, 꽃꽂이 |
 | **특징** | **헤드셋을 왕관처럼 쓴다. 책상엔 늘 같은 자리의 꽃 한 송이** |
@@ -568,7 +641,9 @@
 | 머리 | 올백 · `#2b2b2b` |
 | 눈 | 흰 눈 |
 | 소품 | whistle · clipboard |
-| 날개 | **왼쪽** · 조각 4개 1층 · `#ffffff` |
+| 시트 | **왼쪽**으로 기울어짐 · 4열 · `#ffffff` · 맨 아래 굵은 합계 행 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | orange coach vest over white shirt, whistle, clipboard, energetic |
 | 팔레트 | 머리 `#2b2b2b` · 상의 `#e67e22` · 강조 `#ffffff` |
 | 취미 | 조기 축구, 호루라기 수집 |
 | **특징** | **호루라기와 스톱워치. 늘 뒷짐을 진다** |
@@ -592,7 +667,9 @@
 | 머리 | 쪽진 머리 · `#2d3436` |
 | 눈 | 밝은 황금 눈 |
 | 소품 | glasses · badge · calculator |
-| 날개 | **왼쪽** · 조각 5개 2층 · `#ffeaa7` |
+| 시트 | **왼쪽**으로 기울어짐 · 5열 · `#ffeaa7` · ₩ 통화 서식, 금색 숫자 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | black turtleneck, high-waist trousers, glasses |
 | 팔레트 | 머리 `#2d3436` · 상의 `#74b9ff` · 강조 `#ffeaa7` |
 | 취미 | 주산, 퍼즐 |
 | **특징** | **계산기를 두 대 쓴다. 한 대는 늘 왼손** |
@@ -614,7 +691,9 @@
 | 머리 | 곱슬 · `#1e272e` |
 | 눈 | 청록 눈 |
 | 소품 | headset · coffee · hoodie |
-| 날개 | **왼쪽** · 조각 5개 2층 · `#00cec9` |
+| 시트 | **왼쪽**으로 기울어짐 · 5열 · `#00cec9` · 셀마다 → 화살표 아이콘 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | flannel shirt, headset, coffee cup |
 | 팔레트 | 머리 `#1e272e` · 상의 `#0984e3` · 강조 `#00cec9` |
 | 취미 | 자전거 출퇴근, 기계식 시계 분해 |
 | **특징** | **식은 커피 두 잔이 늘 책상에. 소매는 한쪽만 걷는다** |
@@ -636,7 +715,9 @@
 | 머리 | 샤기컷 · `#b2bec3` |
 | 눈 | 흰 눈 |
 | 소품 | beard · lanyard · files |
-| 날개 | **오른쪽** · 조각 5개 2층 · `#dfe6e9` |
+| 시트 | **오른쪽**으로 기울어짐 · 5열 · `#dfe6e9` · 굵은 바깥 테두리, 틀 고정선 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | grey work vest, gloves, boxes |
 | 팔레트 | 머리 `#b2bec3` · 상의 `#2b7cd3` · 강조 `#dfe6e9` |
 | 취미 | 목공, 공구 정리 |
 | **특징** | **허리춤의 열쇠 뭉치. 걸을 때마다 소리가 난다** |
@@ -658,7 +739,9 @@
 | 머리 | 단발 · `#b33939` |
 | 눈 | 밝은 분홍 눈 |
 | 소품 | flower · scarf |
-| 날개 | **왼쪽** · 조각 5개 2층 · `#ff9ff3` |
+| 시트 | **왼쪽**으로 기울어짐 · 5열 · `#ff9ff3` · 커피색 데이터 막대 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | pastel knit sweater, scarf |
 | 팔레트 | 머리 `#b33939` · 상의 `#a3c4ff` · 강조 `#ff9ff3` |
 | 취미 | 간식 신제품 탐방, 뜨개질 |
 | **특징** | **목에 건 스카프. 주머니에서 사탕이 끝없이 나온다** |
@@ -680,7 +763,9 @@
 | 머리 | 단발 · `#6c5ce7` |
 | 눈 | 청록 눈 |
 | 소품 | lanyard · pen |
-| 날개 | **왼쪽** · 조각 5개 2층 · `#00cec9` |
+| 시트 | **왼쪽**으로 기울어짐 · 5열 · `#00cec9` · 맨 아래 굵은 합계 행 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | crisp denim jacket over a white blouse, neat bob, lanyard, holding a fanned stack of planning documents, confident bright smile |
 | 팔레트 | 머리 `#6c5ce7` · 상의 `#55efc4` · 강조 `#00cec9` |
 | 취미 | 전시 관람, 메모 앱 비교 |
 | **특징** | **회의에 A4 한 장만 들고 들어간다** |
@@ -702,7 +787,9 @@
 | 머리 | 곱슬 · `#e84393` |
 | 눈 | 밝은 황금 눈 |
 | 소품 | earring · tablet |
-| 날개 | **오른쪽** · 조각 5개 2층 · `#ffeaa7` |
+| 시트 | **오른쪽**으로 기울어짐 · 5열 · `#ffeaa7` · 셀마다 → 화살표 아이콘 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | oversized artist smock over a striped tee, curly pink hair under a beret, holding a drawing tablet and a stylus, bright cheerful smile, a few paint smudges on the smock |
 | 팔레트 | 머리 `#e84393` · 상의 `#fd79a8` · 강조 `#ffeaa7` |
 | 취미 | 스케치, 폰트 수집 |
 | **특징** | **손목의 컬러칩 링. 귀 뒤에 스타일러스** |
@@ -724,7 +811,9 @@
 | 머리 | 부스스한 머리 · `#b2bec3` |
 | 눈 | 푸른 눈 |
 | 소품 | glasses · laptop |
-| 날개 | **왼쪽** · 조각 5개 2층 · `#0984e3` |
+| 시트 | **왼쪽**으로 기울어짐 · 5열 · `#0984e3` · 빨간 강조 셀이 드문드문 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | white lab coat over sweater, glasses, laptop |
 | 팔레트 | 머리 `#b2bec3` · 상의 `#f5f6fa` · 강조 `#0984e3` |
 | 취미 | 천체 관측, 커피 내리기 |
 | **특징** | **눈 밑의 그늘. 가운 위에 담요를 두르고 다닌다** |
@@ -746,7 +835,9 @@
 | 머리 | 땋은 머리 · `#a9c9e8` |
 | 눈 | 흰 눈 |
 | 소품 | earring · book |
-| 날개 | **왼쪽** · 조각 5개 2층 · `#ffffff` |
+| 시트 | **왼쪽**으로 기울어짐 · 5열 · `#ffffff` · 모서리의 빨간 메모 삼각형 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | beige trench coat, long silver-blue hair, book, elegant |
 | 팔레트 | 머리 `#a9c9e8` · 상의 `#d8c3a5` · 강조 `#ffffff` |
 | 취미 | 외국 라디오, 종이사전 수집 |
 | **특징** | **일곱 나라 배지를 단 가방. 사전은 아직 종이로 쓴다** |
@@ -768,7 +859,9 @@
 | 머리 | 쪽진 머리 · `#151515` |
 | 눈 | 황금 눈 |
 | 소품 | earring · planner |
-| 날개 | **오른쪽** · 조각 5개 2층 · `#d4a017` |
+| 시트 | **오른쪽**으로 기울어짐 · 5열 · `#d4a017` · 맨 아래 굵은 합계 행 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | charcoal pencil suit, black hair bun, gold earrings, leather planner, composed |
 | 팔레트 | 머리 `#151515` · 상의 `#2f3640` · 강조 `#d4a017` |
 | 취미 | 플래너 꾸미기, 새벽 조깅 |
 | **특징** | **가죽 플래너. 펜 세 자루를 색으로 구분해 꽂는다** |
@@ -790,7 +883,9 @@
 | 머리 | 짧은 머리 · `#3b2a1a` |
 | 눈 | 주황 눈 |
 | 소품 | gloves · boxes |
-| 날개 | **왼쪽** · 조각 5개 2층 · `#f39c12` |
+| 시트 | **왼쪽**으로 기울어짐 · 5열 · `#f39c12` · 굵은 바깥 테두리, 틀 고정선 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | grey work jacket, orange gloves, stacked boxes, sturdy, friendly |
 | 팔레트 | 머리 `#3b2a1a` · 상의 `#7f8c8d` · 강조 `#f39c12` |
 | 취미 | 역도, 지게차 자격증 모으기 |
 | **특징** | **장갑을 벗지 않는다. 작업복 위에 사원증** |
@@ -814,7 +909,9 @@
 | 머리 | 올백 · `#ececec` |
 | 눈 | 밝은 황금 눈 |
 | 소품 | glasses · tie · ledger |
-| 날개 | **왼쪽** · 조각 6개 2층 · `#ffeaa7` |
+| 시트 | **왼쪽**으로 기울어짐 · 6열 · `#ffeaa7` · ₩ 통화 서식, 금색 숫자 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | deep purple three-piece suit with a gold pocket watch chain, silver hair swept back, thin gold-rimmed glasses, sharp calculating smile |
 | 팔레트 | 머리 `#ececec` · 상의 `#6c5ce7` · 강조 `#ffeaa7` |
 | 취미 | 클래식 감상, 체스 |
 | **특징** | **금테 안경과 회중시계 줄. 웃을 때만 눈이 가늘어진다** |
@@ -836,7 +933,9 @@
 | 머리 | 뻗친 머리 · `#2d3436` |
 | 눈 | 청록 눈 |
 | 소품 | sunglasses · coffee · watch |
-| 날개 | **왼쪽** · 조각 6개 2층 · `#00b894` |
+| 시트 | **왼쪽**으로 기울어짐 · 6열 · `#00b894` · 빨간 강조 셀이 드문드문 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | black turtleneck under a tailored charcoal blazer, spiky black hair, tinted glasses pushed up on his head, confident smirk |
 | 팔레트 | 머리 `#2d3436` · 상의 `#a29bfe` · 강조 `#00b894` |
 | 취미 | 보드 타기, 기판 납땜 |
 | **특징** | **선글라스를 머리 위로 올려 쓴다. 손목에 낡은 밴드** |
@@ -858,7 +957,9 @@
 | 머리 | 숏컷 · `#636e72` |
 | 눈 | 흰 눈 |
 | 소품 | beard · badge · briefcase |
-| 날개 | **오른쪽** · 조각 6개 2층 · `#dfe6e9` |
+| 시트 | **오른쪽**으로 기울어짐 · 6열 · `#dfe6e9` · 맨 아래 굵은 합계 행 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | elegant tailored navy pantsuit with gold buttons and a thin gold chain, silk blouse, sleek side-swept bob, sharp confident smile, holding a slim tablet |
 | 팔레트 | 머리 `#636e72` · 상의 `#8e44ad` · 강조 `#dfe6e9` |
 | 취미 | 수영, 전략 보드게임 |
 | **특징** | **재킷 안주머니에 만년필 두 자루** |
@@ -880,7 +981,9 @@
 | 머리 | 히메컷 · `#d63031` |
 | 눈 | 밝은 황금 눈 |
 | 소품 | sunglasses · phone |
-| 날개 | **오른쪽** · 조각 6개 2층 · `#ffeaa7` |
+| 시트 | **오른쪽**으로 기울어짐 · 6열 · `#ffeaa7` · 별 아이콘이 흩어진 셀 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | stylish scarlet blazer over white top, long wavy hair, sunglasses pushed up on head, statement gold earrings, playful wink |
 | 팔레트 | 머리 `#d63031` · 상의 `#ff7675` · 강조 `#ffeaa7` |
 | 취미 | 전시 오프닝, 빈티지 쇼핑 |
 | **특징** | **계절마다 바뀌는 귀걸이. 늘 한쪽만** |
@@ -902,7 +1005,9 @@
 | 머리 | 웨이브 · `#2d3436` |
 | 눈 | 밝은 황금 눈 |
 | 소품 | earring · badge · files |
-| 날개 | **왼쪽** · 조각 6개 2층 · `#ffeaa7` |
+| 시트 | **왼쪽**으로 기울어짐 · 6열 · `#ffeaa7` · 맨 아래 굵은 합계 행 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | elegant mauve suit dress with pearl earrings and a gold brooch, long wavy hair, warm reassuring smile, one hand resting lightly over her heart with fingers together |
 | 팔레트 | 머리 `#2d3436` · 상의 `#e84393` · 강조 `#ffeaa7` |
 | 취미 | 심리학 독서, 산책 |
 | **특징** | **명함을 두 손으로만 건넨다. 손목에 매듭 팔찌** |
@@ -924,7 +1029,9 @@
 | 머리 | 올백 · `#2b2b3a` |
 | 눈 | 황금 눈 |
 | 소품 | glasses · badge |
-| 날개 | **왼쪽** · 조각 6개 2층 · `#ffd54f` |
+| 시트 | **왼쪽**으로 기울어짐 · 6열 · `#ffd54f` · 굵은 바깥 테두리, 틀 고정선 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | charcoal double-breasted suit with a gold pin, dark hair in a neat bun, thin glasses, calm unshakeable gaze |
 | 팔레트 | 머리 `#2b2b3a` · 상의 `#37474f` · 강조 `#ffd54f` |
 | 취미 | 기상 관측, 재난 영화 |
 | **특징** | **맑은 날에도 우산을 들고 다닌다** |
@@ -946,7 +1053,9 @@
 | 머리 | 짧은 머리 · `#3d2b1f` |
 | 눈 | 밝은 청록 눈 |
 | 소품 | headset · tablet |
-| 날개 | **왼쪽** · 조각 6개 2층 · `#b2dfdb` |
+| 시트 | **왼쪽**으로 기울어짐 · 6열 · `#b2dfdb` · 모서리의 빨간 메모 삼각형 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | teal shirt with rolled sleeves, headset around neck, short brown hair, holding a tablet showing a product roadmap, focused smile |
 | 팔레트 | 머리 `#3d2b1f` · 상의 `#00897b` · 강조 `#b2dfdb` |
 | 취미 | 연필 깎기, 종이 프로토타입 |
 | **특징** | **지우개가 다 닳은 연필. 로드맵을 종이에 그린다** |
@@ -968,7 +1077,9 @@
 | 머리 | 가르마 · `#1a1a1a` |
 | 눈 | 밝은 분홍 눈 |
 | 소품 | tie · ledger |
-| 날개 | **왼쪽** · 조각 6개 2층 · `#e1bee7` |
+| 시트 | **왼쪽**으로 기울어짐 · 6열 · `#e1bee7` · ₩ 통화 서식, 금색 숫자 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | deep purple three-piece suit, swept black hair, gold tie pin, holding a leather ledger, composed confident smile |
 | 팔레트 | 머리 `#1a1a1a` · 상의 `#4a148c` · 강조 `#e1bee7` |
 | 취미 | 와인, 외국어 뉴스 청취 |
 | **특징** | **커프스 단추. 손에 늘 접힌 한 장의 요약** |
@@ -990,7 +1101,9 @@
 | 머리 | 낮은 쪽머리 · `#4e342e` |
 | 눈 | 붉은 눈 |
 | 소품 | glasses · files |
-| 날개 | **오른쪽** · 조각 6개 2층 · `#ff8a65` |
+| 시트 | **오른쪽**으로 기울어짐 · 6열 · `#ff8a65` · 커피색 데이터 막대 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | ivory pantsuit over a soft blouse, long brown wavy hair, thin glasses, arms loosely folded, warm reassuring smile, soft white light |
 | 팔레트 | 머리 `#4e342e` · 상의 `#eceff1` · 강조 `#ff8a65` |
 | 취미 | 판례 읽기, 합창단 |
 | **특징** | **서류 가방의 손잡이가 테이프로 감겨 있다** |
@@ -1012,7 +1125,9 @@
 | 머리 | 뻗친 머리 · `#212121` |
 | 눈 | 밝은 주황 눈 |
 | 소품 | watch · briefcase |
-| 날개 | **오른쪽** · 조각 6개 2층 · `#ffe0b2` |
+| 시트 | **오른쪽**으로 기울어짐 · 6열 · `#ffe0b2` · 가로로 병합된 넓은 셀 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | orange blazer over a white shirt, spiked black hair, wristwatch, three business cards fanned between his fingers, energetic grin |
 | 팔레트 | 머리 `#212121` · 상의 `#ef6c00` · 강조 `#ffe0b2` |
 | 취미 | 명함 정리, 인맥 지도 그리기 |
 | **특징** | **재킷 네 주머니에 명함집이 각각. 넥타이는 느슨하게** |
@@ -1034,7 +1149,9 @@
 | 머리 | 한쪽 묶음 · `#151515` |
 | 눈 | 청록 눈 |
 | 소품 | earring · tablet |
-| 날개 | **왼쪽** · 조각 6개 2층 · `#00d2ff` |
+| 시트 | **왼쪽**으로 기울어짐 · 6열 · `#00d2ff` · 빨간 강조 셀이 드문드문 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | black suit with cyan accents and a gold pin, long black hair with a bright blue streak tucked behind her ear, bright cyan eyes, calm confident smile, one hand resting on a slim tablet |
 | 팔레트 | 머리 `#151515` · 상의 `#1e272e` · 강조 `#00d2ff` |
 | 취미 | 데이터 시각화, 신스 연주 |
 | **특징** | **머리칼의 푸른 한 줄. 손목에 데이터 밴드 두 개** |
@@ -1056,7 +1173,9 @@
 | 머리 | 웨이브 · `#f4a9c8` |
 | 눈 | 흰 눈 |
 | 소품 | earring · phone |
-| 날개 | **오른쪽** · 조각 6개 2층 · `#ffffff` |
+| 시트 | **오른쪽**으로 기울어짐 · 6열 · `#ffffff` · 커피색 데이터 막대 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | coral suit, pink bob, headset phone, radiant smile, flowers |
 | 팔레트 | 머리 `#f4a9c8` · 상의 `#ff8a80` · 강조 `#ffffff` |
 | 취미 | 손편지 쓰기, 제빵 |
 | **특징** | **이름표에 웃는 얼굴을 직접 그려 넣었다** |
@@ -1080,7 +1199,9 @@
 | 머리 | 히메컷 · `#f5f6fa` |
 | 눈 | 황금 눈 |
 | 소품 | sunglasses · tie · briefcase |
-| 날개 | **오른쪽** · 조각 7개 3층 · `#fbc531` |
+| 시트 | **오른쪽**으로 기울어짐 · 7열 · `#fbc531` · 모서리의 빨간 메모 삼각형 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | white long coat over black dress, gold accents, small sunglasses, pale skin, brightly lit face, confident smile |
 | 팔레트 | 머리 `#f5f6fa` · 상의 `#d4a017` · 강조 `#fbc531` |
 | 취미 | 승마, 서예 |
 | **특징** | **왼손 약지의 창립 반지. 목소리를 높이는 법이 없다** |
@@ -1102,7 +1223,9 @@
 | 머리 | 민머리 · `#dcdde1` |
 | 눈 | 흰 눈 |
 | 소품 | crown · beard · cane |
-| 날개 | **오른쪽** · 조각 7개 3층 · `#f5f6fa` |
+| 시트 | **오른쪽**으로 기울어짐 · 7열 · `#f5f6fa` · 맨 아래 굵은 합계 행 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | golden formal suit, cane, crown, beard |
 | 팔레트 | 머리 `#dcdde1` · 상의 `#e1b12c` · 강조 `#f5f6fa` |
 | 취미 | 산책, 오래된 사진 정리 |
 | **특징** | **40년 된 지팡이. 손잡이가 손 모양으로 닳았다** |
@@ -1124,7 +1247,9 @@
 | 머리 | 긴 머리 · `#2d3436` |
 | 눈 | 흰 눈 |
 | 소품 | glasses · hoodie |
-| 날개 | **오른쪽** · 조각 7개 3층 · `#f5f6fa` |
+| 시트 | **오른쪽**으로 기울어짐 · 7열 · `#f5f6fa` · 빨간 강조 셀이 드문드문 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | white and gold founder coat worn open over a fitted black turtleneck, long silver hair, thin gold-rimmed glasses, arms loosely crossed, calm visionary gaze, thin gold embroidery on the collar and cuffs of the coat |
 | 팔레트 | 머리 `#2d3436` · 상의 `#00b894` · 강조 `#f5f6fa` |
 | 취미 | 중고 부품 수리, 차고 정리 |
 | **특징** | **팔꿈치가 해진 카디건. 회사에서 가장 오래된 사원증** |
@@ -1146,7 +1271,9 @@
 | 머리 | 긴 머리 · `#c8b6ff` |
 | 눈 | 보라 눈 |
 | 소품 | earring · tablet |
-| 날개 | **오른쪽** · 조각 7개 3층 · `#8c7ae6` |
+| 시트 | **오른쪽**으로 기울어짐 · 7열 · `#8c7ae6` · 맨 아래 굵은 합계 행 |
+| 공격 | 셀이 떨어져 나가 숫자 탄환으로 날아간다 |
+| 의상 | white and navy executive suit dress, lavender long wavy hair, star earrings, holographic tablet, serene confident smile |
 | 팔레트 | 머리 `#c8b6ff` · 상의 `#f5f6fa` · 강조 `#8c7ae6` |
 | 취미 | 지도 수집, 장기 기상 예보 읽기 |
 | **특징** | **늘 접힌 종이 지도를 들고 다닌다** |
@@ -1168,7 +1295,9 @@
 | 머리 | 땋은 머리 · `#9ff3e6` |
 | 눈 | 청록 눈 |
 | 소품 | glasses · laptop |
-| 날개 | **오른쪽** · 조각 7개 3층 · `#00cec9` |
+| 시트 | **오른쪽**으로 기울어짐 · 7열 · `#00cec9` · 초록 데이터 막대가 차오름 |
+| 공격 | 초록 =SUM 셀이 아군에게 날아가 붙는다 |
+| 의상 | white and gold lab coat over a mint blouse, very long mint hair, round glasses, a slim holographic panel held at her side, serene commanding presence |
 | 팔레트 | 머리 `#9ff3e6` · 상의 `#ffffff` · 강조 `#00cec9` |
 | 취미 | 로봇 조립, 식물 기르기 |
 | **특징** | **안경테에 작은 LED. 무선 이어폰은 한쪽만** |
@@ -1190,7 +1319,9 @@
 | 머리 | 샤기컷 · `#1e272e` |
 | 눈 | 흰 눈 |
 | 소품 | headband · megaphone |
-| 날개 | **오른쪽** · 조각 7개 3층 · `#f5f6fa` |
+| 시트 | **오른쪽**으로 기울어짐 · 7열 · `#f5f6fa` · 굵은 바깥 테두리, 틀 고정선 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | crimson and gold leader coat with a white armband over a dark shirt, blond spiked hair, a union pin on the lapel, broad confident grin |
 | 팔레트 | 머리 `#1e272e` · 상의 `#c23616` · 강조 `#f5f6fa` |
 | 취미 | 등산, 노래방 |
 | **특징** | **목에 건 호루라기와 확성기. 손등에 굳은살** |
@@ -1212,7 +1343,9 @@
 | 머리 | 투블럭 · `#1e272e` |
 | 눈 | 청록 눈 |
 | 소품 | headset · laptop |
-| 날개 | **왼쪽** · 조각 7개 3층 · `#00d2ff` |
+| 시트 | **왼쪽**으로 기울어짐 · 7열 · `#00d2ff` · 빨간 강조 셀이 드문드문 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | long black techwear coat open over a hooded top, glowing cyan circuit lines running through the fabric, neon cyan headset, short black bob with a bright cyan streak, confident smirk |
 | 팔레트 | 머리 `#1e272e` · 상의 `#2d3436` · 강조 `#00d2ff` |
 | 취미 | CTF 대회, 자물쇠 따기 |
 | **특징** | **형광 헤드셋. 손톱을 짧게 깎고 검게 칠한다** |
@@ -1234,7 +1367,9 @@
 | 머리 | 포니테일 · `#f3e6b8` |
 | 눈 | 황금 눈 |
 | 소품 | earring · stamp |
-| 날개 | **왼쪽** · 조각 7개 3층 · `#d4a017` |
+| 시트 | **왼쪽**으로 기울어짐 · 7열 · `#d4a017` · 셀마다 → 화살표 아이콘 |
+| 공격 | 행 하나가 뜯겨 나와 칼날처럼 벤다 |
+| 의상 | white and gold executive suit with a thin gold chain, platinum long ponytail, an approval stamp in one hand, sharp confident smile |
 | 팔레트 | 머리 `#f3e6b8` · 상의 `#f5f6fa` · 강조 `#d4a017` |
 | 취미 | 속독, 단거리 수영 |
 | **특징** | **백금색 포니테일. 결재 도장을 목에 걸고 다닌다** |
@@ -1256,7 +1391,9 @@
 | 머리 | 긴 머리 · `#f5f6fa` |
 | 눈 | 황금 눈 |
 | 소품 | crown · earring · cane |
-| 날개 | **오른쪽** · 조각 7개 3층 · `#d4a017` |
+| 시트 | **오른쪽**으로 기울어짐 · 7열 · `#d4a017` · 굵은 바깥 테두리, 틀 고정선 |
+| 공격 | 시트가 앞으로 나와 셀 격자 벽이 된다 |
+| 의상 | black formal gown-style suit, silver hair, small crown, cane |
 | 팔레트 | 머리 `#f5f6fa` · 상의 `#2d3436` · 강조 `#d4a017` |
 | 취미 | 난초 기르기, 오래된 장부 읽기 |
 | **특징** | **은발을 늘 단정히. 창립 기념 브로치를 매일 단다** |
@@ -1273,20 +1410,20 @@
 ## 주인공 (김인턴) — 승진 트랙
 
 한 사람이다. 승진해도 같은 인물 — **남성, 검은 단발**, 11개 직급 전부 동일. 바뀌는 것은 복장의
-격과 날개뿐이고, 얼굴·머리·체형은 고정이다. 트랙(영업·재무·총무)은 **소품과 색**으로 구별한다.
+격과 시트뿐이고, 얼굴·머리·체형은 고정이다. 트랙(영업·재무·총무)은 **소품과 색**으로 구별한다.
 
-| id | 직급 | 트랙 | 등급 | 역할 | 날개 | 다음 |
+| id | 직급 | 트랙 | 등급 | 역할 | 시트 | 다음 |
 |---|---|---|---|---|---|---|
-| `intern` | 인턴 | — | D | 근접 | 오른쪽 · 조각 3 | staff |
-| `staff` | 사원 | — | C | 근접 | 오른쪽 · 조각 4 | sales_senior, finance_senior, admin_senior |
-| `sales_senior` | 영업대리 | sales | B | 근접 | 오른쪽 · 조각 5 | sales_manager |
-| `sales_manager` | 영업과장 | sales | A | 근접 | 오른쪽 · 조각 6 | sales |
-| `sales` | 영업부장 | sales | S | 근접 | 오른쪽 · 조각 7 | — |
-| `finance_senior` | 재무대리 | finance | B | 원거리 | 오른쪽 · 조각 5 | finance_manager |
-| `finance_manager` | 재무과장 | finance | A | 원거리 | 오른쪽 · 조각 6 | finance |
-| `finance` | 재무부장 | finance | S | 원거리 | 오른쪽 · 조각 7 | — |
-| `admin_senior` | 총무대리 | admin | B | 탱커 | 오른쪽 · 조각 5 | admin_manager |
-| `admin_manager` | 총무과장 | admin | A | 탱커 | 오른쪽 · 조각 6 | admin |
-| `admin` | 총무부장 | admin | S | 탱커 | 오른쪽 · 조각 7 | — |
+| `intern` | 인턴 | — | D | 근접 | 오른쪽 · 3열 | staff |
+| `staff` | 사원 | — | C | 근접 | 오른쪽 · 4열 | sales_senior, finance_senior, admin_senior |
+| `sales_senior` | 영업대리 | sales | B | 근접 | 오른쪽 · 5열 | sales_manager |
+| `sales_manager` | 영업과장 | sales | A | 근접 | 오른쪽 · 6열 | sales |
+| `sales` | 영업부장 | sales | S | 근접 | 오른쪽 · 7열 | — |
+| `finance_senior` | 재무대리 | finance | B | 원거리 | 오른쪽 · 5열 | finance_manager |
+| `finance_manager` | 재무과장 | finance | A | 원거리 | 오른쪽 · 6열 | finance |
+| `finance` | 재무부장 | finance | S | 원거리 | 오른쪽 · 7열 | — |
+| `admin_senior` | 총무대리 | admin | B | 탱커 | 오른쪽 · 5열 | admin_manager |
+| `admin_manager` | 총무과장 | admin | A | 탱커 | 오른쪽 · 6열 | admin |
+| `admin` | 총무부장 | admin | S | 탱커 | 오른쪽 · 7열 | — |
 
-주인공의 날개는 **오른쪽** 고정이다 — 승진해도 방향은 바뀌지 않는다.
+주인공의 시트는 **오른쪽** 고정이다 — 승진해도 방향은 바뀌지 않고, 직급이 오르면 열이 늘어난다.
