@@ -48,3 +48,36 @@ test('the prompt leaves the back empty and forbids the old devices', () => {
   assert.ok(!/wing|halo/i.test(BACK_CLEAR));
   for (const w of ['wings', 'halo', 'floating screens']) assert.ok(BACK_NEG.includes(w), w);
 });
+
+// ---------------------------------------------------------------- dossier (blue-utils layout)
+import { DOSSIER, position, tactical, workType, sites, birthday, age, tenure } from '../src/data/dossier.js';
+
+test('every character has a dossier: english name, team, unique tool, favourite item', () => {
+  for (const id of ['main', ...HEROES.map((h) => h.id)]) {
+    const d = DOSSIER[id];
+    assert.ok(d, `${id} has no dossier`);
+    for (const k of ['en', 'team', 'recruit']) assert.ok(d[k], `${id}.${k}`);
+    assert.ok(d.tool?.name && d.tool?.kind && d.tool?.text, `${id}.tool`);
+    assert.ok(d.fav?.name && d.fav?.text, `${id}.fav`);
+  }
+  for (const k of Object.keys(DOSSIER)) assert.ok(k === 'main' || HEROES.some((h) => h.id === k), `stray dossier ${k}`);
+});
+
+test('derived dossier fields are well-formed and stable', () => {
+  for (const h of HEROES) {
+    assert.match(birthday(h.id), /^(1[0-2]|[1-9])월 ([1-9]|[12]\d|3[01])일$/, `${h.id} ${birthday(h.id)}`);
+    assert.equal(birthday(h.id), birthday(h.id));
+    assert.ok(age(h.id, h.grade) >= 20 && age(h.id, h.grade) <= 80);
+    assert.ok(tenure(h.id, h.grade) >= 1 && tenure(h.id, h.grade) < age(h.id, h.grade) - 15);
+    assert.ok(['FRONT', 'MIDDLE', 'BACK'].includes(position(h.role)));
+    assert.ok(['STRIKER', 'SPECIAL'].includes(tactical(h.role)));
+    assert.ok(workType(h.trait));
+    for (const v of Object.values(sites(h.id, h.role))) assert.ok('SABCD'.includes(v) && v.length === 1);
+  }
+});
+
+test('a story that states years of service is honoured', () => {
+  assert.equal(tenure('guard', 'D'), 20);
+  assert.equal(tenure('chairman', 'S'), 40);
+  assert.ok(age('guard', 'D') >= 20 + 22);
+});

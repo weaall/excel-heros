@@ -65,7 +65,10 @@ const CUTOUT_BG = 'plain flat white background, solid white backdrop, no scenery
 
 /** Head to feet, with margin. The margin is not styling — tools/cutout.py floods inward from the
  *  image border, so a character touching an edge lets the fill walk into them. */
-const CUTOUT_SHOT = 'full body, standing, full figure from head to feet, feet visible, clear empty margin on all sides, character fully inside the frame';
+// Full body that FILLS the height, as blue-utils' standing art does. 'Clear empty margin on
+// all sides' shrank the figure until the face was a thumbnail; the cutout needs only a sliver
+// of background above the head and below the feet to flood from.
+const CUTOUT_SHOT = 'full body, standing, full figure from head to feet, the character fills the frame from top to bottom, a thin strip of empty background above the head and below the feet, feet visible, official art, game cg, standing portrait';
 
 const STYLE_TAGS_BASE = 'blue archive style, centered composition, character centered in frame, flat color, cel shading, thin clean lineart, consistent line weight, anime coloring, vivid pastel colors, character focus';
 // `soft blurred background, depth of field` asks for a background to blur; with CUTOUT there is
@@ -112,7 +115,7 @@ export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo a
 // are dropped under CUTOUT and replaced with bans on the SCENERY, because anything painted behind
 // the character is something tools/cutout.py cannot key away.
 const NEG_BASE = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, close-up, legs, knees, feet, shoes, standing full figure, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, full body, wide shot, distant, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw';
-const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw, background details, office background, furniture, desk, window, city, skyline, plants, wall, floor, ground, shadow on the ground, drop shadow, gradient background, textured background, patterned background, scenery, indoors, outdoors';
+const NEG_CUTOUT = 'thick outlines, heavy lineart, bold black outlines, sketchy lines, rough linework, six fingers, extra fingers, fused fingers, malformed hands, deformed hand, too many fingers, long fingers, picture frame, ornate frame, gold frame, border, framed painting, window frame, rectangular border, poster, canvas edge, inset panel, vignette border, overwhelming background effects, character off center, character at the edge of frame, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, cropped head, head out of frame, top of head cut off, hair touching the top edge of the image, hair over eyes, covered face, hand over face, face mask, surgical mask, mouth mask, scarf over face, veil, covered mouth, backlighting, silhouette, dark face, shadowed face, low key lighting, small face, tiny face, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry face, 3d, realistic, photo, multiple views, stiff symmetrical frontal pose, mugshot, id photo, busy background, cluttered background, high contrast background, nsfw, background details, office background, furniture, desk, window, city, skyline, plants, wall, floor, ground, shadow on the ground, drop shadow, gradient background, textured background, patterned background, scenery, indoors, outdoors, cast shadow, ground shadow, shadow under feet, speed lines, motion lines, floor lines';
 // The wing is ONE, on ONE shoulder, and is not a bird. Every one of those has to be said:
 // 'a single wing' in the positive prompt is routinely answered with a symmetric pair.
 const NEG = (CUTOUT ? NEG_CUTOUT : NEG_BASE) + ', ' + BACK_NEG;
@@ -151,14 +154,22 @@ function colorName(hex) {
 export function describe(def, profileId, outfitOverride = null) {
   const p = PROFILES[profileId] ?? {}; const look = def.look ?? {}; const pal = def.palette ?? {};
   const who = p.gender === 'F' ? '1girl, solo' : '1boy, solo, male focus';
-  const hair = look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair, ${HAIR[look.hair] ?? 'short hair'}`;
+  const outfitText = outfitOverride ?? OUTFIT_BY_ID[def.id] ?? '';
+  // The outfit line sometimes names the hair itself ("short black bob with a cyan streak"). Two
+  // hair descriptions in one prompt make the model pick one or blend them — the hacker came out
+  // with an undercut AND a bob — so the hand-written one wins and the derived one steps aside.
+  const outfitNamesHair = /\b(hair|bob|ponytail|twin tails|bun|braid|bald|pixie|undercut)\b/i.test(outfitText);
+  const hair = outfitNamesHair ? '' : look.hair === 'bald' ? 'bald' : `${colorName(pal.H ?? '#3b2a1a')} hair, ${HAIR[look.hair] ?? 'short hair'}`;
   const outfit = outfitOverride ? `${outfitOverride}, ${TIER[def.grade]}` : OUTFIT_BY_ID[def.id] ? `${OUTFIT_BY_ID[def.id]}, ${TIER[def.grade]}` : `${TIER[def.grade]}, ${colorName(pal.B ?? '#dfe6e9')} jacket`;
   const bits = outfitOverride || OUTFIT_BY_ID[def.id] ? '' : [ACC[look.acc], ACC[look.acc2], ACC[look.prop]].filter(Boolean).join(', ');
   // build, feature and hobby were in the data and never reached the model. The feature is the
   // one thing that makes this character rather than a person in the same job — it goes in.
   const body = BUILD_EN[def.role] ?? '';
-  const mark = p.feature ? `, ${p.feature}` : '';
-  return `${who}, ${hair}, ${bits ? bits + ', ' : ''}${outfit}, ${body}, ${ROLE[def.role]}${mark}`;
+  // Only an English feature reaches the model: SDXL reads English and Danbooru tags, and a
+  // Korean sentence in the prompt is noise that crowds out tags it can read. featureEn is
+  // optional; until a character has one, its feature stays in the document only.
+  const mark = p.featureEn ? `, ${p.featureEn}` : '';
+  return `${who}, ${hair ? hair + ', ' : ''}${bits ? bits + ', ' : ''}${outfit}, ${body}, ${ROLE[def.role]}${mark}`;
 }
 const SKIN_BG = { casual: 'cafe window close behind him, warm evening lights, bokeh', formal: 'warm party lights close behind him, soft golden bokeh' };
 export function prompt(def, profileId, skin = null) {
@@ -166,7 +177,10 @@ export function prompt(def, profileId, skin = null) {
   const head = 'looking at viewer, face fully visible, eyes visible, whole head in frame with clear empty space above the hair, face focus, soft even front lighting, bright face';
 
   if (CUTOUT) {
-    return `${desc}, ${poseTag(def.id, desc)}, ${head}, ${CUTOUT_SHOT}, ${BACK_CLEAR}, `
+    // No 'face focus' here: it pulls the camera in while 'full body' pushes it out, and the
+    // model settles the argument by cutting the head off (the first CFO test did exactly that).
+    const headFull = head.replace(', face focus', '');
+    return `${desc}, ${poseTag(def.id, desc)}, ${headFull}, ${CUTOUT_SHOT}, ${BACK_CLEAR}, `
          + `${CUTOUT_BG}, ${STYLE_TAGS}, masterpiece, best quality, very aesthetic, absurdres`;
   }
 
@@ -266,8 +280,10 @@ if (isMain && process.argv.includes('--manifest')) {
     : skinMode
     ? baseDefs.filter(([id, , pid]) => ids.length ? ids.includes(id) : pid !== 'main').flatMap(([id, def, pid]) => (SKINS[id] ?? []).map((sk) => [`${id}__${sk.id}`, def, pid, sk])) // heroes only by default (main jobs: pass ids)
     : baseDefs.filter(([id]) => !ids.length || ids.includes(id));
-  const outDir = new URL(sceneMode ? '../assets/story/' : '../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', new URL('../assets/cards/', import.meta.url));
-  if (sceneMode) fs.mkdirSync(outDir, { recursive: true });
+  // Cutout art goes to its own folder and never touches the live cards or their manifest: it is
+  // the replacement being built, and the game keeps showing the old art until it is complete.
+  const outDir = new URL(sceneMode ? '../assets/story/' : CUTOUT ? '../assets/cards_cutout/' : '../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', new URL('../assets/cards/', import.meta.url));
+  if (sceneMode || CUTOUT) fs.mkdirSync(outDir, { recursive: true });
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   let ok = 0;
   for (const [id, def, pid, skin = null] of defs) {
@@ -282,7 +298,7 @@ if (isMain && process.argv.includes('--manifest')) {
       try {
         const buf = await callGenerate(text, seed + id.length, sceneMode ? { width: 1216, height: 832, neg: sceneNeg(id) } : { neg: negFor(def?.grade) });
         fs.writeFileSync(target, buf);
-        if (!sceneMode) { manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n'); }
+        if (!sceneMode && !CUTOUT) { manifest.cards[id] = file; fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n'); }
         console.log(`ok   ${id} ${(buf.length / 1024).toFixed(0)} KB  ${new Date().toLocaleTimeString()}`); ok++; break;
       } catch (e) { const quota = /quota|event error/i.test(e.message); const congested = /No GPU was available/i.test(e.message); const m = e.message.match(/Try again in (\d+):(\d\d):(\d\d)/); const asked = m ? ((+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) + 30) * 1000 : 0; if (asked) soonestReset = Math.min(soonestReset, asked); const rotated = (quota || congested) && rotatePool(); const wait = rotated ? 2000 : quota ? (Number.isFinite(soonestReset) ? soonestReset : quotaWait) : 15000; if (!rotated) soonestReset = Infinity; console.log(`retry ${id} (${attempt}): ${e.message}${rotated ? ` — switching to ${poolName()}` : quota ? ` — every pool is short of the 90 s an image costs; waiting ${(wait / 60000).toFixed(0)} min for the first one to refill` : congested ? ' — every pool is congested; waiting 15 s' : ''}`); if (quota && !rotated) poolIdx = 0, AUTH = TOKEN_POOL[0] ? { authorization: `Bearer ${TOKEN_POOL[0]}` } : {}; await new Promise((r) => setTimeout(r, wait)); } // (was: 15000)); }
     }

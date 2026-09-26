@@ -24,6 +24,7 @@ import { PROFILES } from '../src/data/profiles.js';
 // the drift this very document warns about.
 import { sheetSideKo, SHEET_BY_GRADE, SHEET_TRAIT, SHEET_ATTACK, SHEET_ROWS_MAX, BUILD, height, colorName, outfit } from '../src/data/design.js';
 import { TRAITS } from '../src/data/heroes.js';
+import { DOSSIER, workType, dressType, position, tactical, sites, birthday, age, tenure, WORK_TYPE } from '../src/data/dossier.js';
 
 const HAIR = {
   short: '짧은 머리', bob: '단발', bun: '쪽진 머리', side: '가르마', bald: '민머리',
@@ -95,6 +96,45 @@ md += `\n**역할 → 시트로 공격하는 방식**\n\n| 역할 | 기본 공�
 for (const [k, v] of Object.entries(SHEET_ATTACK)) md += `| ${ROLES[k]?.name ?? k} | ${v.ko} | ${v.skill} |\n`;
 md += `\n시트 색은 각 캐릭터의 \`palette.W\`. 같은 등급 안에서도 **색 × 특성 무늬 × 방향**이 달라 카드마다 다른 시트가 된다.\n`;
 
+
+// ---------------------------------------------------------------- the blue-utils block
+// One character, in the order blue-utils lays a student out: the file (name, birthday, age,
+// height, hobby), who they belong to, how they fight, the three visuals, the unique tool and
+// the favourite item. Shared by the cast and the main hero.
+const face = { S: '😆', A: '😊', B: '🙂', C: '😐', D: '😣' };
+function dossierBlock(h, p, look, w) {
+  const d = DOSSIER[h.id] ?? {};
+  const props = [look.acc, look.acc2, look.prop].filter(Boolean).join(' · ') || '—';
+  const wt = workType(h.trait);
+  const st = sites(h.id, h.role);
+  const tr = SHEET_TRAIT[h.trait];
+  let o = '';
+  o += `\`${h.id}\` · **${d.en ?? '—'}** · ${p.gender === 'F' ? '여성' : '남성'}\n\n`;
+  o += `| 인사 기록 | |\n|---|---|\n`;
+  o += `| 생일 · 나이 · 연차 | ${birthday(h.id)} · ${age(h.id, h.grade)}세 · ${tenure(h.id, h.grade)}년차 |\n`;
+  o += `| 키 · 체형 | ${height(h, p)}cm · ${BUILD[h.role] ?? '—'} |\n`;
+  o += `| 취미 | ${p.hobby ?? '—'} |\n`;
+  o += `| 소속 | ${p.dept ?? '—'} · ${d.team ?? '—'} |\n`;
+  o += `| 일러스트 · 디자인 | Animagine XL 4.0 · 엑셀 히어로즈 |\n`;
+  o += `| 모집 한마디 | ${d.recruit ?? '—'} |\n\n`;
+  o += `| 전투 | |\n|---|---|\n`;
+  o += `| 포지션 · 전술 | **${position(h.role)}** · ${tactical(h.role)} |\n`;
+  o += `| 역할 · 특성 | ${ROLES[h.role]?.name ?? h.role} · ${TRAITS[h.trait]?.name ?? h.trait} |\n`;
+  o += `| 업무 타입 · 복장 타입 | ${wt} (\`${WORK_TYPE[wt].color}\`) · ${dressType(outfit(h.id) ?? '')} |\n`;
+  o += `| 근무지 적성 | 사무실 ${st.사무실} ${face[st.사무실]} · 외근 ${st.외근} ${face[st.외근]} · 재택 ${st.재택} ${face[st.재택]} |\n`;
+  o += `| 공격 방식 | ${SHEET_ATTACK[h.role]?.ko ?? '—'} |\n\n`;
+  o += `| 비주얼 | |\n|---|---|\n`;
+  o += `| 기본 일러 | 전신, **배경 없음(투명)** · 머리 ${HAIR[look.hair] ?? look.hair ?? '—'} \`${h.palette?.H ?? '—'}\` · 눈 ${colorName(h.palette?.W, true)} |\n`;
+  o += `| 의상 | ${outfit(h.id) ?? '—'} |\n`;
+  o += `| 소품 | ${props} |\n`;
+  o += `| **특징** | **${p.feature ?? '—'}** |\n`;
+  o += `| 등 뒤 시트 | **${sheetSideKo(h.id)}**으로 기울어짐 · ${w.cols}열 · \`${h.palette?.W ?? '—'}\` · ${tr ? tr.ko : '—'} |\n`;
+  o += `| 미니어처(SD) | 유니티에서 제작 예정 — 2px 도트 페이퍼돌 기준 |\n\n`;
+  if (d.tool) o += `**고유 업무 도구 — ${d.tool.name}** (${d.tool.kind})  \n${d.tool.text}\n\n`;
+  if (d.fav) o += `**애용품 — ${d.fav.name}**  \n${d.fav.text}\n`;
+  return o;
+}
+
 // ---------------------------------------------------------------- per-character blocks
 md += `\n---\n\n## 사원 명단\n`;
 for (const g of gradeKeys) {
@@ -104,19 +144,7 @@ for (const g of gradeKeys) {
   for (const { h, p, look } of inGrade) {
     const props = [look.acc, look.acc2, look.prop].filter(Boolean).join(' · ') || '—';
     md += `\n#### ${h.name}${p.nick ? ` — ${p.nick}` : ''}\n\n`;
-    md += `\`${h.id}\` · ${p.dept ?? '—'} · ${ROLES[h.role]?.name ?? h.role} · ${p.gender === 'F' ? '여성' : '남성'}\n\n`;
-    md += `| | |\n|---|---|\n`;
-    md += `| 키 · 체형 | ${height(h, p)}cm · ${BUILD[h.role] ?? '—'} |\n`;
-    md += `| 머리 | ${HAIR[look.hair] ?? look.hair ?? '—'} · \`${h.palette?.H ?? '—'}\` |\n`;
-    md += `| 눈 | ${colorName(h.palette?.W, true)} 눈 |\n`;
-    md += `| 소품 | ${props} |\n`;
-    const tr = SHEET_TRAIT[h.trait];
-    md += `| 시트 | **${sheetSideKo(h.id)}**으로 기울어짐 · ${w.cols}열 · \`${h.palette?.W ?? '—'}\` · ${tr ? tr.ko : '—'} |\n`;
-    md += `| 공격 | ${SHEET_ATTACK[h.role]?.ko ?? '—'} |\n`;
-    md += `| 의상 | ${outfit(h.id) ?? '—'} |\n`;
-    md += `| 팔레트 | 머리 \`${h.palette?.H ?? '—'}\` · 상의 \`${h.palette?.B ?? '—'}\` · 강조 \`${h.palette?.W ?? '—'}\` |\n`;
-    md += `| 취미 | ${p.hobby ?? '—'} |\n`;
-    md += `| **특징** | **${p.feature ?? '—'}** |\n`;
+    md += dossierBlock(h, p, look, w);
     // The short line is what the card UI renders — it stays short on purpose, because both
     // the web panel and the Unity card sheet lay it out in a fixed frame. The long one is for
     // whoever draws this character and lives only in the document.
@@ -132,7 +160,12 @@ for (const g of gradeKeys) {
 }
 
 // ---------------------------------------------------------------- main hero
-md += `\n---\n\n## 주인공 (김인턴) — 승진 트랙\n\n`;
+md += `\n---\n\n## 주인공 (김인턴)\n\n`;
+{
+  const mh = { id: 'main', name: '김인턴', grade: 'D', role: MAIN_JOBS.intern?.role ?? 'melee', trait: MAIN_JOBS.intern?.trait ?? 'swift', palette: MAIN_JOBS.intern?.palette, look: MAIN_JOBS.intern?.look ?? {} };
+  md += dossierBlock(mh, PROFILES.main ?? {}, mh.look, SHEET_BY_GRADE.D);
+}
+md += `\n### 승진 트랙\n\n`;
 md += `한 사람이다. 승진해도 같은 인물 — **남성, 검은 단발**, 11개 직급 전부 동일. 바뀌는 것은 복장의\n`;
 md += `격과 시트뿐이고, 얼굴·머리·체형은 고정이다. 트랙(영업·재무·총무)은 **소품과 색**으로 구별한다.\n\n`;
 md += `| id | 직급 | 트랙 | 등급 | 역할 | 시트 | 다음 |\n|---|---|---|---|---|---|---|\n`;
