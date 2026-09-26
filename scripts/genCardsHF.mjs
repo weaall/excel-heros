@@ -130,11 +130,12 @@ const hue = (hex) => {
   let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h = (h * 60 + 360) % 360;
   return h < 15 ? 'red' : h < 40 ? 'orange' : h < 65 ? 'yellow' : h < 160 ? 'green' : h < 200 ? 'cyan' : h < 255 ? 'blue' : h < 290 ? 'purple' : h < 340 ? 'pink' : 'red';
 };
-export const monsterPrompt = (t, boss) => `no humans, chibi mascot monster, ${MON_SHAPE[t.shape] ?? MON_SHAPE.blob}, ${hue(t.palette?.M) ? hue(t.palette.M) + ' body, ' : ''}`
+export const monsterPrompt = (t, boss) => `solo, no humans, one single creature, centered, large in frame, filling most of the image, chibi mascot monster, ${MON_SHAPE[t.shape] ?? MON_SHAPE.blob}, ${hue(t.palette?.M) ? hue(t.palette.M) + ' body, ' : ''}`
   + `${MON_EYES[t.face?.eyes] ?? 'angry slanted eyes'}, ${MON_MOUTH[t.face?.mouth] ?? 'a toothy snarl'}, cute but mischievous enemy, ${boss ? 'big boss monster, a small crown of red warning signs, ' : ''}`
   + `full body, standing on the ground, facing left, simple background, white background, blue archive style, soft cel shading, clean thin lineart, bright clean colors, game character sprite, `
   + `${CUTOUT_BG}, masterpiece, high score, great score, absurdres, newest`;
-const MON_NEG = 'humans, 1girl, 1boy, person, text, letters, numbers, watermark, realistic, 3d, gradient background, shadow, multiple monsters, cropped, lowres, worst quality, low quality';
+const MON_NEG = 'humans, 1girl, 1boy, person, text, letters, numbers, watermark, realistic, 3d, gradient background, beige background, brown background, shadow, '
+  + 'multiple monsters, group, many creatures, two creatures, crowd, character sheet, variations, small, tiny, far away, cropped, lowres, worst quality, low quality';
 
 export const scenePrompt = (id) => `${SCENES[id] ?? id}, ${HALO_SCENES.has(id) ? 'halo, ' : ''}${SCENE_STYLE}`;
 export const sceneNeg = (id) => (HALO_SCENES.has(id) ? SCENE_NEG : `angel halo above head, glowing ring above head, ${SCENE_NEG}`);

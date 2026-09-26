@@ -110,10 +110,48 @@ def hf_remove(img):
                     return Image.open(io.BytesIO(raw)).convert('RGBA')
     raise RuntimeError('the Space answered without an image')
 
+def flood_white(im, tol=24):
+    """Pure-white background flooded in from the border (Gemini sheets are drawn on #fff with a
+    dark outline round every creature, so white INSIDE the outline survives)."""
+    im = im.convert('RGBA')
+    w, h = im.size
+    px = im.load()
+    seen = bytearray(w * h)
+    stack = [(x, 0) for x in range(w)] + [(x, h - 1) for x in range(w)] + [(0, y) for y in range(h)] + [(w - 1, y) for y in range(h)]
+    while stack:
+        x, y = stack.pop()
+        i = y * w + x
+        if seen[i]: continue
+        seen[i] = 1
+        r, g, b, _ = px[x, y]
+        if not (r > 255 - tol and g > 255 - tol and b > 255 - tol): continue
+        px[x, y] = (255, 255, 255, 0)
+        if x > 0: stack.append((x - 1, y))
+        if x < w - 1: stack.append((x + 1, y))
+        if y > 0: stack.append((x, y - 1))
+        if y < h - 1: stack.append((x, y + 1))
+    # soften the rim: near-white edge pixels next to the flood get partial alpha
+    out = im.copy(); op = out.load()
+    for y in range(1, h - 1):
+        for x in range(1, w - 1):
+            r, g, b, a = px[x, y]
+            if a and min(r, g, b) > 200 and any(px[x + dx, y + dy][3] == 0 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                op[x, y] = (r, g, b, int(255 * (255 - min(r, g, b)) / 55))
+    return out
+
+
 def process(path, out_dir, report_only=False):
     orig = Image.open(path).convert('RGB')
     name = os.path.basename(path)
     t = time.time()
+    if MONSTER:
+        keep = flood_white(orig)
+        cov = sum(1 for v in keep.split()[3].getdata() if v > 127) / (keep.width * keep.height)
+        ok = 0.03 <= cov <= 0.8
+        print(f'  {name}: white flood  cover {cov:5.1%}  {"ok" if ok else "fail"}  ({time.time() - t:.1f}s)')
+        if ok and not report_only:
+            normalise(keep).save(os.path.join(out_dir, name))
+        return ok
     a = rembg_remove(orig, 'isnet-anime')
     b = rembg_remove(orig, 'birefnet-general')
     agree, cover = iou(a, b)
@@ -130,6 +168,10 @@ def process(path, out_dir, report_only=False):
             else: verdict = f'all differ (space/isnet {ca:.3f}, space/biref {cb:.3f})'
         except Exception as e:
             verdict = f'fail (space unavailable: {str(e)[:60]})'
+            # LENIENT=0.9: with the tie-break down, a near-agreement keeps the anime model's mask.
+            lenient = float(os.environ.get('LENIENT', '0') or 0)
+            if lenient and agree >= lenient and COVER_MIN <= cover <= COVER_MAX:
+                verdict, keep = f'lenient isnet ({agree:.3f})', a
     ok = keep is not None and COVER_MIN <= cover <= COVER_MAX
     heads = None
     if ok and MONSTER:
@@ -158,7 +200,7 @@ FIG_H, FLOOR = 1240, 1318
 
 # SD=1 (the chibi sprites): a big-headed band instead, and a squarer canvas.
 SD = os.environ.get('SD') == '1'
-SD_HEADS = (1.8, 3.4)
+SD_HEADS = (1.6, 3.4)
 # MONSTER=1: the SD error mascots — square canvas, no head check
 MONSTER = os.environ.get('MONSTER') == '1'
 if MONSTER:
