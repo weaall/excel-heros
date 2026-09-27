@@ -188,7 +188,16 @@ def process(path, out_dir, report_only=False):
             verdict += f'  | {heads:.1f} heads'
     print(f'  {name}: isnet/biref IoU {agree:.3f}  cover {cover:5.1%}  {verdict}  ({time.time() - t:.1f}s)')
     if ok and not report_only:
-        normalise(keep).save(os.path.join(out_dir, name))
+        out = normalise(keep)
+        # one body for the whole cast (tools/uniform.py): same head size, same height
+        if not MONSTER:
+            import uniform
+            uni, note = uniform.uniform(out, 'sd' if SD else 'std')
+            if uni is None:
+                print(f'    uniform: {note} → redo')
+                return False
+            out = uni
+        out.save(os.path.join(out_dir, name))
     return ok
 
 

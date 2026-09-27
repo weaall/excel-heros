@@ -60,7 +60,8 @@ const poseTag = (id, desc) => {
  */
 // SD=1 — the battle/line-up sprite: a 2.5-head chibi, full body, on white, for the cutout pass.
 // Its own folder (assets/sd_cutout/), its own negatives (the chibi bans come off).
-const SD = process.env.SD === '1';
+const SD = process.env.SD === '1' || process.env.SD_A === '1';
+const SD_POSE_A = process.env.SD_A === '1';
 const CUTOUT = process.env.CUTOUT === '1' || SD;
 
 /** What the character is drawn ON when CUTOUT is set. Near-white rather than chroma: a saturated
@@ -239,8 +240,13 @@ export function prompt(def, profileId, skin = null) {
     const m = desc.match(/^(1girl, solo|1boy, solo, male focus)(, )?/);
     const who = m ? m[1] : '';
     const rest = (m ? desc.slice(m[0].length) : desc).replace(/, (slim|slender|athletic|broad sturdy) build/g, '');
-    const prop = SD_PROP[def?.role] ?? 'holding a clipboard';
-    return `${who}, chibi, sd character, super deformed, white background, simple background, blue archive, ${rest}, ${prop}, full body, standing, feet visible, three-quarter view, body turned to the right, looking at viewer, `
+    const prop = SD_POSE_A ? 'empty hands' : SD_PROP[def?.role] ?? 'holding a clipboard';
+    // SD_A=1: the same character as the input for the 3D SD — facing the viewer, standing straight
+    // in an A-pose with the arms a little away from the body, nothing in the hands (the reference
+    // SD models are built and rigged in this pose).
+    const pose = SD_POSE_A ? 'front view, facing viewer, symmetrical standing pose, a-pose, arms slightly away from the body, hands open, feet together'
+                           : 'three-quarter view, body turned to the right';
+    return `${who}, chibi, sd character, super deformed, white background, simple background, blue archive, ${rest}, ${prop}, full body, standing, feet visible, ${pose}, looking at viewer, `
          + `chibi proportions, very big head, tiny body, short arms and legs, two and a half heads tall, cute, clean thin lineart, soft cel shading, bright clean colors, ${CUTOUT_BG}, ${BA2_QUALITY}`;
   }
   if (CUTOUT) {
@@ -361,7 +367,7 @@ if (isMain && process.argv.includes('--manifest')) {
     : baseDefs.filter(([id]) => !ids.length || ids.includes(id));
   // Cutout art goes to its own folder and never touches the live cards or their manifest: it is
   // the replacement being built, and the game keeps showing the old art until it is complete.
-  const outDir = new URL(monMode ? '../assets/sd_monsters/' : sceneMode ? '../assets/story/' : SD ? '../assets/sd_cutout/' : CUTOUT ? '../assets/cards_cutout/' : '../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', new URL('../assets/cards/', import.meta.url));
+  const outDir = new URL(monMode ? '../assets/sd_monsters/' : sceneMode ? '../assets/story/' : SD_POSE_A ? '../assets/sd3d_src/' : SD ? '../assets/sd_cutout/' : CUTOUT ? '../assets/cards_cutout/' : '../assets/cards/', import.meta.url); const manifestPath = new URL('manifest.json', new URL('../assets/cards/', import.meta.url));
   if (sceneMode || CUTOUT || monMode) fs.mkdirSync(outDir, { recursive: true });
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   let ok = 0;
